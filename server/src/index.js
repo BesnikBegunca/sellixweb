@@ -29,9 +29,18 @@ const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .filter(Boolean);
 
 // Behind nginx or Railway's edge the client IP arrives in X-Forwarded-For;
-// without this every request looks like it came from the proxy and rate
-// limiting counts them all as one.
-if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
+// without this every request looks like it came from the proxy.
+//
+// The value is a hop count, and Railway fronts the container with more than
+// one layer, so a hard-coded 1 picks an internal address that rotates between
+// requests — which silently resets the rate limiter on every call. Setting it
+// to the number of proxies in front of the app makes req.ip the real client.
+// TRUST_PROXY accepts a number, or `true` to trust the whole chain.
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy) {
+  const asNumber = Number(trustProxy);
+  app.set('trust proxy', Number.isFinite(asNumber) && trustProxy !== 'true' ? asNumber : true);
+}
 
 app.use(
   cors({
@@ -50,6 +59,17 @@ app.use(express.json({ limit: '200kb' }));
 app.use(cookieParser());
 
 app.get('/api/health', (req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
+// TEMPORARY: reports how the proxy chain reaches this container, so the
+// trust proxy depth can be set from evidence instead of guesswork.
+app.get('/api/_debug/ip', (req, res) => {
+  res.json({
+    ip: req.ip,
+    ips: req.ips,
+    xForwardedFor: req.get('x-forwarded-for') || null,
+    trustProxySetting: app.get('trust proxy')
+  });
+});
 app.use('/api/auth', authRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/leads', leadsRouter);
