@@ -29,7 +29,24 @@ function readDeviceId(req) {
 
 function licensePayload(row) {
   return {
-    business: { name: row.name, nui: row.nui, sector: row.sector, city: row.city },
+    // Every business field the dashboard holds, so the till can fill its own
+    // settings and print a correct fiscal receipt from one call. The admin
+    // already typed these; the shop should never have to type them again.
+    business: {
+      nui: row.nui,
+      name: row.name,
+      fiscalNumber: row.fiscal_number,
+      vatNumber: row.vat_number,
+      address: row.address,
+      city: row.city,
+      zipCode: row.zip_code,
+      country: row.country,
+      contactPerson: row.contact_person,
+      phone: row.phone,
+      email: row.email,
+      sector: row.sector,
+      notes: row.notes
+    },
     license: {
       status: effectiveStatus(row),
       expiresAt: row.license_expires_at,
