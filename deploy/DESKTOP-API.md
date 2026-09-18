@@ -40,7 +40,21 @@ Response `200`:
 ```json
 {
   "valid": true,
-  "business": { "name": "Market Testi", "nui": "810123456", "sector": "market", "city": "Prishtinë" },
+  "business": {
+    "nui": "810123456",
+    "name": "Market Dardania",
+    "fiscalNumber": "600123456",
+    "vatNumber": "330123456",
+    "address": "Rr. Nëna Terezë 12",
+    "city": "Prishtinë",
+    "zipCode": "10000",
+    "country": "Kosovë",
+    "contactPerson": "Arben Krasniqi",
+    "phone": "044123456",
+    "email": "info@dardania.com",
+    "sector": "market",
+    "notes": "Klient nga viti 2024"
+  },
   "license": { "status": "active", "expiresAt": "2027-09-18 14:08:04", "seats": 2, "devicesUsed": 1 }
 }
 ```
@@ -48,8 +62,11 @@ Response `200`:
 Calling activate again with the same `deviceId` is safe — it refreshes the
 device name and `last_seen_at` instead of consuming another seat.
 
-Use `business` to prefill the business details in the app (name, NUI, city,
-sector) so the user does not retype what the admin already entered.
+`business` carries every field the admin dashboard holds — the same thirteen,
+by the same names. Entering the key is therefore enough to fill the app's
+business settings, including the fiscal and VAT numbers a receipt needs. The
+shop never retypes what the admin already entered. Fields left blank in the
+dashboard come back as `""`, not missing.
 
 ---
 
