@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+
+.lp, .lp * , .lp *::before, .lp *::after { box-sizing: border-box; }
+.lp { background: #070D14; -webkit-font-smoothing: antialiased; }
+.lp a { color: #EAF7FA; text-decoration: none; }
+.lp a:hover { color: oklch(0.86 0.12 195); }
+.lp input, .lp select, .lp textarea, .lp button { font-family: inherit; }
+.lp input::placeholder, .lp textarea::placeholder { color: #61707F; }
+
+@keyframes sellixSpin {
+  0%   { transform: rotateX(-9deg) rotateY(-26deg); }
+  50%  { transform: rotateX(-12deg) rotateY(24deg); }
+  100% { transform: rotateX(-9deg) rotateY(-26deg); }
+}
+@keyframes sellixPulse { 0%, 100% { opacity: .35; } 50% { opacity: .8; } }
+
+.lp-navlink { color: inherit; transition: color .15s; }
+.lp-navlink:hover { color: #F2F6FA; }
+
+.lp-btn-primary { transition: background .15s; }
+.lp-btn-primary:hover { background: oklch(0.88 0.12 195); }
+
+.lp-btn-white { transition: background .15s; }
+.lp-btn-white:hover { background: oklch(0.86 0.12 195); color: #06121A; }
+
+.lp-btn-outline { transition: border-color .15s; }
+.lp-btn-outline:hover { border-color: rgba(255,255,255,.4); }
+.lp-btn-outline2:hover { border-color: rgba(255,255,255,.45); }
+
+.lp-field { transition: border-color .15s; }
+.lp-field:focus { outline: none; border-color: oklch(0.82 0.12 195); }
+
+.lp-catbtn { transition: all .18s; cursor: pointer; }

@@ -1,0 +1,13 @@
+# better-sqlite3 ships prebuilt binaries for Node 20/22 on linux-x64, so the
+# install needs no compiler toolchain here.
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm --prefix web ci", "npm --prefix server ci --omit=dev"]
+
+[phases.build]
+cmds = ["npm --prefix web run build"]
+
+[start]
+cmd = "npm --prefix server start"

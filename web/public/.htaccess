@@ -1,0 +1,28 @@
+# SelliX — Apache/cPanel config for a React (BrowserRouter) single-page app.
+# Serves real files as-is; every other URL falls back to index.html so that
+# deep links like /admin/login work on a direct visit or refresh.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Never rewrite the API — it must reach the backend, not index.html.
+  RewriteRule ^api/ - [L]
+
+  # Existing files and directories are served directly.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Hashed asset filenames change on every build, so they can be cached forever.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|svg|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  # index.html must never be cached, or visitors keep loading the old bundle.
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
