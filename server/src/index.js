@@ -11,6 +11,7 @@ import { leadsRouter } from './routes/leads.js';
 import { usersRouter } from './routes/users.js';
 import { businessesRouter } from './routes/businesses.js';
 import { licenseRouter } from './routes/license.js';
+import { registrationsRouter } from './routes/registrations.js';
 import { seed } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -75,6 +76,7 @@ app.use('/api/leads', leadsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/businesses', businessesRouter);
 app.use('/api/license', licenseRouter);
+app.use('/api/registrations', registrationsRouter);
 
 // In production the built frontend ships inside the same container, so one
 // service serves both the site and the API and the session cookie stays

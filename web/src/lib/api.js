@@ -39,6 +39,11 @@ export const api = {
   getBusinessDevices: (id) => request(`/businesses/${id}/devices`),
   releaseBusinessDevice: (id, deviceId) => request(`/businesses/${id}/devices/${deviceId}`, { method: 'DELETE' }),
 
+  getRegistrations: () => request('/registrations'),
+  approveRegistration: (id, data) => request(`/registrations/${id}/approve`, { method: 'POST', body: JSON.stringify(data) }),
+  rejectRegistration: (id) => request(`/registrations/${id}/reject`, { method: 'POST' }),
+  deleteRegistration: (id) => request(`/registrations/${id}`, { method: 'DELETE' }),
+
   getUsers: () => request('/users'),
   createUser: (email, name) => request('/users', { method: 'POST', body: JSON.stringify({ email, name }) }),
   deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),

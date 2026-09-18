@@ -70,6 +70,7 @@ export default function DashboardLayout() {
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <NavLink to="/admin/leads" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Leads</NavLink>
           <NavLink to="/admin/businesses" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Businesses</NavLink>
+          <NavLink to="/admin/registrations" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Registrations</NavLink>
           <NavLink to="/admin/content" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Site content</NavLink>
           <NavLink to="/admin/users" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Admin users</NavLink>
         </nav>

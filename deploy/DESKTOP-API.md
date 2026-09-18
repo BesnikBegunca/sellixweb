@@ -118,6 +118,53 @@ curl -X POST $BASE/api/license/check \
 
 ---
 
+## `POST /api/license/register` — shops set up without internet
+
+For an installation that was configured before it had a connection. The app
+generates a local install code, the shop starts trading on it, and Synchronize
+posts the business details here. **The install code is not a licence** — it is
+a claim ticket. An admin approves the request in the dashboard, and only then
+does the server create the business and issue a real key.
+
+```json
+{
+  "installCode": "PENDING-7Q4M",
+  "deviceId": "machine-uuid",
+  "deviceName": "Arka kryesore",
+  "appKind": "restaurant",
+  "nui": "810999888",
+  "name": "Restorant Tirana",
+  "city": "Prishtinë",
+  "sector": "restaurant",
+  "phone": "044111222",
+  "email": "info@example.com",
+  "contactPerson": "...", "address": "...", "zipCode": "...",
+  "fiscalNumber": "...", "vatNumber": "...", "notes": "..."
+}
+```
+
+`installCode`, `deviceId`, `name` and `nui` are required; the rest are
+optional and fill in the business record. `appKind` tells the admin which
+product asked — send `restaurant` or `market`.
+
+Responses:
+
+| status | HTTP | meaning |
+| --- | --- | --- |
+| `pending` | 202 | received, waiting for an admin |
+| `approved` | 200 | carries `licenseKey` and `business` — store the key and switch to the normal activate/check flow |
+| `rejected` | 403 | an admin refused it; stop asking |
+
+Press Synchronize again periodically until it stops returning `pending`.
+Re-posting is safe: the request is matched on `installCode`, so it updates the
+existing row rather than creating a second one, and fields left out keep the
+values an earlier call supplied.
+
+Once approved, the device that registered is already bound to the licence — go
+straight to `/api/license/check`, no separate activate needed.
+
+---
+
 ## Admin-side endpoints
 
 Everything under `/api/businesses` is cookie-authenticated and meant for the web

@@ -6,6 +6,7 @@ import RequireAuth from './pages/admin/RequireAuth';
 import DashboardLayout from './pages/admin/DashboardLayout';
 import Leads from './pages/admin/Leads';
 import Businesses from './pages/admin/Businesses';
+import Registrations from './pages/admin/Registrations';
 import Content from './pages/admin/Content';
 import Users from './pages/admin/Users';
 
@@ -27,6 +28,7 @@ export default function App() {
             <Route index element={<Leads />} />
             <Route path="leads" element={<Leads />} />
             <Route path="businesses" element={<Businesses />} />
+            <Route path="registrations" element={<Registrations />} />
             <Route path="content" element={<Content />} />
             <Route path="users" element={<Users />} />
           </Route>
