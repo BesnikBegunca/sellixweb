@@ -116,17 +116,17 @@ export default function Users() {
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id}>
-                    <td>{u.name || '—'}{u.id === me?.id && <span className="ad-hint"> (you)</span>}</td>
-                    <td>{u.email}</td>
-                    <td className="ad-hint">{u.createdAt}</td>
-                    <td>
+                    <td data-label="Name">{u.name || '—'}{u.id === me?.id && <span className="ad-hint"> (you)</span>}</td>
+                    <td data-label="Email">{u.email}</td>
+                    <td data-label="Created" className="ad-hint">{u.createdAt}</td>
+                    <td data-label="Status">
                       {u.mustChangePassword ? (
                         <span className="ad-badge ad-badge-contacted">Pending setup</span>
                       ) : (
                         <span className="ad-badge ad-badge-closed">Active</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Actions">
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                         <button className="ad-btn-ghost" disabled={busyId === u.id} onClick={() => onReset(u.id)}>Reset password</button>
                         {u.id !== me?.id && (

@@ -49,6 +49,7 @@ function ForcedPasswordChange() {
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const onLogout = async () => {
     await logout();
@@ -58,21 +59,33 @@ export default function DashboardLayout() {
   if (user?.mustChangePassword) return <ForcedPasswordChange />;
 
   return (
-    <div className="ad" style={{ display: 'flex' }}>
-      <aside style={{ width: 220, flexShrink: 0, borderRight: '1px solid rgba(255,255,255,.07)', padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: 24, minHeight: '100vh' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 6px' }}>
-          <span style={{ display: 'block', width: 28, height: 20, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#F2F6FA' }}></span>
-          </span>
-          <span className="ad-heading" style={{ fontWeight: 700, fontSize: 17 }}>SelliX</span>
+    <div className={`ad ad-shell ${mobileMenuOpen ? 'menu-open' : ''}`} style={{ display: 'flex' }}>
+      <div className="ad-backdrop" onClick={() => setMobileMenuOpen(false)} />
+
+      <div className="ad-mobile-topbar">
+        <button className="ad-menu-toggle" aria-label="Open menu" onClick={() => setMobileMenuOpen((v) => !v)}>
+          ☰
+        </button>
+        <div className="ad-heading" style={{ fontSize: 18, fontWeight: 700 }}>SelliX</div>
+      </div>
+
+      <aside className="ad-sidebar" style={{ width: 220, flexShrink: 0, borderRight: '1px solid rgba(255,255,255,.07)', padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: 24, minHeight: '100vh' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0 6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ display: 'block', width: 28, height: 20, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#F2F6FA' }}></span>
+            </span>
+            <span className="ad-heading" style={{ fontWeight: 700, fontSize: 17 }}>SelliX</span>
+          </div>
+          <button className="ad-close-menu" aria-label="Close menu" onClick={() => setMobileMenuOpen(false)}>×</button>
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <NavLink to="/admin/leads" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Leads</NavLink>
-          <NavLink to="/admin/businesses" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Businesses</NavLink>
-          <NavLink to="/admin/registrations" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Registrations</NavLink>
-          <NavLink to="/admin/content" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Site content</NavLink>
-          <NavLink to="/admin/users" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`}>Admin users</NavLink>
+          <NavLink to="/admin/leads" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Leads</NavLink>
+          <NavLink to="/admin/businesses" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Businesses</NavLink>
+          <NavLink to="/admin/registrations" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Registrations</NavLink>
+          <NavLink to="/admin/content" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Site content</NavLink>
+          <NavLink to="/admin/users" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Admin users</NavLink>
         </nav>
 
         <div style={{ flex: 1 }} />
@@ -83,10 +96,10 @@ export default function DashboardLayout() {
           <button className="ad-btn-ghost" onClick={onLogout} style={{ width: '100%' }}>Log out</button>
         </div>
 
-        <Link to="/" className="ad-hint" style={{ textAlign: 'center', textDecoration: 'underline' }}>← Back to website</Link>
+        <Link to="/" className="ad-hint" style={{ textAlign: 'center', textDecoration: 'underline' }} onClick={() => setMobileMenuOpen(false)}>← Back to website</Link>
       </aside>
 
-      <main style={{ flex: 1, padding: '28px 32px', minWidth: 0 }}>
+      <main className="ad-main" style={{ flex: 1, padding: '28px 32px', minWidth: 0 }}>
         <Outlet />
       </main>
     </div>

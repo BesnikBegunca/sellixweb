@@ -298,17 +298,17 @@ export default function Businesses() {
               <tbody>
                 {businesses.map((b) => (
                   <tr key={b.id}>
-                    <td>
+                    <td data-label="Business">
                       <div style={{ fontWeight: 600 }}>{b.name}</div>
                       {b.contactPerson && <div className="ad-hint">{b.contactPerson}</div>}
                     </td>
-                    <td className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
-                    <td>
+                    <td data-label="NUI" className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
+                    <td data-label="Location">
                       <div>{b.city || '—'}</div>
                       <div className="ad-hint">{[b.zipCode, b.country].filter(Boolean).join(' · ')}</div>
                     </td>
-                    <td>{b.sector || '—'}</td>
-                    <td>
+                    <td data-label="Sector">{b.sector || '—'}</td>
+                    <td data-label="License key">
                       <button
                         className="ad-btn-ghost ad-mono"
                         title="Copy license key"
@@ -318,14 +318,14 @@ export default function Businesses() {
                         {copied === b.licenseKey ? 'Copied!' : b.licenseKey}
                       </button>
                     </td>
-                    <td><StatusBadge status={b.licenseStatus} /></td>
-                    <td className="ad-hint">{formatDate(b.licenseExpiresAt)}</td>
-                    <td>
+                    <td data-label="Status"><StatusBadge status={b.licenseStatus} /></td>
+                    <td data-label="Expires" className="ad-hint">{formatDate(b.licenseExpiresAt)}</td>
+                    <td data-label="Devices">
                       <button className="ad-btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => setDevicesFor(b)}>
                         {b.devicesUsed} / {b.seats}
                       </button>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
                         <select
                           className="ad-field"

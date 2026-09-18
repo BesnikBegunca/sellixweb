@@ -57,12 +57,12 @@ export default function Leads() {
               <tbody>
                 {leads.map((lead) => (
                   <tr key={lead.id}>
-                    <td>{lead.name}</td>
-                    <td>{lead.business}</td>
-                    <td>{lead.phone}</td>
-                    <td>{lead.category}</td>
-                    <td className="ad-hint">{lead.created_at}</td>
-                    <td>
+                    <td data-label="Name">{lead.name}</td>
+                    <td data-label="Business">{lead.business}</td>
+                    <td data-label="Phone">{lead.phone}</td>
+                    <td data-label="Sector">{lead.category}</td>
+                    <td data-label="Submitted" className="ad-hint">{lead.created_at}</td>
+                    <td data-label="Status">
                       <select
                         className="ad-field"
                         style={{ width: 'auto', padding: '6px 10px', fontSize: 13 }}
