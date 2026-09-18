@@ -1,0 +1,13 @@
+{
+  "name": "sellix",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SelliX marketing site, admin dashboard and license API",
+  "scripts": {
+    "build": "npm --prefix web run build",
+    "start": "npm --prefix server start"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,7 +1,9 @@
+# Node itself is provisioned by Nixpacks' own node provider — pinning a nixPkgs
+# name here breaks against snapshots that spell it differently. The version is
+# set with the NIXPACKS_NODE_VERSION service variable instead.
+#
 # better-sqlite3 ships prebuilt binaries for Node 20/22 on linux-x64, so the
-# install needs no compiler toolchain here.
-[phases.setup]
-nixPkgs = ["nodejs_22"]
+# install needs no compiler toolchain.
 
 [phases.install]
 cmds = ["npm --prefix web ci", "npm --prefix server ci --omit=dev"]
