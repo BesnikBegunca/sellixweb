@@ -140,16 +140,19 @@ function cleanField(value, max) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
 
+// Every failure here also carries `valid: false`, matching activate and check.
+// A client that only looks at `valid` would otherwise read a missing field as
+// success and treat a rejected registration as a working licence.
 licenseRouter.post('/register', (req, res) => {
   const installCode = cleanField(req.body?.installCode, 100).toUpperCase();
   const deviceId = readDeviceId(req);
-  if (!installCode) return res.status(400).json({ status: 'error', reason: 'missing_install_code' });
-  if (!deviceId) return res.status(400).json({ status: 'error', reason: 'missing_device_id' });
+  if (!installCode) return res.status(400).json({ valid: false, status: 'error', reason: 'missing_install_code' });
+  if (!deviceId) return res.status(400).json({ valid: false, status: 'error', reason: 'missing_device_id' });
 
   const name = cleanField(req.body?.name, 200);
   const nui = cleanField(req.body?.nui, 50);
-  if (!name) return res.status(400).json({ status: 'error', reason: 'missing_business_name' });
-  if (!nui) return res.status(400).json({ status: 'error', reason: 'missing_nui' });
+  if (!name) return res.status(400).json({ valid: false, status: 'error', reason: 'missing_business_name' });
+  if (!nui) return res.status(400).json({ valid: false, status: 'error', reason: 'missing_nui' });
 
   const existing = db.prepare('SELECT * FROM pending_registrations WHERE install_code = ?').get(installCode);
 
@@ -158,15 +161,14 @@ licenseRouter.post('/register', (req, res) => {
   if (existing?.status === 'approved' && existing.business_id) {
     const business = db.prepare('SELECT * FROM businesses WHERE id = ?').get(existing.business_id);
     if (business) {
-      return res.json({
-        status: 'approved',
-        licenseKey: business.license_key,
-        business: { name: business.name, nui: business.nui, sector: business.sector, city: business.city }
-      });
+      // Same business/license blocks as activate and check, so a client can
+      // store the expiry and seat count straight away instead of having to
+      // make a second call to learn them.
+      return res.json({ valid: true, status: 'approved', licenseKey: business.license_key, ...licensePayload(business) });
     }
   }
   if (existing?.status === 'rejected') {
-    return res.status(403).json({ status: 'rejected' });
+    return res.status(403).json({ valid: false, status: 'rejected' });
   }
 
   const values = { install_code: installCode, device_id: deviceId };
@@ -197,5 +199,7 @@ licenseRouter.post('/register', (req, res) => {
     ).run(values);
   }
 
-  res.status(202).json({ status: 'pending' });
+  // pending is not a licence, so valid stays false — the shop runs on its own
+  // trial rules until an admin approves it.
+  res.status(202).json({ valid: false, status: 'pending' });
 });

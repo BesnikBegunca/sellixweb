@@ -147,13 +147,29 @@ does the server create the business and issue a real key.
 optional and fill in the business record. `appKind` tells the admin which
 product asked — send `restaurant` or `market`.
 
-Responses:
+Responses carry `valid` like the other two endpoints, so a client can branch
+on that one field everywhere:
 
-| status | HTTP | meaning |
-| --- | --- | --- |
-| `pending` | 202 | received, waiting for an admin |
-| `approved` | 200 | carries `licenseKey` and `business` — store the key and switch to the normal activate/check flow |
-| `rejected` | 403 | an admin refused it; stop asking |
+| status | HTTP | valid | meaning |
+| --- | --- | --- | --- |
+| `pending` | 202 | false | received, waiting for an admin |
+| `approved` | 200 | true | carries `licenseKey`, `business` and `license` |
+| `rejected` | 403 | false | an admin refused it; stop asking |
+| `error` | 400 | false | with `reason`: `missing_install_code`, `missing_device_id`, `missing_business_name`, `missing_nui` |
+
+An approved response looks like this — the same `business` and `license`
+blocks that check returns, so the expiry and seat count are available without
+a second call:
+
+```json
+{
+  "valid": true,
+  "status": "approved",
+  "licenseKey": "SLX-JTFL9-DPN5A-WMM9G-XF6M9",
+  "business": { "name": "Butik Zana", "nui": "860111222", "sector": "boutique", "city": "Ferizaj" },
+  "license": { "status": "active", "expiresAt": "2027-09-18 15:46:58", "seats": 2, "devicesUsed": 1 }
+}
+```
 
 Press Synchronize again periodically until it stops returning `pending`.
 Re-posting is safe: the request is matched on `installCode`, so it updates the
