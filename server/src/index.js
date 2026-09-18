@@ -56,20 +56,19 @@ app.use(
   })
 );
 app.use(express.json({ limit: '200kb' }));
+
+// A malformed body is the caller's mistake, not a server fault — answer 400
+// instead of letting express.json's SyntaxError reach the 500 handler.
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+  next(err);
+});
+
 app.use(cookieParser());
 
 app.get('/api/health', (req, res) => res.json({ ok: true, uptime: process.uptime() }));
-
-// TEMPORARY: reports how the proxy chain reaches this container, so the
-// trust proxy depth can be set from evidence instead of guesswork.
-app.get('/api/_debug/ip', (req, res) => {
-  res.json({
-    ip: req.ip,
-    ips: req.ips,
-    xForwardedFor: req.get('x-forwarded-for') || null,
-    trustProxySetting: app.get('trust proxy')
-  });
-});
 app.use('/api/auth', authRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/leads', leadsRouter);
