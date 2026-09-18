@@ -17,6 +17,11 @@
 .lp-navlink { color: inherit; transition: color .15s; }
 .lp-navlink:hover { color: #F2F6FA; }
 
+.lp-header-inner { min-width: 0; }
+.lp-header-links { flex: 1 1 auto; justify-content: flex-end; white-space: nowrap; }
+.lp-header-tools { flex-shrink: 0; }
+.lp-header-actions { flex-shrink: 0; }
+
 .lp-btn-primary { transition: background .15s; }
 .lp-btn-primary:hover { background: oklch(0.88 0.12 195); }
 
@@ -31,3 +36,65 @@
 .lp-field:focus { outline: none; border-color: oklch(0.82 0.12 195); }
 
 .lp-catbtn { transition: all .18s; cursor: pointer; }
+
+@media (max-width: 980px) {
+  .lp-header-inner {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .lp-header-spacer {
+    display: none;
+  }
+
+  .lp-header-links {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 14px 18px;
+    padding-top: 4px;
+  }
+
+  .lp-header-tools {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-header-inner {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 12px;
+  }
+
+  .lp-brand-text {
+    font-size: 20px !important;
+  }
+
+  .lp-header-links {
+    gap: 10px 14px;
+    font-size: 12px;
+  }
+
+  .lp-header-tools {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .lp-header-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .lp-header-actions a,
+  .lp-header-actions .lp-btn-outline,
+  .lp-header-actions .lp-btn-white {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+}

@@ -217,35 +217,37 @@ export default function Landing() {
     <div className="lp" style={{ color: '#F2F6FA', fontFamily: 'Manrope,Helvetica,sans-serif', minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
       <div style={{ position: 'absolute', top: -240, left: '50%', width: 1100, height: 800, transform: 'translateX(-50%)', background: `radial-gradient(ellipse at center, oklch(0.82 0.12 195 / 0.12), transparent 65%)`, filter: 'blur(10px)', pointerEvents: 'none' }}></div>
 
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(18px)', background: 'rgba(7,13,20,.72)', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 28 }}>
-          <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+      <nav className="lp-header" style={{ position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(18px)', background: 'rgba(7,13,20,.72)', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+        <div className="lp-header-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 28 }}>
+          <a className="lp-brand" href="#top" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
             <span style={{ display: 'block', width: 34, height: 24, border: '2px solid #F2F6FA', borderRadius: 6, position: 'relative' }}>
               <span style={{ position: 'absolute', left: 2, right: 2, top: 4, height: 2, background: '#F2F6FA' }}></span>
             </span>
-            <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 23, letterSpacing: '-0.02em' }}>SelliX</span>
+            <span className="lp-brand-text" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 23, letterSpacing: '-0.02em' }}>SelliX</span>
           </a>
-          <div style={{ flex: 1 }}></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 22, fontSize: 14, fontWeight: 500, color: '#8FA0B2' }}>
+          <div className="lp-header-spacer" style={{ flex: 1 }}></div>
+          <div className="lp-header-links" style={{ display: 'flex', alignItems: 'center', gap: 22, fontSize: 14, fontWeight: 500, color: '#8FA0B2' }}>
             <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
             <a className="lp-navlink" href="#krahaso">{isSq ? 'Pse Sellix' : 'Why Sellix'}</a>
             <a className="lp-navlink" href="#shkarko">{isSq ? 'Çmimi' : 'Pricing'}</a>
             <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
           </div>
-          <div style={{ display: 'flex', gap: 2, padding: 3, border: '1px solid rgba(255,255,255,.1)', borderRadius: 999 }}>
+          <div className="lp-header-tools" style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, border: '1px solid rgba(255,255,255,.1)', borderRadius: 999 }}>
             <button onClick={() => setLang('sq')} style={langBtn(lang === 'sq')}>SQ</button>
             <button onClick={() => setLang('en')} style={langBtn(lang === 'en')}>EN</button>
           </div>
-          <Link
-            to="/admin/login"
-            className="lp-btn-outline"
-            style={{ padding: '10px 18px', borderRadius: 999, border: '1px solid rgba(255,255,255,.16)', color: '#F2F6FA', fontWeight: 600, fontSize: 14 }}
-          >
-            {isSq ? 'Hyrje' : 'Login'}
-          </Link>
-          <a href="#shkarko" className="lp-btn-white" style={{ padding: '11px 20px', borderRadius: 999, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 14 }}>
-            {isSq ? 'Shkarko' : 'Download'}
-          </a>
+          <div className="lp-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Link
+              to="/admin/login"
+              className="lp-btn-outline"
+              style={{ padding: '10px 18px', borderRadius: 999, border: '1px solid rgba(255,255,255,.16)', color: '#F2F6FA', fontWeight: 600, fontSize: 14 }}
+            >
+              {isSq ? 'Hyrje' : 'Login'}
+            </Link>
+            <a href="#shkarko" className="lp-btn-white" style={{ padding: '11px 20px', borderRadius: 999, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 14 }}>
+              {isSq ? 'Shkarko' : 'Download'}
+            </a>
+          </div>
         </div>
       </nav>
 
