@@ -44,27 +44,23 @@ export const api = {
   rejectRegistration: (id) => request(`/registrations/${id}/reject`, { method: 'POST' }),
   deleteRegistration: (id) => request(`/registrations/${id}`, { method: 'DELETE' }),
 
-  createPortalAccount: (id, email) =>
-    request(`/businesses/${id}/portal-account`, { method: 'POST', body: JSON.stringify({ email }) }),
-  deletePortalAccount: (id) => request(`/businesses/${id}/portal-account`, { method: 'DELETE' }),
-
-  // The business owner portal — a separate session from the admin one above.
-  portalLogin: (email, password) =>
-    request('/portal/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  portalLogout: () => request('/portal/logout', { method: 'POST' }),
-  portalMe: () => request('/portal/me'),
-  portalChangePassword: (currentPassword, newPassword) =>
-    request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
-  portalOverview: () => request('/portal/overview'),
-  portalTables: (period) => request(`/portal/tables?period=${encodeURIComponent(period)}`),
-  portalBreakdown: (period) => request(`/portal/breakdown?period=${encodeURIComponent(period)}`),
-  portalSales: (period, limit = 50) =>
-    request(`/portal/sales?period=${encodeURIComponent(period)}&limit=${limit}`),
-
   getUsers: () => request('/users'),
   createUser: (email, name) => request('/users', { method: 'POST', body: JSON.stringify({ email, name }) }),
   deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
   resetUserPassword: (id) => request(`/users/${id}/reset-password`, { method: 'POST' }),
   changeOwnPassword: (currentPassword, newPassword) =>
-    request('/users/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) })
+    request('/users/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+
+  portalLogin: (licenseKey) => request('/portal/login', { method: 'POST', body: JSON.stringify({ licenseKey }) }),
+  portalLogout: () => request('/portal/logout', { method: 'POST' }),
+  portalMe: () => request('/portal/me'),
+  portalOverview: (date) => request(`/portal/overview?date=${encodeURIComponent(date)}`),
+  portalBreakdown: (query) => request(`/portal/breakdown?${query}`),
+  portalTables: (query) => request(`/portal/tables?${query}`),
+  portalSales: (query) => request(`/portal/sales?${query}`),
+
+  getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
+  getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),
+  getBusinessSalesTables: (id, query) => request(`/businesses/${id}/sales/tables?${query}`),
+  getBusinessSales: (id, query) => request(`/businesses/${id}/sales?${query}`)
 };

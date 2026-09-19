@@ -2,22 +2,25 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
 import { effectiveStatus } from '../licenses.js';
+import { toCents } from '../reports.js';
 
 export const salesRouter = Router();
 
-// Same shape of trust as the licence endpoints: the till authenticates with its
-// licence key, not a cookie. The limit is higher than the licence limiter's
-// because a shop reconnecting after a long offline stretch legitimately pushes
-// many batches back to back.
+// A busy lunch service can post after every closed table, plus a catch-up
+// burst when the till comes back online. 60/15min (the license limiter)
+// would drop real receipts.
 const syncLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 240,
+  limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, reason: 'rate_limited' }
+  message: { ok: false, error: 'rate_limited' }
 });
 
 salesRouter.use(syncLimiter);
+
+const MAX_SALES = 500;
+const MAX_ITEMS = 200;
 
 function readKey(req) {
   const header = req.get('x-license-key');
@@ -25,148 +28,190 @@ function readKey(req) {
   return (header || body).trim().toUpperCase();
 }
 
-function clean(value, max = 200) {
-  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+function pick(obj, ...keys) {
+  for (const key of keys) {
+    if (obj?.[key] !== undefined && obj[key] !== null) return obj[key];
+  }
+  return undefined;
 }
 
-// Accepts either minor units (`totalCents`) or a decimal amount (`total`), so a
-// till can send whichever it already has. Rounding at the boundary is what
-// keeps 19.99 from ever becoming 1998 cents.
-function readCents(source, centsKey, amountKey) {
-  const cents = source?.[centsKey];
-  if (typeof cents === 'number' && Number.isFinite(cents)) return Math.round(cents);
-  const amount = source?.[amountKey];
-  if (typeof amount === 'number' && Number.isFinite(amount)) return Math.round(amount * 100);
-  // Tills that serialise money as a string still land on a number here rather
-  // than silently reporting zero takings.
-  if (typeof amount === 'string' && amount.trim() !== '') {
-    const parsed = Number(amount);
-    if (Number.isFinite(parsed)) return Math.round(parsed * 100);
-  }
-  return 0;
+function asString(value, max = 200) {
+  if (value == null) return '';
+  return String(value).trim().slice(0, max);
 }
 
-// `soldAt` decides which day/week/month a sale counts in, so a malformed or
-// missing value must not quietly become "now" — that would move real takings
-// onto the wrong day. Anything unparseable rejects the sale instead.
-function readSoldAt(value) {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  const raw = value.trim();
-  // Already a local 'YYYY-MM-DD HH:MM:SS' (or with a T) — keep it verbatim so
-  // no timezone maths shifts the shop's own clock.
-  const local = raw.replace('T', ' ');
-  if (/^\d{4}-\d{2}-\d{2}([ ]\d{2}:\d{2}(:\d{2})?)?$/.test(local)) {
-    return local.length === 10 ? `${local} 00:00:00` : local.padEnd(19, ':00').slice(0, 19);
-  }
-  // An instant with an explicit offset (…Z, +02:00): convert to the offset the
-  // till stated, so the sale still lands on the shop's own calendar day.
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+function normalizeSoldAt(value) {
+  if (typeof value !== 'string') return null;
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  return match ? `${match[1]} ${match[2]}` : null;
 }
+
+function parseItem(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const name = asString(pick(raw, 'name', 'productName', 'product_name'), 200);
+  if (!name) return null;
+  const quantityRaw = pick(raw, 'quantity', 'qty');
+  const quantity = quantityRaw == null || quantityRaw === '' ? 1 : Number(quantityRaw);
+  if (!Number.isFinite(quantity) || quantity < 0) return null;
+  const unitPrice = toCents(pick(raw, 'unitPrice', 'unit_price', 'price') ?? 0);
+  if (unitPrice == null) return null;
+  const lineTotalRaw = pick(raw, 'total', 'lineTotal', 'line_total');
+  const total = lineTotalRaw == null || lineTotalRaw === '' ? Math.round(quantity * unitPrice) : toCents(lineTotalRaw);
+  if (total == null) return null;
+  return {
+    name,
+    quantity,
+    unit_price_cents: unitPrice,
+    total_cents: total,
+    category: asString(pick(raw, 'category'), 200)
+  };
+}
+
+function optionalString(raw, keys, max) {
+  const value = pick(raw, ...keys);
+  if (value === undefined) return undefined;
+  return asString(value, max);
+}
+
+function optionalCents(raw, keys, fallback) {
+  const value = pick(raw, ...keys);
+  if (value === undefined) return undefined;
+  return toCents(value ?? fallback);
+}
+
+function parseSale(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const saleUid = asString(pick(raw, 'saleUid', 'sale_uid', 'uid', 'id'), 200);
+  if (!saleUid) return null;
+  const soldAt = normalizeSoldAt(pick(raw, 'soldAt', 'sold_at', 'soldAtLocal'));
+  if (!soldAt) return null;
+
+  const itemsRaw = pick(raw, 'items', 'lines');
+  const hasItems = Array.isArray(itemsRaw);
+  const items = hasItems ? itemsRaw.slice(0, MAX_ITEMS).map(parseItem).filter(Boolean) : [];
+
+  const total = toCents(pick(raw, 'total', 'totalAmount', 'total_amount'));
+  const tax = optionalCents(raw, ['tax', 'taxAmount', 'tax_amount'], 0);
+  const discount = optionalCents(raw, ['discount', 'discountAmount', 'discount_amount'], 0);
+  if (total == null || tax === null || discount === null) return null;
+
+  const summed = items.reduce((acc, item) => acc + item.total_cents, 0);
+  return {
+    sale_uid: saleUid,
+    sold_at: soldAt,
+    total_cents: total === 0 && summed ? summed : total,
+    tax_cents: tax,
+    discount_cents: discount,
+    payment_method: optionalString(raw, ['paymentMethod', 'payment_method', 'payment'], 50),
+    table_name: optionalString(raw, ['tableName', 'table_name', 'table'], 200),
+    receipt_no: optionalString(raw, ['receiptNo', 'receipt_no', 'receipt'], 50),
+    staff_name: optionalString(raw, ['staffName', 'staff_name', 'staff', 'waiter'], 200),
+    hasItems,
+    items
+  };
+}
+
+const insertSale = db.prepare(`
+  INSERT INTO sales (
+    business_id, sale_uid, device_id, sold_at, total_cents, tax_cents, discount_cents,
+    payment_method, table_name, receipt_no, staff_name, synced_at
+  ) VALUES (
+    @business_id, @sale_uid, @device_id, @sold_at, @total_cents, @tax_cents, @discount_cents,
+    @payment_method, @table_name, @receipt_no, @staff_name, datetime('now')
+  )
+`);
+
+const updateSale = db.prepare(`
+  UPDATE sales SET
+    device_id = @device_id,
+    sold_at = @sold_at,
+    total_cents = @total_cents,
+    tax_cents = @tax_cents,
+    discount_cents = @discount_cents,
+    payment_method = @payment_method,
+    table_name = @table_name,
+    receipt_no = @receipt_no,
+    staff_name = @staff_name,
+    synced_at = datetime('now')
+  WHERE id = @id
+`);
+
+const findSale = db.prepare('SELECT * FROM sales WHERE business_id = ? AND sale_uid = ?');
+const deleteItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
+const insertItem = db.prepare(`
+  INSERT INTO sale_items (sale_id, name, quantity, unit_price_cents, total_cents, category)
+  VALUES (@sale_id, @name, @quantity, @unit_price_cents, @total_cents, @category)
+`);
+
+function upsertSale(businessId, deviceId, sale) {
+  const existing = findSale.get(businessId, sale.sale_uid);
+  let saleId;
+  if (existing) {
+    updateSale.run({
+      id: existing.id,
+      device_id: deviceId || existing.device_id,
+      sold_at: sale.sold_at,
+      total_cents: sale.total_cents,
+      tax_cents: sale.tax_cents ?? existing.tax_cents,
+      discount_cents: sale.discount_cents ?? existing.discount_cents,
+      payment_method: sale.payment_method ?? existing.payment_method,
+      table_name: sale.table_name ?? existing.table_name,
+      receipt_no: sale.receipt_no ?? existing.receipt_no,
+      staff_name: sale.staff_name ?? existing.staff_name
+    });
+    saleId = existing.id;
+    if (sale.hasItems) deleteItems.run(saleId);
+  } else {
+    const info = insertSale.run({
+      business_id: businessId,
+      device_id: deviceId,
+      sale_uid: sale.sale_uid,
+      sold_at: sale.sold_at,
+      total_cents: sale.total_cents,
+      tax_cents: sale.tax_cents ?? 0,
+      discount_cents: sale.discount_cents ?? 0,
+      payment_method: sale.payment_method ?? '',
+      table_name: sale.table_name ?? '',
+      receipt_no: sale.receipt_no ?? '',
+      staff_name: sale.staff_name ?? ''
+    });
+    saleId = info.lastInsertRowid;
+  }
+  if (sale.hasItems || !existing) {
+    for (const item of sale.items) {
+      insertItem.run({ sale_id: saleId, ...item });
+    }
+  }
+}
+
+const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
+  let accepted = 0;
+  let rejected = 0;
+  for (const raw of rawSales) {
+    const sale = parseSale(raw);
+    if (!sale) {
+      rejected += 1;
+      continue;
+    }
+    upsertSale(businessId, deviceId, sale);
+    accepted += 1;
+  }
+  return { accepted, rejected };
+});
 
 salesRouter.post('/sync', (req, res) => {
   const key = readKey(req);
-  if (!key) return res.status(400).json({ ok: false, reason: 'missing_license_key' });
+  if (!key) return res.status(400).json({ ok: false, error: 'missing_license_key' });
 
-  const business = db.prepare('SELECT * FROM businesses WHERE license_key = ?').get(key);
-  if (!business) return res.status(404).json({ ok: false, reason: 'not_found' });
+  const row = db.prepare('SELECT * FROM businesses WHERE license_key = ?').get(key);
+  if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
+  if (effectiveStatus(row) === 'revoked') return res.status(403).json({ ok: false, error: 'revoked' });
 
-  const status = effectiveStatus(business);
-  if (status !== 'active') return res.status(403).json({ ok: false, reason: status });
+  const sales = req.body?.sales;
+  if (!Array.isArray(sales)) return res.status(400).json({ ok: false, error: 'sales_required' });
+  if (sales.length > MAX_SALES) return res.status(400).json({ ok: false, error: 'too_many_sales', max: MAX_SALES });
 
-  const sales = Array.isArray(req.body?.sales) ? req.body.sales : null;
-  if (!sales) return res.status(400).json({ ok: false, reason: 'missing_sales' });
-  if (sales.length > 500) return res.status(400).json({ ok: false, reason: 'batch_too_large' });
-
-  const deviceId = clean(req.body?.deviceId, 200);
-
-  const upsertSale = db.prepare(`
-    INSERT INTO sales (
-      business_id, sale_uid, device_id, receipt_no, total_cents, tax_cents,
-      discount_cents, currency, payment_method, table_name, staff_name, sold_at, synced_at
-    ) VALUES (
-      @business_id, @sale_uid, @device_id, @receipt_no, @total_cents, @tax_cents,
-      @discount_cents, @currency, @payment_method, @table_name, @staff_name, @sold_at, datetime('now')
-    )
-    ON CONFLICT (business_id, sale_uid) DO UPDATE SET
-      device_id = excluded.device_id,
-      receipt_no = excluded.receipt_no,
-      total_cents = excluded.total_cents,
-      tax_cents = excluded.tax_cents,
-      discount_cents = excluded.discount_cents,
-      currency = excluded.currency,
-      payment_method = excluded.payment_method,
-      table_name = excluded.table_name,
-      staff_name = excluded.staff_name,
-      sold_at = excluded.sold_at,
-      synced_at = datetime('now')
-  `);
-
-  const findSale = db.prepare('SELECT id FROM sales WHERE business_id = ? AND sale_uid = ?');
-  const clearItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
-  const insertItem = db.prepare(`
-    INSERT INTO sale_items (sale_id, name, sku, category, quantity, unit_price_cents, total_cents)
-    VALUES (@sale_id, @name, @sku, @category, @quantity, @unit_price_cents, @total_cents)
-  `);
-
-  const rejected = [];
-
-  // One transaction for the whole batch: a till that drops mid-push either has
-  // all of its sales recorded or none, never a half-counted day.
-  const runBatch = db.transaction(() => {
-    let accepted = 0;
-    for (const [index, sale] of sales.entries()) {
-      const saleUid = clean(sale?.saleUid || sale?.id, 120);
-      if (!saleUid) {
-        rejected.push({ index, reason: 'missing_sale_uid' });
-        continue;
-      }
-      const soldAt = readSoldAt(sale?.soldAt || sale?.closedAt);
-      if (!soldAt) {
-        rejected.push({ index, saleUid, reason: 'invalid_sold_at' });
-        continue;
-      }
-
-      upsertSale.run({
-        business_id: business.id,
-        sale_uid: saleUid,
-        device_id: clean(sale?.deviceId, 200) || deviceId,
-        receipt_no: clean(sale?.receiptNo, 60),
-        total_cents: readCents(sale, 'totalCents', 'total'),
-        tax_cents: readCents(sale, 'taxCents', 'tax'),
-        discount_cents: readCents(sale, 'discountCents', 'discount'),
-        currency: clean(sale?.currency, 8).toUpperCase() || 'EUR',
-        payment_method: clean(sale?.paymentMethod, 40).toLowerCase(),
-        table_name: clean(sale?.tableName || sale?.table, 60),
-        staff_name: clean(sale?.staffName, 120),
-        sold_at: soldAt
-      });
-
-      const saleId = findSale.get(business.id, saleUid).id;
-
-      // Items are replaced rather than appended, so re-syncing a corrected sale
-      // cannot leave the superseded lines behind and double the product totals.
-      if (Array.isArray(sale?.items)) {
-        clearItems.run(saleId);
-        for (const item of sale.items.slice(0, 200)) {
-          const quantity = Number(item?.quantity);
-          insertItem.run({
-            sale_id: saleId,
-            name: clean(item?.name, 200),
-            sku: clean(item?.sku, 80),
-            category: clean(item?.category, 120),
-            quantity: Number.isFinite(quantity) ? quantity : 1,
-            unit_price_cents: readCents(item, 'unitPriceCents', 'unitPrice'),
-            total_cents: readCents(item, 'totalCents', 'total')
-          });
-        }
-      }
-      accepted++;
-    }
-    return accepted;
-  });
-
-  const accepted = runBatch();
-  res.json({ ok: true, accepted, rejected });
+  const deviceId = asString(pick(req.body, 'deviceId', 'device_id'), 200);
+  const result = syncBatch(row.id, deviceId, sales);
+  res.json({ ok: true, accepted: result.accepted, rejected: result.rejected });
 });

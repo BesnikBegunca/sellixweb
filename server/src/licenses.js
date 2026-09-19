@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { db } from './db.js';
+import { isRestaurantSector } from './reports.js';
 
 // 32 unambiguous characters — no O/0, I/1 — so keys can be read off a phone
 // call or a printed invoice without confusion. 256 % 32 === 0, so indexing
@@ -77,11 +78,7 @@ export function publicBusiness(row) {
     licenseIssuedAt: row.license_issued_at,
     licenseExpiresAt: row.license_expires_at,
     devicesUsed: deviceCount(row.id),
-    // The owner portal login. The hash is deliberately never exposed — only
-    // whether an account exists and which email it uses.
-    portalEmail: row.portal_email || '',
-    portalEnabled: !!row.portal_password_hash,
-    portalLastLoginAt: row.portal_last_login_at || null,
+    isRestaurant: isRestaurantSector(row.sector),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

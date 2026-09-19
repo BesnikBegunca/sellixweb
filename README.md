@@ -44,8 +44,8 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
-Visit `http://localhost:5173` for the public site, or `/admin/login` for the
-admin dashboard.
+Visit `http://localhost:5173` for the public site, `/portal` for the business
+sales portal (license-key login), or `/admin/login` for the admin dashboard.
 
 ## Admin dashboard
 
@@ -54,7 +54,8 @@ admin dashboard.
   address, city, ZIP, country, contact person, phone, email, sector, allowed
   devices and notes. Creating a business issues its license key. Per row you can
   extend the license, revoke or reactivate it, issue a new key, and see or
-  release the devices that activated it
+  release the devices that activated it. Restaurant-sector businesses also have
+  a **Shitjet** view of the same till-synced receipts the portal shows.
 - **Site content** — price, the 8 sector cards, the comparison table, plan
   inclusions and testimonials, all editable and reflected live on the site
 - **Admin users** — invite new admins (a one-time temporary password is shown
@@ -125,7 +126,11 @@ POST /api/license/check
 { "licenseKey": "SLX-...", "deviceId": "machine-uuid" }
 ```
 
-A refused call returns `valid: false` with a `reason` the app should act on:
+**`POST /api/sales/sync`** — the restaurant till posts closed sales here. The
+business portal (`/portal`) and the admin **Shitjet** view read those rows.
+Contract details are in [`deploy/DESKTOP-API.md`](deploy/DESKTOP-API.md).
+
+A refused license call returns `valid: false` with a `reason` the app should act on:
 
 | reason | meaning |
 | --- | --- |

@@ -58,7 +58,9 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json({ limit: '200kb' }));
+// 500 receipts with line items comfortably fit under 2mb; the previous 200kb
+// cap would drop a catch-up sync from a till that was offline all day.
+app.use(express.json({ limit: '2mb' }));
 
 // A malformed body is the caller's mistake, not a server fault — answer 400
 // instead of letting express.json's SyntaxError reach the 500 handler.

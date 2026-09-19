@@ -1,8 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { usePortalAuth } from '../../lib/PortalAuthContext';
+import { usePortal } from '../../lib/PortalContext';
 
-export default function RequirePortalAuth({ children }) {
-  const { business, loading } = usePortalAuth();
+export default function RequirePortal({ children }) {
+  const { business, loading } = usePortal();
   const location = useLocation();
 
   if (loading) return null;
