@@ -133,36 +133,20 @@ export function ProductsList({ products }) {
   );
 }
 
-export function TablesGrid({ tables, occupied, openTotal }) {
+export function TablesGrid({ tables }) {
   const rows = tables || [];
-  const occupiedCount = occupied ?? rows.length;
   if (rows.length === 0) {
-    return <div className="pt-empty">Nuk ka tavolina të zëna. Printoni një porosi që të shfaqet këtu; kur paguhet, hiqet.</div>;
+    return <div className="pt-empty">Nuk ka shitje me tavolinë në këtë periudhë. Takeaway / banaku nuk shfaqen këtu.</div>;
   }
   return (
-    <div>
-      <div className="pt-table-legend">
-        <span>{occupiedCount} {occupiedCount === 1 ? 'tavolinë e zënë' : 'tavolina të zëna'}</span>
-        {openTotal != null && (
-          <>
-            <span>·</span>
-            <span>{formatEuro(openTotal)}</span>
-          </>
-        )}
-      </div>
-      <div className="pt-tables">
-        {rows.map((t) => (
-          <div key={t.name} className="ad-card pt-table-card occupied">
-            <div className="pt-table-top">
-              <div className="ad-heading pt-table-name">{t.name}</div>
-              <span className="pt-table-pill occupied">E zënë</span>
-            </div>
-            <div className="pt-table-kicker">Totali aktual</div>
-            <div className="pt-table-total">{formatEuro(t.total)}</div>
-            {t.staffName ? <div className="ad-hint">{t.staffName}</div> : null}
-          </div>
-        ))}
-      </div>
+    <div className="pt-tables">
+      {rows.map((t) => (
+        <div key={t.name} className="ad-card pt-table-card">
+          <div className="ad-heading pt-table-name">{t.name}</div>
+          <div className="pt-table-total">{formatEuro(t.total)}</div>
+          <div className="ad-hint">{t.count} {t.count === 1 ? 'porosi' : 'porosi'}</div>
+        </div>
+      ))}
     </div>
   );
 }

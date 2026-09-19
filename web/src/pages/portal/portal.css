@@ -288,62 +288,14 @@
   gap: 12px;
 }
 
-.pt-table-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 14px;
-  color: #8FA0B2;
-  font-size: 13px;
-}
-
 .pt-table-card {
   padding: 16px;
-  border: 1px solid transparent;
-}
-
-.pt-table-card.occupied {
-  background: #f3faf4;
-  border-color: rgba(47, 133, 90, 0.22);
-}
-
-.pt-table-card.free {
-  background: #fff;
-}
-
-.pt-table-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
 }
 
 .pt-table-name {
   font-size: 15px;
   font-weight: 700;
-  margin: 0;
-}
-
-.pt-table-pill {
-  flex-shrink: 0;
-  font-size: 11px;
-  line-height: 1;
-  padding: 5px 8px;
-  border-radius: 14px;
-  color: #8FA0B2;
-  background: rgba(143, 160, 178, 0.12);
-}
-
-.pt-table-pill.occupied {
-  color: #2f855a;
-  background: rgba(47, 133, 90, 0.12);
-}
-
-.pt-table-kicker {
-  font-size: 12px;
-  color: #8FA0B2;
-  margin-bottom: 2px;
+  margin-bottom: 8px;
 }
 
 .pt-table-total {
@@ -352,11 +304,6 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 4px;
-}
-
-.pt-table-idle {
-  font-size: 12px;
-  color: #8FA0B2;
 }
 
 @media (max-width: 900px) {

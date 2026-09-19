@@ -41,14 +41,9 @@ export default function PortalTables() {
         <h1 className="ad-heading pt-title">Tavolinat</h1>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Vetëm tavolinat me porosi të printuar. Kur paguhet, tavolina hiqet; kur printohet përsëri, del këtu.
+        Totalet sipas tavolinës, nga të njëjtat faturë që arka dërgoi. Takeaway dhe banaku hyjnë te Shitjet, jo këtu.
       </p>
-      <TablesGrid
-        tables={floor?.tables}
-        occupied={floor?.occupied}
-        free={0}
-        openTotal={floor?.openTotal}
-      />
+      <TablesGrid tables={floor?.tables} />
     </div>
   );
 }

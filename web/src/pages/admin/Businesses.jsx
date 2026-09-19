@@ -252,12 +252,7 @@ function SalesPanel({ business, onClose }) {
             )}
           </div>
           {tab === 'tables' ? (
-            <TablesGrid
-              tables={tables}
-              occupied={floor?.occupied}
-              free={floor?.free}
-              openTotal={floor?.openTotal}
-            />
+            <TablesGrid tables={tables} />
           ) : (
             <>
               <TotalsGrid totals={overview?.totals} />
