@@ -238,11 +238,11 @@ export default function Landing() {
           </div>
           <div className="lp-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Link
-              to="/admin/login"
+              to="/portal/login"
               className="lp-btn-outline"
               style={{ padding: '8px 16px', borderRadius: 999, border: '1px solid rgba(255,255,255,.16)', color: '#F2F6FA', fontWeight: 600, fontSize: 13 }}
             >
-              {isSq ? 'Hyrje' : 'Login'}
+              {isSq ? 'Biznesi im' : 'My business'}
             </Link>
             <a href="#shkarko" className="lp-btn-white" style={{ padding: '9px 18px', borderRadius: 999, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 13 }}>
               {isSq ? 'Shkarko' : 'Download'}
@@ -483,6 +483,7 @@ export default function Landing() {
             <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
             <a className="lp-navlink" href="#shkarko">{isSq ? 'Shkarko' : 'Download'}</a>
             <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
+            <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>
             <Link className="lp-navlink" to="/admin/login">{isSq ? 'Hyrje Admin' : 'Admin Login'}</Link>
           </div>
           <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#4F5E6D', letterSpacing: '.1em' }}>SELLIX SOFTWARE · 2026</div>

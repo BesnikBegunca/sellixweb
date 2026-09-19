@@ -95,6 +95,51 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- One row per closed sale, pushed up by the till. sale_uid is the id the
+  -- desktop app assigns locally: it is what makes re-syncing the same sale
+  -- idempotent, so a till that loses its connection mid-push can simply send
+  -- the whole batch again without double-counting takings.
+  CREATE TABLE IF NOT EXISTS sales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    sale_uid TEXT NOT NULL,
+    device_id TEXT NOT NULL DEFAULT '',
+    receipt_no TEXT NOT NULL DEFAULT '',
+    -- Stored in minor units (cents) so money never rides on a float.
+    total_cents INTEGER NOT NULL DEFAULT 0,
+    tax_cents INTEGER NOT NULL DEFAULT 0,
+    discount_cents INTEGER NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'EUR',
+    payment_method TEXT NOT NULL DEFAULT '',
+    table_name TEXT NOT NULL DEFAULT '',
+    staff_name TEXT NOT NULL DEFAULT '',
+    -- When the sale was closed at the till, in the shop's own local time.
+    -- Daily/weekly/monthly totals are grouped on this, never on arrival time:
+    -- a batch synced the next morning still belongs to the day it was rung up.
+    sold_at TEXT NOT NULL,
+    synced_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (business_id, sale_uid)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sales_business_sold_at ON sales (business_id, sold_at);
+  CREATE INDEX IF NOT EXISTS idx_sales_business_table ON sales (business_id, table_name);
+
+  -- Line items are optional: a till that only reports totals still gets
+  -- working dashboards, and one that sends items additionally gets per-product
+  -- reporting. Replaced wholesale whenever their sale is re-synced.
+  CREATE TABLE IF NOT EXISTS sale_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT '',
+    sku TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '',
+    quantity REAL NOT NULL DEFAULT 1,
+    unit_price_cents INTEGER NOT NULL DEFAULT 0,
+    total_cents INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items (sale_id);
+
   CREATE TABLE IF NOT EXISTS license_activations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -105,3 +150,29 @@ db.exec(`
     UNIQUE (business_id, device_id)
   );
 `);
+
+// `businesses` predates the owner portal, so the login columns are added by
+// migration rather than in the CREATE TABLE above — deployed databases already
+// have the table and would never re-run it. Each ALTER is guarded by the
+// current column list, which makes this safe to run on every boot.
+const businessColumns = new Set(db.prepare('PRAGMA table_info(businesses)').all().map((c) => c.name));
+
+const BUSINESS_MIGRATIONS = [
+  // The owner signs in with their own email and password, kept separate from
+  // admin_users: these accounts see one business's takings and nothing else.
+  ['portal_email', "ALTER TABLE businesses ADD COLUMN portal_email TEXT NOT NULL DEFAULT ''"],
+  ['portal_password_hash', "ALTER TABLE businesses ADD COLUMN portal_password_hash TEXT NOT NULL DEFAULT ''"],
+  ['portal_must_change_password', 'ALTER TABLE businesses ADD COLUMN portal_must_change_password INTEGER NOT NULL DEFAULT 0'],
+  ['portal_last_login_at', 'ALTER TABLE businesses ADD COLUMN portal_last_login_at TEXT']
+];
+
+for (const [column, sql] of BUSINESS_MIGRATIONS) {
+  if (!businessColumns.has(column)) db.exec(sql);
+}
+
+// Enforced as an index rather than a column constraint because SQLite cannot
+// add a UNIQUE column by ALTER. The partial predicate keeps the many businesses
+// with no portal account yet from colliding on the empty string.
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"
+);

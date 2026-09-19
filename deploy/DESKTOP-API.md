@@ -198,9 +198,91 @@ straight to `/api/license/check`, no separate activate needed.
 
 ---
 
+## Pushing sales up: `POST /api/sales/sync`
+
+The owner portal (`/portal`) shows each shop its own takings — daily, weekly,
+monthly, yearly and all-time, plus per-table totals for restaurants and bars.
+Those figures come from this endpoint and nowhere else: **until the till posts
+its sales here, the owner's dashboard is empty.**
+
+Authentication is the licence key, exactly like activate and check — in an
+`x-license-key` header or as `licenseKey` in the body. No cookie is involved.
+
+```
+POST /api/sales/sync
+x-license-key: SLX-...
+Content-Type: application/json
+
+{
+  "deviceId": "machine-uuid",
+  "sales": [
+    {
+      "saleUid": "2026-000481",
+      "soldAt": "2026-09-19 20:14:00",
+      "total": 42.50,
+      "tax": 3.86,
+      "discount": 0,
+      "paymentMethod": "cash",
+      "tableName": "Tavolina 4",
+      "receiptNo": "481",
+      "staffName": "Arta",
+      "items": [
+        { "name": "Pizza", "quantity": 2, "unitPrice": 6.00, "total": 12.00 },
+        { "name": "Birrë", "quantity": 4, "unitPrice": 2.00, "total": 8.00 }
+      ]
+    }
+  ]
+}
+
+200 { "ok": true, "accepted": 1, "rejected": [] }
+```
+
+### The two fields that matter most
+
+**`saleUid`** — the till's own id for the sale, unique within that shop. This is
+what makes syncing idempotent: re-posting a sale with the same `saleUid`
+updates it instead of adding a second copy. So a till that loses its connection
+mid-push can simply send the whole batch again without inflating the takings,
+and a corrected sale is fixed by re-sending it under the same id.
+
+**`soldAt`** — when the sale was rung up, **in the shop's own local time**
+(`YYYY-MM-DD HH:MM:SS`). Every daily/weekly/monthly total is grouped on this,
+not on when the batch arrived, so a night's sales uploaded the next morning
+still count on the night they belong to. A missing or unparseable `soldAt`
+rejects that sale rather than silently dating it "now" — which would move real
+takings onto the wrong day.
+
+### The rest
+
+| field | notes |
+| --- | --- |
+| `total`, `tax`, `discount` | decimal euros. Send `totalCents` etc. instead if the till already holds minor units — either is accepted |
+| `tableName` | the table the sale was rung up on. **Required for the Tables tab**; leave empty for takeaway or counter sales, which are counted in the day's total but excluded from table totals |
+| `paymentMethod` | `cash`, `card`, `bank`, `voucher` … drives the payment breakdown |
+| `items` | optional. Without them the totals still work; with them the owner also gets a top-products list. Items are replaced on re-sync, so corrections cannot double-count |
+| `receiptNo`, `staffName`, `currency` | optional, shown in the sales list |
+
+Up to **500 sales per request**; send more in several batches. The whole batch
+is written in one transaction, so it either all lands or none of it does.
+Rejected sales come back individually in `rejected` with a reason — the rest of
+the batch is still accepted.
+
+Refusals use the same reasons as the licence endpoints: `not_found`, `revoked`,
+`expired` (a shop whose licence lapsed stops reporting), plus `missing_sales`
+and `batch_too_large`.
+
+### When to call it
+
+After each sale if the till is online, or in a batch when it reconnects —
+whichever suits the app. Since re-posting is safe, the simplest correct
+strategy is to keep a local "not yet synced" flag, post everything still
+flagged, and clear the flag on a `200`.
+
+---
+
 ## Admin-side endpoints
 
 Everything under `/api/businesses` is cookie-authenticated and meant for the web
 dashboard, not the desktop app. The desktop app only ever calls
-`/api/license/*`. If an admin needs to free a seat, they do it from
+`/api/license/*` and `/api/sales/sync`. If an admin needs to free a seat, they do it from
 **Businesses → Devices** in the dashboard.

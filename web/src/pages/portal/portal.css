@@ -1,0 +1,279 @@
+/* The owner portal reuses the admin shell's tokens (.ad, .ad-card, .ad-field,
+   .ad-table and its mobile card treatment) and adds only what reporting needs:
+   stat tiles, a bar chart, period tabs and the tables grid. */
+
+.pt-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.pt-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.pt-sub {
+  font-size: 13px;
+  color: #8FA0B2;
+  margin: 6px 0 0;
+}
+
+/* --- Period tabs --- */
+.pt-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(0,0,0,.25);
+  overflow-x: auto;
+  /* The row must not be squeezed by a long stat grid beside it. */
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.pt-tabs::-webkit-scrollbar { display: none; }
+
+.pt-tab {
+  border: none;
+  background: transparent;
+  color: #8FA0B2;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.pt-tab:hover { color: #F2F6FA; }
+.pt-tab.active { background: oklch(0.82 0.12 195 / 0.16); color: #EAF7FA; }
+
+/* --- Stat tiles --- */
+/* auto-fill rather than auto-fit, so a short row (the two tiles on the tables
+   page) keeps its natural tile width instead of each stretching to half the
+   screen. */
+.pt-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+/* The six period totals belong on one row on a wide screen; the default
+   auto-fill track count leaves the sixth stranded on a line of its own. */
+@media (min-width: 1180px) {
+  .pt-stats-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  /* Six tracks are narrow, and a six-figure yearly total would otherwise wrap
+     its currency symbol onto a second line. */
+  .pt-stats-6 .pt-stat-value { font-size: 22px; }
+}
+
+@media (min-width: 1500px) {
+  .pt-stats-6 .pt-stat-value { font-size: 26px; }
+}
+
+.pt-stat {
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: linear-gradient(150deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+}
+
+.pt-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #6D7E8E;
+  margin-bottom: 10px;
+}
+
+.pt-stat-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  /* Long totals must wrap rather than widen the tile and break the grid. */
+  overflow-wrap: anywhere;
+}
+
+.pt-stat-meta {
+  font-size: 12px;
+  color: #8FA0B2;
+  margin-top: 8px;
+}
+
+.pt-stat-accent .pt-stat-value { color: oklch(0.86 0.12 195); }
+
+/* --- Chart --- */
+.pt-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 190px;
+  padding: 14px 4px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.pt-bar-col {
+  flex: 1 1 0;
+  min-width: 22px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 7px;
+}
+
+.pt-bar {
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, oklch(0.82 0.12 195), oklch(0.62 0.11 210));
+  /* A zero-value day still shows a hairline, so the axis reads as a closed day
+     rather than as missing data. */
+  min-height: 3px;
+  transition: filter .15s;
+}
+.pt-bar:hover { filter: brightness(1.2); }
+.pt-bar-empty { background: rgba(255,255,255,.08); }
+
+.pt-bar-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #6D7E8E;
+  white-space: nowrap;
+}
+
+/* --- Tables grid (restaurants) --- */
+.pt-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 14px;
+}
+
+.pt-table-card {
+  padding: 17px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: linear-gradient(150deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+  transition: border-color .15s, transform .15s;
+}
+.pt-table-card:hover {
+  border-color: oklch(0.82 0.12 195 / 0.4);
+  transform: translateY(-2px);
+}
+
+.pt-table-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  overflow-wrap: anywhere;
+}
+
+.pt-table-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: oklch(0.82 0.12 195);
+  flex-shrink: 0;
+}
+
+.pt-table-total {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: oklch(0.86 0.12 195);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.pt-table-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-size: 12px;
+  color: #8FA0B2;
+}
+
+.pt-empty {
+  padding: 44px 20px;
+  text-align: center;
+  color: #61707F;
+  font-size: 14px;
+}
+
+.pt-section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.pt-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+}
+
+.pt-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: 14px;
+}
+.pt-list-row:last-child { border-bottom: none; }
+.pt-list-row .pt-name { color: #D5DFE8; min-width: 0; overflow-wrap: anywhere; }
+.pt-list-row .pt-amount { font-weight: 700; white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .pt-title { font-size: 21px; }
+  .pt-page-head { margin-bottom: 18px; }
+
+  .pt-stats {
+    /* Two up on a phone keeps the four period totals on one screen; one-up
+       would push the month and year figures below the fold. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .pt-stat { padding: 14px; }
+  .pt-stat-value { font-size: 20px; }
+  .pt-stat-label { font-size: 9px; }
+
+  .pt-tabs { width: 100%; }
+  .pt-tab { flex: 1; text-align: center; padding: 8px 10px; }
+
+  /* Extra right padding so the newest day's label is not clipped by the
+     card edge on a phone. */
+  .pt-chart { height: 150px; padding-right: 10px; }
+  .pt-bar-col { min-width: 17px; gap: 5px; }
+  .pt-bar-label { font-size: 8px; }
+
+  .pt-tables { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .pt-table-card { padding: 14px; }
+  .pt-table-total { font-size: 20px; }
+  .pt-table-name { font-size: 14px; }
+}
+
+@media (max-width: 380px) {
+  .pt-tables { grid-template-columns: 1fr; }
+}

@@ -39,11 +39,52 @@ export function requireAuth(req, res, next) {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    const claims = jwt.verify(token, JWT_SECRET);
+    // A business token is signed with the same secret, so without this check a
+    // shop owner's cookie would verify here and open every admin route.
+    if (claims.kind === BUSINESS_TOKEN_KIND) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    req.user = claims;
     next();
   } catch {
     return res.status(401).json({ error: 'Session expired' });
   }
 }
 
-export { COOKIE_NAME };
+// --- Business portal sessions ---------------------------------------------
+// A shop owner's session is deliberately a different cookie under a different
+// name, so signing in to the portal never disturbs an admin session in the
+// same browser, and neither token can be replayed against the other's routes.
+
+const BUSINESS_COOKIE_NAME = 'sellix_business_session';
+const BUSINESS_TOKEN_KIND = 'business';
+
+export function signBusinessToken(business) {
+  return jwt.sign({ sub: business.id, kind: BUSINESS_TOKEN_KIND }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+}
+
+export function setBusinessSessionCookie(res, token) {
+  res.cookie(BUSINESS_COOKIE_NAME, token, { ...COOKIE_OPTIONS, maxAge: 12 * 60 * 60 * 1000 });
+}
+
+export function clearBusinessSessionCookie(res) {
+  res.clearCookie(BUSINESS_COOKIE_NAME, COOKIE_OPTIONS);
+}
+
+export function requireBusinessAuth(req, res, next) {
+  const token = req.cookies?.[BUSINESS_COOKIE_NAME];
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const claims = jwt.verify(token, JWT_SECRET);
+    if (claims.kind !== BUSINESS_TOKEN_KIND) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    req.businessId = claims.sub;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Session expired' });
+  }
+}
+
+export { COOKIE_NAME, BUSINESS_COOKIE_NAME };

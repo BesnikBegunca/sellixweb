@@ -5,13 +5,15 @@ boutiques, shoe stores, medical bookings, cafés/bars, barbershops and
 pharmacies. Implemented from the Claude Design handoff bundle in
 `project/Sellix Website.dc.html` (see `chats/chat1.md` for the original brief).
 
-Includes a public landing page (bilingual SQ/EN) plus an admin login and
-dashboard for managing contact-form leads, site content/pricing, and admin
-accounts.
+Includes a public landing page (bilingual SQ/EN), an admin login and dashboard
+for managing contact-form leads, site content/pricing and admin accounts, and a
+separate owner portal where each licensed business signs in to watch its own
+sales.
 
 ## Structure
 
-- `web/` — React + Vite frontend: the public landing page and the admin dashboard
+- `web/` — React + Vite frontend: the public landing page, the admin dashboard
+  and the business owner portal
 - `server/` — Node/Express + SQLite backend: auth, leads, site content, admin users
 - `deploy/` — deployment guides: [`RAILWAY.md`](deploy/RAILWAY.md) (recommended),
   [`DEPLOY.md`](deploy/DEPLOY.md) for a self-managed nginx VPS, and
@@ -60,6 +62,33 @@ admin dashboard.
 
 Authentication is a real backend: bcrypt-hashed passwords, an httpOnly
 session cookie, and rate-limited login/lead-submission endpoints.
+
+## Business owner portal
+
+Each business can be given its own login at `/portal/login`, separate from the
+admin dashboard — a different session cookie, and access to nothing but that
+one shop's figures. In **Businesses → Portal**, *Give access* sets the owner's
+email and shows a one-time temporary password to pass on; they must replace it
+on first sign-in.
+
+Once in, the owner sees:
+
+- **Shitjet** — totals for today, yesterday, this week, this month, this year
+  and all time, with a 14-day and a 12-month chart, a payment-method breakdown
+  and the top-selling products
+- **Tavolinat** — takings per table (`Tavolina 1 · 177.00 €`), shown only for
+  table-service sectors: restaurants, bars, cafés, pubs, pizzerias. Sales with
+  no table (takeaway, counter) count in the day's total but not here
+- **Llogaria** — the business details on file, and a password change
+
+The whole portal is in Albanian and works on a phone.
+
+These numbers come from the tills: the desktop app posts closed sales to
+`POST /api/sales/sync`, documented in
+[`deploy/DESKTOP-API.md`](deploy/DESKTOP-API.md). Until a till syncs, a new
+shop's dashboard is empty — there is no sample data. Syncing is idempotent on
+the till's own `saleUid`, so re-sending a batch after a dropped connection
+never double-counts.
 
 ## Deploying
 

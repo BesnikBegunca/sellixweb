@@ -77,6 +77,11 @@ export function publicBusiness(row) {
     licenseIssuedAt: row.license_issued_at,
     licenseExpiresAt: row.license_expires_at,
     devicesUsed: deviceCount(row.id),
+    // The owner portal login. The hash is deliberately never exposed — only
+    // whether an account exists and which email it uses.
+    portalEmail: row.portal_email || '',
+    portalEnabled: !!row.portal_password_hash,
+    portalLastLoginAt: row.portal_last_login_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
