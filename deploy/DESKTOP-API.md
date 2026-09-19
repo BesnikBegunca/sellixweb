@@ -243,7 +243,8 @@ Content-Type: application/json
 - Up to **500** sales per request.
 - Response: `{ "ok": true, "accepted": 1, "rejected": 0 }`
 
-The business portal is `/portal` (license-key login). Restaurant / bar / café
+The business portal is `/portal`. Shop owners sign in with the email and
+password an admin issues under **Businesses → Give access**. Restaurant / bar / café
 sectors also see **Tavolinat**. Admins can open the same figures from
 **Businesses → Shitjet** for those sectors; both views read the `sales` table.
 

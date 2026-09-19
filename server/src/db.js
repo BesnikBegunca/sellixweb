@@ -140,3 +140,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sales_business_table ON sales (business_id, table_name);
   CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items (sale_id);
 `);
+
+// Owner-portal login columns. `businesses` already exists on deployed volumes,
+// so these are added by ALTER rather than in CREATE TABLE above.
+const businessColumns = new Set(db.prepare('PRAGMA table_info(businesses)').all().map((c) => c.name));
+const BUSINESS_MIGRATIONS = [
+  ['portal_email', "ALTER TABLE businesses ADD COLUMN portal_email TEXT NOT NULL DEFAULT ''"],
+  ['portal_password_hash', "ALTER TABLE businesses ADD COLUMN portal_password_hash TEXT NOT NULL DEFAULT ''"],
+  ['portal_must_change_password', 'ALTER TABLE businesses ADD COLUMN portal_must_change_password INTEGER NOT NULL DEFAULT 0'],
+  ['portal_last_login_at', 'ALTER TABLE businesses ADD COLUMN portal_last_login_at TEXT']
+];
+for (const [column, sql] of BUSINESS_MIGRATIONS) {
+  if (!businessColumns.has(column)) db.exec(sql);
+}
+
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"
+);

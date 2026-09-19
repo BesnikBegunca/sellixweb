@@ -45,7 +45,7 @@ npm run dev               # http://localhost:5173
 ```
 
 Visit `http://localhost:5173` for the public site, `/portal` for the business
-sales portal (license-key login), or `/admin/login` for the admin dashboard.
+sales portal (email + password), or `/admin/login` for the admin dashboard.
 
 ## Admin dashboard
 

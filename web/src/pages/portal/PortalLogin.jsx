@@ -8,7 +8,8 @@ export default function PortalLogin() {
   const { business, loading, login } = usePortal();
   const navigate = useNavigate();
   const location = useLocation();
-  const [licenseKey, setLicenseKey] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,10 +23,10 @@ export default function PortalLogin() {
     setSubmitting(true);
     setError('');
     try {
-      await login(licenseKey);
+      await login(email, password);
       navigate('/portal', { replace: true });
     } catch (err) {
-      setError(err.message === 'Unknown license key' ? 'Çelësi i licencës nuk u gjet.' : err.message);
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -42,24 +43,36 @@ export default function PortalLogin() {
         </Link>
 
         <div className="ad-card" style={{ padding: 28 }}>
-          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>PORTAL</div>
-          <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Hyrje e biznesit</h1>
+          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>BIZNESI IM</div>
+          <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Hyni në llogarinë tuaj</h1>
           <p style={{ fontSize: 14, color: '#8FA0B2', margin: '0 0 22px', lineHeight: 1.5 }}>
-            Shkruaj çelësin e licencës që përdor arka (SLX-…). Shitjet vijnë nga POS-i, jo nga ky faqe.
+            Shikoni shitjet e biznesit tuaj — ditore, javore, mujore dhe vjetore.
           </p>
 
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label htmlFor="licenseKey" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Çelësi i licencës</label>
+              <label htmlFor="pt-email" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Email</label>
               <input
-                id="licenseKey"
-                className="ad-field ad-mono"
+                id="pt-email"
+                className="ad-field"
+                type="email"
                 required
                 autoFocus
-                autoComplete="off"
-                placeholder="SLX-XXXXX-XXXXX-XXXXX-XXXXX"
-                value={licenseKey}
-                onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="pt-password" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Fjalëkalimi</label>
+              <input
+                id="pt-password"
+                className="ad-field"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             {error && <div className="ad-error">{error}</div>}
@@ -67,6 +80,10 @@ export default function PortalLogin() {
               {submitting ? 'Duke hyrë…' : 'Hyr'}
             </button>
           </form>
+
+          <p className="ad-hint" style={{ marginTop: 18, lineHeight: 1.5 }}>
+            Nuk keni qasje? Kontaktoni SelliX për t’ju hapur llogarinë e biznesit.
+          </p>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 18 }}>

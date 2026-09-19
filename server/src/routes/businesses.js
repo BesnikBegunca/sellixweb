@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { uniqueLicenseKey, nowSql, addMonths, publicBusiness } from '../licenses.js';
@@ -188,6 +190,47 @@ businessesRouter.delete('/:id/devices/:deviceId', (req, res) => {
     .run(Number(req.params.id), Number(req.params.deviceId));
   if (info.changes === 0) return res.status(404).json({ error: 'Device not found' });
   res.json({ ok: true });
+});
+
+function generateTempPassword() {
+  return crypto.randomBytes(9).toString('base64url');
+}
+
+businessesRouter.post('/:id/portal-account', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+
+  const email = (clean(req.body?.email, 200) || row.email || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'A valid email is required' });
+  }
+
+  const taken = db
+    .prepare("SELECT id FROM businesses WHERE portal_email = ? AND portal_email <> '' AND id <> ?")
+    .get(email, row.id);
+  if (taken) return res.status(409).json({ error: 'Another business already uses that portal email' });
+
+  const tempPassword = generateTempPassword();
+  db.prepare(
+    `UPDATE businesses
+        SET portal_email = ?, portal_password_hash = ?, portal_must_change_password = 1,
+            updated_at = datetime('now')
+      WHERE id = ?`
+  ).run(email, bcrypt.hashSync(tempPassword, 12), row.id);
+
+  res.json({ business: publicBusiness(getBusiness(row.id)), tempPassword });
+});
+
+businessesRouter.delete('/:id/portal-account', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  db.prepare(
+    `UPDATE businesses
+        SET portal_email = '', portal_password_hash = '', portal_must_change_password = 0,
+            updated_at = datetime('now')
+      WHERE id = ?`
+  ).run(row.id);
+  res.json({ business: publicBusiness(getBusiness(row.id)) });
 });
 
 // Same sales rows the till posted to POST /api/sales/sync — filtered by this

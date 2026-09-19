@@ -38,6 +38,9 @@ export const api = {
   regenerateLicense: (id) => request(`/businesses/${id}/license/regenerate`, { method: 'POST' }),
   getBusinessDevices: (id) => request(`/businesses/${id}/devices`),
   releaseBusinessDevice: (id, deviceId) => request(`/businesses/${id}/devices/${deviceId}`, { method: 'DELETE' }),
+  createPortalAccount: (id, email) =>
+    request(`/businesses/${id}/portal-account`, { method: 'POST', body: JSON.stringify({ email }) }),
+  deletePortalAccount: (id) => request(`/businesses/${id}/portal-account`, { method: 'DELETE' }),
 
   getRegistrations: () => request('/registrations'),
   approveRegistration: (id, data) => request(`/registrations/${id}/approve`, { method: 'POST', body: JSON.stringify(data) }),
@@ -51,9 +54,11 @@ export const api = {
   changeOwnPassword: (currentPassword, newPassword) =>
     request('/users/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
 
-  portalLogin: (licenseKey) => request('/portal/login', { method: 'POST', body: JSON.stringify({ licenseKey }) }),
+  portalLogin: (email, password) => request('/portal/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   portalLogout: () => request('/portal/logout', { method: 'POST' }),
   portalMe: () => request('/portal/me'),
+  portalChangePassword: (currentPassword, newPassword) =>
+    request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
   portalOverview: (date) => request(`/portal/overview?date=${encodeURIComponent(date)}`),
   portalBreakdown: (query) => request(`/portal/breakdown?${query}`),
   portalTables: (query) => request(`/portal/tables?${query}`),

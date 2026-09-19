@@ -15,6 +15,7 @@ import RequirePortal from './pages/portal/RequirePortal';
 import PortalLayout from './pages/portal/PortalLayout';
 import PortalSales from './pages/portal/PortalSales';
 import PortalTables from './pages/portal/PortalTables';
+import PortalAccount from './pages/portal/PortalAccount';
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
             >
               <Route index element={<PortalSales />} />
               <Route path="tables" element={<PortalTables />} />
+              <Route path="account" element={<PortalAccount />} />
             </Route>
           </Route>
         </Routes>

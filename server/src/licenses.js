@@ -79,6 +79,9 @@ export function publicBusiness(row) {
     licenseExpiresAt: row.license_expires_at,
     devicesUsed: deviceCount(row.id),
     isRestaurant: isRestaurantSector(row.sector),
+    portalEmail: row.portal_email || '',
+    portalEnabled: !!row.portal_password_hash,
+    portalLastLoginAt: row.portal_last_login_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

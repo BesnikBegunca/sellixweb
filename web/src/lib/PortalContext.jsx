@@ -23,8 +23,8 @@ export function PortalProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  const login = async (licenseKey) => {
-    const { business } = await api.portalLogin(licenseKey);
+  const login = async (email, password) => {
+    const { business } = await api.portalLogin(email, password);
     setBusiness(business);
     return business;
   };

@@ -271,6 +271,7 @@ export default function Businesses() {
   const [salesFor, setSalesFor] = useState(null);
   const [copied, setCopied] = useState(null);
   const [extendMonths, setExtendMonths] = useState({});
+  const [portalCredential, setPortalCredential] = useState(null);
 
   const load = () => {
     api.getBusinesses().then(({ businesses }) => setBusinesses(businesses)).catch((e) => setError(e.message));
@@ -338,6 +339,30 @@ export default function Businesses() {
     }
   };
 
+  const createPortalAccount = async (b) => {
+    const email = prompt(
+      `Email për hyrjen e biznesit "${b.name}" në portalin e shitjeve:`,
+      b.portalEmail || b.email || ''
+    );
+    if (email === null) return;
+    setBusyId(b.id);
+    setError('');
+    try {
+      const { business, tempPassword } = await api.createPortalAccount(b.id, email.trim());
+      setBusinesses((prev) => prev.map((x) => (x.id === business.id ? business : x)));
+      setPortalCredential({ name: business.name, email: business.portalEmail, tempPassword });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removePortalAccount = async (b) => {
+    if (!confirm(`Hiq qasjen e portalit për ${b.name}? Nuk do të mund të hyjnë më.`)) return;
+    await runAction(b.id, () => api.deletePortalAccount(b.id));
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -371,6 +396,28 @@ export default function Businesses() {
         <SalesPanel business={salesFor} onClose={() => setSalesFor(null)} />
       )}
 
+      {portalCredential && (
+        <div className="ad-card" style={{ padding: 20, marginBottom: 16, borderColor: 'oklch(0.82 0.12 195 / 0.45)' }}>
+          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>
+            PORTAL ACCOUNT CREATED
+          </div>
+          <p style={{ fontSize: 14, color: '#D5DFE8', margin: '0 0 14px', lineHeight: 1.5 }}>
+            Jepia <strong>{portalCredential.name}</strong>. Fjalëkalimi i përkohshëm shfaqet vetëm tani — duhet ta ndryshojnë në hyrjen e parë te <code>/portal/login</code>.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 16 }}>
+            <div>
+              <div className="ad-hint" style={{ marginBottom: 4 }}>Email</div>
+              <div className="ad-mono" style={{ fontSize: 14 }}>{portalCredential.email}</div>
+            </div>
+            <div>
+              <div className="ad-hint" style={{ marginBottom: 4 }}>Temporary password</div>
+              <div className="ad-mono" style={{ fontSize: 14, color: 'oklch(0.86 0.12 195)' }}>{portalCredential.tempPassword}</div>
+            </div>
+          </div>
+          <button className="ad-btn-ghost" onClick={() => setPortalCredential(null)}>Done</button>
+        </div>
+      )}
+
       <div className="ad-card" style={{ overflow: 'hidden' }}>
         {businesses === null ? (
           <div style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
@@ -389,6 +436,7 @@ export default function Businesses() {
                   <th>Status</th>
                   <th>Expires</th>
                   <th>Devices</th>
+                  <th>Portal</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -421,6 +469,41 @@ export default function Businesses() {
                       <button className="ad-btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => setDevicesFor(b)}>
                         {b.devicesUsed} / {b.seats}
                       </button>
+                    </td>
+                    <td data-label="Portal">
+                      {b.portalEnabled ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                          <span className="ad-badge ad-badge-new">Active</span>
+                          <span className="ad-hint" style={{ wordBreak: 'break-all' }}>{b.portalEmail}</span>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              className="ad-btn-ghost"
+                              style={{ padding: '5px 9px', fontSize: 11 }}
+                              disabled={busyId === b.id}
+                              onClick={() => createPortalAccount(b)}
+                            >
+                              Reset
+                            </button>
+                            <button
+                              className="ad-btn-danger"
+                              style={{ padding: '5px 9px', fontSize: 11 }}
+                              disabled={busyId === b.id}
+                              onClick={() => removePortalAccount(b)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          className="ad-btn-ghost"
+                          style={{ padding: '6px 10px', fontSize: 12 }}
+                          disabled={busyId === b.id}
+                          onClick={() => createPortalAccount(b)}
+                        >
+                          Give access
+                        </button>
+                      )}
                     </td>
                     <td data-label="Actions">
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
