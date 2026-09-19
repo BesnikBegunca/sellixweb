@@ -14,7 +14,7 @@ import {
   readPeriod,
   overviewPayload,
   breakdownPayload,
-  tableTotals,
+  liveTables,
   listSales,
   isRestaurantSector
 } from '../reports.js';
@@ -129,13 +129,7 @@ portalRouter.get('/breakdown', requirePortal, (req, res) => {
 portalRouter.get('/tables', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
-  const asOf = readAsOf(req);
-  const period = readPeriod(req, 'today');
-  res.json({
-    asOf,
-    period,
-    tables: tableTotals(row.id, period, asOf)
-  });
+  res.json(liveTables(row.id));
 });
 
 portalRouter.get('/sales', requirePortal, (req, res) => {

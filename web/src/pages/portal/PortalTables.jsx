@@ -2,14 +2,11 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { usePortal } from '../../lib/PortalContext';
-import { localDate, periodQuery } from '../../lib/sales';
-import { PeriodPills, TablesGrid } from './SalesReport';
+import { TablesGrid } from './SalesReport';
 
 export default function PortalTables() {
   const { business } = usePortal();
-  const date = localDate();
-  const [period, setPeriod] = useState('today');
-  const [tables, setTables] = useState(null);
+  const [floor, setFloor] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -17,10 +14,11 @@ export default function PortalTables() {
     if (!business?.isRestaurant) return undefined;
     let cancelled = false;
     setLoading(true);
-    setError('');
-    api.portalTables(periodQuery(period, date))
+    api.portalTables()
       .then((data) => {
-        if (!cancelled) setTables(data.tables);
+        if (cancelled) return;
+        setFloor(data);
+        setError('');
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);
@@ -31,22 +29,26 @@ export default function PortalTables() {
     return () => {
       cancelled = true;
     };
-  }, [period, date, business?.isRestaurant]);
+  }, [business?.isRestaurant]);
 
   if (!business?.isRestaurant) return <Navigate to="/portal" replace />;
   if (error) return <div className="ad-error">{error}</div>;
-  if (loading && !tables) return <div className="ad-hint">Duke ngarkuar tavolinat…</div>;
+  if (loading && !floor) return <div className="ad-hint">Duke ngarkuar tavolinat…</div>;
 
   return (
     <div className="pt-page">
       <div className="pt-page-head">
         <h1 className="ad-heading pt-title">Tavolinat</h1>
-        <PeriodPills period={period} onChange={setPeriod} />
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Totalet sipas tavolinës, nga të njëjtat faturë që arka dërgoi. Takeaway dhe banaku hyjnë te Shitjet, jo këtu.
+        Vetëm tavolinat me porosi të printuar. Kur paguhet, tavolina hiqet; kur printohet përsëri, del këtu.
       </p>
-      <TablesGrid tables={tables} />
+      <TablesGrid
+        tables={floor?.tables}
+        occupied={floor?.occupied}
+        free={0}
+        openTotal={floor?.openTotal}
+      />
     </div>
   );
 }

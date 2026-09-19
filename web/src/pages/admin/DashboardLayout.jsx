@@ -93,6 +93,7 @@ export default function DashboardLayout() {
         <div style={{ padding: '0 6px' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#D5DFE8', marginBottom: 2 }}>{user?.name || user?.email}</div>
           <div style={{ fontSize: 12, color: '#61707F', marginBottom: 12, wordBreak: 'break-all' }}>{user?.email}</div>
+          <button className="ad-btn-ghost" onClick={() => window.location.reload()} style={{ width: '100%', marginBottom: 8 }}>Reload</button>
           <button className="ad-btn-ghost" onClick={onLogout} style={{ width: '100%' }}>Log out</button>
         </div>
 

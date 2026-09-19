@@ -61,11 +61,11 @@ export const api = {
     request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
   portalOverview: (date) => request(`/portal/overview?date=${encodeURIComponent(date)}`),
   portalBreakdown: (query) => request(`/portal/breakdown?${query}`),
-  portalTables: (query) => request(`/portal/tables?${query}`),
+  portalTables: () => request('/portal/tables'),
   portalSales: (query) => request(`/portal/sales?${query}`),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),
-  getBusinessSalesTables: (id, query) => request(`/businesses/${id}/sales/tables?${query}`),
+  getBusinessSalesTables: (id) => request(`/businesses/${id}/sales/tables`),
   getBusinessSales: (id, query) => request(`/businesses/${id}/sales?${query}`)
 };

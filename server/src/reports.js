@@ -111,26 +111,87 @@ export function periodTotals(businessId, asOf) {
   };
 }
 
-export function tableTotals(businessId, period, asOf) {
-  const filter = periodFilter(period, asOf);
-  const rows = db
+const TABLE_NAME_RE = /(?:tavolina|table)\s*(\d+)/i;
+
+function tableNumber(name) {
+  const match = String(name || '').match(TABLE_NAME_RE);
+  return match ? Number(match[1]) : null;
+}
+
+function openTableRows(businessId) {
+  return db
     .prepare(
       `SELECT table_name AS name,
               COALESCE(SUM(total_cents), 0) AS total_cents,
-              COUNT(*) AS count
+              COUNT(*) AS count,
+              MAX(staff_name) AS staff_name
        FROM sales
        WHERE business_id = ?
          AND TRIM(table_name) != ''
-         ${filter.sql}
-       GROUP BY table_name
-       ORDER BY total_cents DESC, table_name COLLATE NOCASE ASC`
+         AND LOWER(COALESCE(status, 'paid')) = 'open'
+       GROUP BY table_name`
     )
-    .all(businessId, ...filter.params);
-  return rows.map((r) => ({
-    name: r.name,
-    total: fromCents(r.total_cents),
-    count: r.count
-  }));
+    .all(businessId);
+}
+
+/** Live floor from the till snapshot; falls back to open printed sales. */
+export function liveTables(businessId) {
+  const snapshot = db
+    .prepare(
+      `SELECT table_name AS name, occupied, total_cents, staff_name
+       FROM restaurant_tables
+       WHERE business_id = ?
+       ORDER BY table_name COLLATE NOCASE ASC`
+    )
+    .all(businessId);
+
+  if (snapshot.length > 0) {
+    const tables = snapshot
+      .map((row) => ({
+        name: row.name,
+        occupied: Number(row.occupied) === 1,
+        total: Number(row.occupied) === 1 ? fromCents(row.total_cents) : 0,
+        count: Number(row.occupied) === 1 ? 1 : 0,
+        staffName: row.staff_name || ''
+      }))
+      .filter((t) => t.occupied)
+      .sort((a, b) => (tableNumber(a.name) || 0) - (tableNumber(b.name) || 0) || a.name.localeCompare(b.name, 'sq'));
+    return {
+      occupied: tables.length,
+      free: 0,
+      openTotal: tables.reduce((sum, t) => sum + t.total, 0),
+      tables
+    };
+  }
+
+  const occupiedByName = new Map();
+  for (const row of openTableRows(businessId)) {
+    const number = tableNumber(row.name);
+    const name = number ? `Tavolina ${number}` : row.name;
+    occupiedByName.set(name, {
+      name,
+      occupied: true,
+      total: fromCents(row.total_cents),
+      count: row.count,
+      staffName: row.staff_name || ''
+    });
+  }
+
+  const tables = [...occupiedByName.values()].sort(
+    (a, b) =>
+      (tableNumber(a.name) || 0) - (tableNumber(b.name) || 0) ||
+      a.name.localeCompare(b.name, 'sq', { sensitivity: 'base' })
+  );
+  return {
+    occupied: tables.length,
+    free: 0,
+    openTotal: tables.reduce((sum, t) => sum + t.total, 0),
+    tables
+  };
+}
+
+export function tableTotals(businessId, period, asOf) {
+  return liveTables(businessId).tables;
 }
 
 export function dailySeries(businessId, asOf, days = 14) {

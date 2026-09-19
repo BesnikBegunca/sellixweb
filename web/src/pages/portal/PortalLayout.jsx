@@ -70,7 +70,12 @@ export default function PortalLayout() {
             <div className="ad-hint">{business?.city ? `${business.city} · ` : ''}Portal i biznesit</div>
           </div>
         </div>
-        <button className="ad-btn-ghost" onClick={onLogout}>Dil</button>
+        <div className="pt-header-actions">
+          <button type="button" className="ad-btn-ghost" onClick={() => window.location.reload()}>
+            Rifresko
+          </button>
+          <button type="button" className="ad-btn-ghost" onClick={onLogout}>Dil</button>
+        </div>
       </header>
 
       <nav className="pt-tabs" aria-label="Portal">

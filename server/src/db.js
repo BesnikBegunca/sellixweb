@@ -122,6 +122,7 @@ db.exec(`
     table_name TEXT NOT NULL DEFAULT '',
     receipt_no TEXT NOT NULL DEFAULT '',
     staff_name TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'paid',
     synced_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (business_id, sale_uid)
   );
@@ -153,6 +154,24 @@ const BUSINESS_MIGRATIONS = [
 for (const [column, sql] of BUSINESS_MIGRATIONS) {
   if (!businessColumns.has(column)) db.exec(sql);
 }
+
+const salesColumns = new Set(db.prepare('PRAGMA table_info(sales)').all().map((c) => c.name));
+if (salesColumns.size && !salesColumns.has('status')) {
+  db.exec("ALTER TABLE sales ADD COLUMN status TEXT NOT NULL DEFAULT 'paid'");
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_sales_business_status ON sales (business_id, status)');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS restaurant_tables (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    table_name TEXT NOT NULL,
+    occupied INTEGER NOT NULL DEFAULT 0,
+    total_cents INTEGER NOT NULL DEFAULT 0,
+    staff_name TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, table_name)
+  )
+`);
 
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"

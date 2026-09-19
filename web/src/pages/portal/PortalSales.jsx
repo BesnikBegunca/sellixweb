@@ -16,7 +16,6 @@ export default function PortalSales() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError('');
     const q = periodQuery(period, date);
     Promise.all([
       api.portalOverview(date),
@@ -28,6 +27,7 @@ export default function PortalSales() {
         setOverview(ov);
         setBreakdown(br);
         setSales(sl.sales);
+        setError('');
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);

@@ -181,6 +181,7 @@ function SalesPanel({ business, onClose }) {
   const [overview, setOverview] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
   const [tables, setTables] = useState(null);
+  const [floor, setFloor] = useState(null);
   const [sales, setSales] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -195,14 +196,20 @@ function SalesPanel({ business, onClose }) {
       api.getBusinessSalesBreakdown(business.id, q),
       api.getBusinessSales(business.id, q)
     ];
-    if (business.isRestaurant) requests.push(api.getBusinessSalesTables(business.id, q));
+    if (business.isRestaurant) requests.push(api.getBusinessSalesTables(business.id));
     Promise.all(requests)
       .then((results) => {
         if (cancelled) return;
         setOverview(results[0]);
         setBreakdown(results[1]);
         setSales(results[2].sales);
-        setTables(business.isRestaurant ? results[3].tables : []);
+        if (business.isRestaurant) {
+          setFloor(results[3]);
+          setTables(results[3].tables);
+        } else {
+          setFloor(null);
+          setTables([]);
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);
@@ -221,7 +228,10 @@ function SalesPanel({ business, onClose }) {
         <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
           Shitjet — {business.name}
         </h2>
-        <button className="ad-btn-ghost" onClick={onClose}>Close</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="ad-btn-ghost" onClick={() => window.location.reload()}>Rifresko</button>
+          <button type="button" className="ad-btn-ghost" onClick={onClose}>Close</button>
+        </div>
       </div>
       {error && <div className="ad-error" style={{ marginBottom: 10 }}>{error}</div>}
       {loading && !overview ? (
@@ -242,7 +252,12 @@ function SalesPanel({ business, onClose }) {
             )}
           </div>
           {tab === 'tables' ? (
-            <TablesGrid tables={tables} />
+            <TablesGrid
+              tables={tables}
+              occupied={floor?.occupied}
+              free={floor?.free}
+              openTotal={floor?.openTotal}
+            />
           ) : (
             <>
               <TotalsGrid totals={overview?.totals} />

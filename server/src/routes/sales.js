@@ -106,18 +106,26 @@ function parseSale(raw) {
     table_name: optionalString(raw, ['tableName', 'table_name', 'table'], 200),
     receipt_no: optionalString(raw, ['receiptNo', 'receipt_no', 'receipt'], 50),
     staff_name: optionalString(raw, ['staffName', 'staff_name', 'staff', 'waiter'], 200),
+    status: parseTableStatus(raw),
     hasItems,
     items
   };
 }
 
+function parseTableStatus(raw) {
+  const value = asString(pick(raw, 'status', 'tableStatus', 'state'), 20).toLowerCase();
+  if (value === 'open' || value === 'printed' || value === 'occupied') return 'open';
+  if (value === 'paid' || value === 'closed' || value === 'completed') return 'paid';
+  return undefined;
+}
+
 const insertSale = db.prepare(`
   INSERT INTO sales (
     business_id, sale_uid, device_id, sold_at, total_cents, tax_cents, discount_cents,
-    payment_method, table_name, receipt_no, staff_name, synced_at
+    payment_method, table_name, receipt_no, staff_name, status, synced_at
   ) VALUES (
     @business_id, @sale_uid, @device_id, @sold_at, @total_cents, @tax_cents, @discount_cents,
-    @payment_method, @table_name, @receipt_no, @staff_name, datetime('now')
+    @payment_method, @table_name, @receipt_no, @staff_name, @status, datetime('now')
   )
 `);
 
@@ -132,10 +140,18 @@ const updateSale = db.prepare(`
     table_name = @table_name,
     receipt_no = @receipt_no,
     staff_name = @staff_name,
+    status = @status,
     synced_at = datetime('now')
   WHERE id = @id
 `);
 
+const closeOpenOnTable = db.prepare(`
+  UPDATE sales
+  SET status = 'paid', synced_at = datetime('now')
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+`);
 const findSale = db.prepare('SELECT * FROM sales WHERE business_id = ? AND sale_uid = ?');
 const deleteItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
 const insertItem = db.prepare(`
@@ -157,7 +173,8 @@ function upsertSale(businessId, deviceId, sale) {
       payment_method: sale.payment_method ?? existing.payment_method,
       table_name: sale.table_name ?? existing.table_name,
       receipt_no: sale.receipt_no ?? existing.receipt_no,
-      staff_name: sale.staff_name ?? existing.staff_name
+      staff_name: sale.staff_name ?? existing.staff_name,
+      status: sale.status ?? existing.status ?? 'paid'
     });
     saleId = existing.id;
     if (sale.hasItems) deleteItems.run(saleId);
@@ -173,7 +190,8 @@ function upsertSale(businessId, deviceId, sale) {
       payment_method: sale.payment_method ?? '',
       table_name: sale.table_name ?? '',
       receipt_no: sale.receipt_no ?? '',
-      staff_name: sale.staff_name ?? ''
+      staff_name: sale.staff_name ?? '',
+      status: sale.status ?? 'paid'
     });
     saleId = info.lastInsertRowid;
   }
@@ -187,6 +205,7 @@ function upsertSale(businessId, deviceId, sale) {
 const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
+  const paidTables = new Set();
   for (const raw of rawSales) {
     const sale = parseSale(raw);
     if (!sale) {
@@ -194,9 +213,49 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
       continue;
     }
     upsertSale(businessId, deviceId, sale);
+    if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
+      paidTables.add(sale.table_name);
+    }
     accepted += 1;
   }
+  for (const tableName of paidTables) {
+    closeOpenOnTable.run(businessId, tableName);
+  }
   return { accepted, rejected };
+});
+
+const insertFloor = db.prepare(`
+  INSERT INTO restaurant_tables (
+    business_id, table_name, occupied, total_cents, staff_name, updated_at
+  ) VALUES (
+    @business_id, @table_name, @occupied, @total_cents, @staff_name, datetime('now')
+  )
+`);
+const clearFloor = db.prepare('DELETE FROM restaurant_tables WHERE business_id = ?');
+
+function parseFloorTable(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const tableName = asString(pick(raw, 'tableName', 'table_name', 'name'), 200);
+  if (!tableName) return null;
+  const occupiedRaw = pick(raw, 'occupied', 'isOccupied', 'busy');
+  const occupied =
+    occupiedRaw === true || occupiedRaw === 1 || occupiedRaw === '1' || occupiedRaw === 'true';
+  const total = toCents(pick(raw, 'total', 'currentTotal', 'current_total') ?? 0) ?? 0;
+  return {
+    table_name: tableName,
+    occupied: occupied ? 1 : 0,
+    total_cents: occupied ? total : 0,
+    staff_name: asString(pick(raw, 'staffName', 'staff_name', 'waiterName', 'waiter'), 200)
+  };
+}
+
+const replaceFloor = db.transaction((businessId, rawTables) => {
+  const parsed = rawTables.map(parseFloorTable).filter(Boolean).slice(0, 48);
+  clearFloor.run(businessId);
+  for (const table of parsed) {
+    insertFloor.run({ business_id: businessId, ...table });
+  }
+  return parsed.length;
 });
 
 salesRouter.post('/sync', (req, res) => {
@@ -207,11 +266,16 @@ salesRouter.post('/sync', (req, res) => {
   if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
   if (effectiveStatus(row) === 'revoked') return res.status(403).json({ ok: false, error: 'revoked' });
 
-  const sales = req.body?.sales;
-  if (!Array.isArray(sales)) return res.status(400).json({ ok: false, error: 'sales_required' });
+  const sales = Array.isArray(req.body?.sales) ? req.body.sales : [];
+  const floor = req.body?.tables;
+  if (!Array.isArray(req.body?.sales) && !Array.isArray(floor)) {
+    return res.status(400).json({ ok: false, error: 'sales_required' });
+  }
   if (sales.length > MAX_SALES) return res.status(400).json({ ok: false, error: 'too_many_sales', max: MAX_SALES });
 
   const deviceId = asString(pick(req.body, 'deviceId', 'device_id'), 200);
   const result = syncBatch(row.id, deviceId, sales);
-  res.json({ ok: true, accepted: result.accepted, rejected: result.rejected });
+  let tables = 0;
+  if (Array.isArray(floor)) tables = replaceFloor(row.id, floor);
+  res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, tables });
 });

@@ -9,7 +9,7 @@ import {
   readPeriod,
   overviewPayload,
   breakdownPayload,
-  tableTotals,
+  liveTables,
   listSales
 } from '../reports.js';
 
@@ -250,9 +250,7 @@ businessesRouter.get('/:id/sales/breakdown', (req, res) => {
 businessesRouter.get('/:id/sales/tables', (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });
-  const asOf = readAsOf(req);
-  const period = readPeriod(req, 'today');
-  res.json({ asOf, period, tables: tableTotals(row.id, period, asOf) });
+  res.json(liveTables(row.id));
 });
 
 businessesRouter.get('/:id/sales', (req, res) => {
