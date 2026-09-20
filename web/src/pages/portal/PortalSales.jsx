@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
 import { localDate, periodQuery } from '../../lib/sales';
-import { PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, LiveBadge } from './SalesReport';
+import { PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, LiveBadge, TodayRing } from './SalesReport';
 
 export default function PortalSales() {
   const date = localDate();

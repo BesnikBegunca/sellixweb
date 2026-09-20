@@ -20,7 +20,16 @@ async function request(path, options = {}) {
 // as request() above, so the stream authenticates exactly like a fetch does.
 export function openStream(path) {
   if (typeof EventSource === 'undefined') return null;
-  return new EventSource(`${API_URL}/api${path}`, { withCredentials: true });
+  const url = `${API_URL}/api${path}`;
+  try {
+    return new EventSource(url, { withCredentials: true });
+  } catch {
+    try {
+      return new EventSource(url);
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const api = {

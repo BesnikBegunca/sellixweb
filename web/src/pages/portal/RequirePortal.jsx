@@ -5,7 +5,13 @@ export default function RequirePortal({ children }) {
   const { business, loading } = usePortal();
   const location = useLocation();
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="ad" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8FA0B2' }}>
+        Duke ngarkuar…
+      </div>
+    );
+  }
   if (!business) return <Navigate to="/portal/login" state={{ from: location }} replace />;
   return children;
 }
