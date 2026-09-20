@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
 import { effectiveStatus } from '../licenses.js';
 import { toCents } from '../reports.js';
+import { publish } from '../events.js';
 
 export const salesRouter = Router();
 
@@ -277,5 +278,10 @@ salesRouter.post('/sync', (req, res) => {
   const result = syncBatch(row.id, deviceId, sales);
   let tables = 0;
   if (Array.isArray(floor)) tables = replaceFloor(row.id, floor);
+  // Tell every open portal and admin tab for this business to refetch. A sync
+  // that accepted nothing changed nothing, so it stays quiet.
+  if (result.accepted > 0 || Array.isArray(floor)) {
+    publish(row.id, { accepted: result.accepted, tables });
+  }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, tables });
 });

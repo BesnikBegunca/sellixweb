@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { localDate, periodQuery } from '../../lib/sales';
+import { useLiveRefresh } from '../../lib/useLiveRefresh';
 import {
-  PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid
+  PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, LiveBadge
 } from '../portal/SalesReport';
 import '../portal/portal.css';
 import './admin.css';
@@ -181,55 +182,56 @@ function SalesPanel({ business, onClose }) {
   const [overview, setOverview] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
   const [tables, setTables] = useState(null);
-  const [floor, setFloor] = useState(null);
   const [sales, setSales] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  // Only the newest load may write state: switching period or business fires a
+  // new one before the previous has landed.
+  const requestId = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError('');
+  const businessId = business.id;
+  const isRestaurant = business.isRestaurant;
+
+  const load = useCallback(async () => {
+    const id = ++requestId.current;
     const q = periodQuery(period, date);
     const requests = [
-      api.getBusinessSalesOverview(business.id, date),
-      api.getBusinessSalesBreakdown(business.id, q),
-      api.getBusinessSales(business.id, q)
+      api.getBusinessSalesOverview(businessId, date),
+      api.getBusinessSalesBreakdown(businessId, q),
+      api.getBusinessSales(businessId, q)
     ];
-    if (business.isRestaurant) requests.push(api.getBusinessSalesTables(business.id));
-    Promise.all(requests)
-      .then((results) => {
-        if (cancelled) return;
-        setOverview(results[0]);
-        setBreakdown(results[1]);
-        setSales(results[2].sales);
-        if (business.isRestaurant) {
-          setFloor(results[3]);
-          setTables(results[3].tables);
-        } else {
-          setFloor(null);
-          setTables([]);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [business.id, business.isRestaurant, period, date]);
+    if (isRestaurant) requests.push(api.getBusinessSalesTables(businessId));
+    try {
+      const results = await Promise.all(requests);
+      if (id !== requestId.current) return;
+      setOverview(results[0]);
+      setBreakdown(results[1]);
+      setSales(results[2].sales);
+      setTables(isRestaurant ? results[3].tables : []);
+      setError('');
+    } catch (e) {
+      if (id === requestId.current) setError(e.message);
+      throw e;
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  }, [businessId, isRestaurant, period, date]);
+
+  const { lastUpdated, live } = useLiveRefresh(load, {
+    deps: [businessId, isRestaurant, period, date],
+    stream: `/businesses/${businessId}/sales/stream`
+  });
 
   return (
     <div className="ad-card" style={{ padding: 20, marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-        <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
-          Shitjet — {business.name}
-        </h2>
+        <div className="pt-live-row">
+          <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+            Shitjet — {business.name}
+          </h2>
+          <LiveBadge live={live} lastUpdated={lastUpdated} />
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="ad-btn-ghost" onClick={() => window.location.reload()}>Rifresko</button>
           <button type="button" className="ad-btn-ghost" onClick={onClose}>Close</button>
         </div>
       </div>
@@ -240,7 +242,7 @@ function SalesPanel({ business, onClose }) {
         <>
           <div className="pt-page-head" style={{ marginBottom: 14 }}>
             <PeriodPills period={period} onChange={setPeriod} />
-            {business.isRestaurant && (
+            {isRestaurant && (
               <div className="pt-pills pt-pills-sm">
                 <button type="button" className={`pt-pill${tab === 'sales' ? ' active' : ''}`} onClick={() => setTab('sales')}>
                   Shitjet

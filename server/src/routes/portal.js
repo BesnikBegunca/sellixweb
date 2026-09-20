@@ -18,6 +18,7 @@ import {
   listSales,
   isRestaurantSector
 } from '../reports.js';
+import { subscribe } from '../events.js';
 
 export const portalRouter = Router();
 
@@ -130,6 +131,14 @@ portalRouter.get('/tables', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
   res.json(liveTables(row.id));
+});
+
+// Held open by the browser. It carries no data — it only tells the page that
+// this business has new sales, and the page refetches the endpoints above.
+portalRouter.get('/stream', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  subscribe(row.id, req, res);
 });
 
 portalRouter.get('/sales', requirePortal, (req, res) => {

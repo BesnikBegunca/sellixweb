@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
+import { subscribe } from '../events.js';
 import { uniqueLicenseKey, nowSql, addMonths, publicBusiness } from '../licenses.js';
 import {
   readAsOf,
@@ -251,6 +252,13 @@ businessesRouter.get('/:id/sales/tables', (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });
   res.json(liveTables(row.id));
+});
+
+// Live counterpart of the four endpoints above, for the admin sales panel.
+businessesRouter.get('/:id/sales/stream', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  subscribe(row.id, req, res);
 });
 
 businessesRouter.get('/:id/sales', (req, res) => {

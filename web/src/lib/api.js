@@ -16,6 +16,13 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Server-sent events for the live sales views. Same base URL and same cookie
+// as request() above, so the stream authenticates exactly like a fetch does.
+export function openStream(path) {
+  if (typeof EventSource === 'undefined') return null;
+  return new EventSource(`${API_URL}/api${path}`, { withCredentials: true });
+}
+
 export const api = {
   getContent: () => request('/content'),
   updateContent: (content) => request('/content', { method: 'PUT', body: JSON.stringify({ content }) }),

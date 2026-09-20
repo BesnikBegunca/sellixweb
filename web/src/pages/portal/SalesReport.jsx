@@ -1,4 +1,21 @@
 import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel } from '../../lib/sales';
+import { liveClock } from '../../lib/useLiveRefresh';
+
+// Says why the numbers changed by themselves. "LIVE" means the push stream is
+// open and a receipt lands here the moment the till syncs it; "Auto" means the
+// stream is down and the page is falling back to polling.
+export function LiveBadge({ live, lastUpdated }) {
+  return (
+    <span
+      className={`pt-live${live ? '' : ' off'}`}
+      title={live ? 'Përditësohet vetë sapo arka dërgon një faturë' : 'Lidhja live u ndërpre — po kontrollohet çdo disa sekonda'}
+    >
+      <span className="pt-live-dot" aria-hidden="true" />
+      {live ? 'LIVE' : 'Auto'}
+      {lastUpdated && <span className="pt-live-time">{liveClock(lastUpdated)}</span>}
+    </span>
+  );
+}
 
 function BarChart({ points, valueKey, labelFn }) {
   const max = Math.max(1, ...points.map((p) => Number(p[valueKey]) || 0));

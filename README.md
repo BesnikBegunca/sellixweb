@@ -91,6 +91,19 @@ shop's dashboard is empty — there is no sample data. Syncing is idempotent on
 the till's own `saleUid`, so re-sending a batch after a dropped connection
 never double-counts.
 
+**Shitjet and Tavolinat update themselves.** Every open page holds a server-sent
+event stream (`GET /api/portal/stream`, and `GET /api/businesses/:id/sales/stream`
+for the admin view). A sync that accepted anything pushes a notice to every page
+watching that business, and the page refetches — so a closed table appears in a
+second or two without anyone pressing refresh. The event carries no sale data,
+only "something changed", so authorisation stays on the normal endpoints. If the
+stream cannot be established the page falls back to polling every few seconds and
+the badge next to the title reads **Auto** instead of **LIVE**. A hidden tab stops
+refetching and catches up when it is focused again.
+
+Behind a reverse proxy the stream needs buffering turned off — see the `/api/`
+block in [`deploy/nginx.conf`](deploy/nginx.conf).
+
 ## Deploying
 
 [`deploy/RAILWAY.md`](deploy/RAILWAY.md) walks through Railway: a single service
