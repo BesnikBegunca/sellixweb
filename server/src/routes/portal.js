@@ -117,6 +117,18 @@ portalRouter.patch('/me/password', requirePortal, (req, res) => {
   res.json({ ok: true });
 });
 
+portalRouter.patch('/me/goal', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const euros = Number(req.body?.goal);
+  if (!Number.isFinite(euros) || euros < 0 || euros > 10000000) {
+    return res.status(400).json({ error: 'Objektivi duhet të jetë një shumë valide.' });
+  }
+  const cents = Math.round(euros * 100);
+  db.prepare("UPDATE businesses SET daily_goal_cents = ?, updated_at = datetime('now') WHERE id = ?").run(cents, row.id);
+  res.json({ goal: cents / 100 });
+});
+
 portalRouter.get('/overview', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;

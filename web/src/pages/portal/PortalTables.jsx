@@ -58,7 +58,14 @@ export default function PortalTables() {
         Takeaway dhe banaku hyjnë te Shitjet, jo këtu.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
-      <TodayRing totals={overview?.totals} />
+      <TodayRing
+        totals={overview?.totals}
+        goal={overview?.goal}
+        onSaveGoal={async (value) => {
+          const { goal } = await api.portalSetGoal(value);
+          setOverview((prev) => (prev ? { ...prev, goal } : prev));
+        }}
+      />
       <TablesGrid tables={floor?.tables} />
     </div>
   );

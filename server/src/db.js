@@ -152,7 +152,8 @@ const BUSINESS_MIGRATIONS = [
   ['portal_last_login_at', 'ALTER TABLE businesses ADD COLUMN portal_last_login_at TEXT'],
   ['verified', 'ALTER TABLE businesses ADD COLUMN verified INTEGER NOT NULL DEFAULT 0'],
   ['verified_color', "ALTER TABLE businesses ADD COLUMN verified_color TEXT NOT NULL DEFAULT '#1D9BF0'"],
-  ['deleted_at', 'ALTER TABLE businesses ADD COLUMN deleted_at TEXT']
+  ['deleted_at', 'ALTER TABLE businesses ADD COLUMN deleted_at TEXT'],
+  ['daily_goal_cents', 'ALTER TABLE businesses ADD COLUMN daily_goal_cents INTEGER NOT NULL DEFAULT 0']
 ];
 for (const [column, sql] of BUSINESS_MIGRATIONS) {
   if (!businessColumns.has(column)) db.exec(sql);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel } from '../../lib/sales';
 import { liveClock } from '../../lib/useLiveRefresh';
 
-const STAFF_COLORS = ['#1D9BF0', '#22C55E', '#F59E0B', '#A855F7', '#F43F5E', '#14B8A6', '#6366F1', '#FB7185'];
+const STAFF_COLORS = ['#5EEAD4', '#38BDF8', '#86EFAC', '#FBBF24', '#FB7185', '#67E8F9', '#FDBA74', '#A3E635'];
 const STAFF_UNNAMED = 'Pa kamarjer';
 
 export function staffLabel(name) {
@@ -74,19 +74,46 @@ export function PeriodPills({ period, onChange }) {
   );
 }
 
-export function TodayRing({ totals }) {
+export function TodayRing({ totals, goal = 0, onSaveGoal }) {
   const today = totals?.today || { total: 0, count: 0 };
-  const yesterday = totals?.yesterday || { total: 0, count: 0 };
-  const denom = Math.max(Number(yesterday.total) || 0, Number(today.total) || 0, 0.01);
-  const pct = Number(today.total) > 0 ? Math.min(100, (Number(today.total) / denom) * 100) : 0;
+  const target = Number(goal) || 0;
+  const pct = target > 0 ? Math.min(100, (Number(today.total) / target) * 100) : 0;
   const radius = 102;
   const circ = 2 * Math.PI * radius;
   const [drawn, setDrawn] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(target ? String(target) : '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setDrawn(pct));
     return () => cancelAnimationFrame(frame);
   }, [pct]);
+
+  useEffect(() => {
+    if (!editing) setDraft(target ? String(target) : '');
+  }, [target, editing]);
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (!onSaveGoal) return;
+    const value = Number(String(draft).replace(',', '.'));
+    if (!Number.isFinite(value) || value < 0) {
+      setError('Shkruaj një shumë valide.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await onSaveGoal(value);
+      setEditing(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="pt-today">
@@ -106,14 +133,67 @@ export function TodayRing({ totals }) {
           <div className="ad-mono pt-today-label">Sot</div>
           <div className="ad-heading pt-today-value">{formatEuro(today.total)}</div>
           <div className="ad-hint">{today.count} {today.count === 1 ? 'porosi' : 'porosi'}</div>
+          {target > 0 && (
+            <div className="pt-today-pct">{Math.round(pct)}% · {formatEuro(target)}</div>
+          )}
         </div>
       </div>
+      {onSaveGoal && (
+        <div className="pt-today-goal">
+          {editing ? (
+            <form className="pt-today-form" onSubmit={save}>
+              <input
+                className="ad-field"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="decimal"
+                placeholder="p.sh. 500"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                aria-label="Objektivi ditor në euro"
+              />
+              <button className="ad-btn" type="submit" disabled={saving}>{saving ? 'Duke ruajtur…' : 'Ruaj'}</button>
+              <button className="ad-btn-ghost" type="button" onClick={() => { setEditing(false); setError(''); }}>Anulo</button>
+            </form>
+          ) : (
+            <button type="button" className="ad-btn-ghost" onClick={() => setEditing(true)}>
+              {target > 0 ? 'Ndrysho objektivin' : 'Cakto objektivin'}
+            </button>
+          )}
+          {error && <div className="ad-error">{error}</div>}
+        </div>
+      )}
     </div>
   );
 }
 
 export function TotalsGrid({ totals }) {
-  return <TodayRing totals={totals} />;
+  const cards = [
+    { key: 'today', label: 'Sot' },
+    { key: 'yesterday', label: 'Dje' },
+    { key: 'week', label: '1 javë' },
+    { key: 'month', label: '1 muaj' },
+    { key: 'month3', label: '3 muaj' },
+    { key: 'month6', label: '6 muaj' },
+    { key: 'month9', label: '9 muaj' },
+    { key: 'year', label: '1 vit' },
+    { key: 'all', label: 'Total' }
+  ];
+  return (
+    <div className="pt-totals">
+      {cards.map((c) => {
+        const row = totals?.[c.key] || { total: 0, count: 0 };
+        return (
+          <div key={c.key} className="ad-card pt-stat">
+            <div className="ad-mono pt-stat-label">{c.label}</div>
+            <div className="ad-heading pt-stat-value">{formatEuro(row.total)}</div>
+            <div className="ad-hint">{row.count} {row.count === 1 ? 'porosi' : 'porosi'}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function SalesCharts({ breakdown, chartMode, onChartModeChange }) {
@@ -237,14 +317,12 @@ export function TablesGrid({ tables }) {
             return (
               <div
                 key={`${t.name}::${t.staffName || ''}`}
-                className="ad-card pt-table-card"
+                className={`ad-card pt-table-card${showStaffChrome ? ' has-staff' : ''}`}
                 style={showStaffChrome ? { '--staff-color': color } : undefined}
               >
-                {showStaffChrome && (
-                  <div className="pt-table-staff">{waiter}</div>
-                )}
                 <div className="ad-heading pt-table-name">{t.name}</div>
                 <div className="pt-table-total">{formatEuro(t.total)}</div>
+                {showStaffChrome && <div className="pt-table-waiter">{waiter}</div>}
                 <div className="ad-hint">{t.count} {t.count === 1 ? 'porosi' : 'porosi'}</div>
               </div>
             );

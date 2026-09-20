@@ -9,7 +9,7 @@ export function isRestaurantSector(sector) {
   return RESTAURANT_SECTOR.test(String(sector || ''));
 }
 
-const PERIODS = new Set(['today', 'yesterday', 'week', 'month', 'year', 'all']);
+const PERIODS = new Set(['today', 'yesterday', 'week', 'month', 'month3', 'month6', 'month9', 'year', 'all']);
 
 const PERIOD_ALIASES = {
   sot: 'today',
@@ -17,6 +17,9 @@ const PERIOD_ALIASES = {
   jave: 'week',
   javë: 'week',
   muaj: 'month',
+  '3muaj': 'month3',
+  '6muaj': 'month6',
+  '9muaj': 'month9',
   vit: 'year',
   gjithsej: 'all',
   total: 'all'
@@ -71,6 +74,12 @@ export function periodBounds(period, asOf) {
       return { from: addDays(asOf, -6), to: asOf };
     case 'month':
       return { from: addDays(asOf, -29), to: asOf };
+    case 'month3':
+      return { from: addDays(asOf, -89), to: asOf };
+    case 'month6':
+      return { from: addDays(asOf, -179), to: asOf };
+    case 'month9':
+      return { from: addDays(asOf, -269), to: asOf };
     case 'year':
       return { from: addDays(asOf, -364), to: asOf };
     case 'all':
@@ -106,6 +115,9 @@ export function periodTotals(businessId, asOf) {
     yesterday: sumSales(businessId, 'yesterday', asOf),
     week: sumSales(businessId, 'week', asOf),
     month: sumSales(businessId, 'month', asOf),
+    month3: sumSales(businessId, 'month3', asOf),
+    month6: sumSales(businessId, 'month6', asOf),
+    month9: sumSales(businessId, 'month9', asOf),
     year: sumSales(businessId, 'year', asOf),
     all: sumSales(businessId, 'all', asOf)
   };
@@ -348,7 +360,8 @@ export function overviewPayload(business, asOf) {
       isRestaurant: isRestaurantSector(business.sector)
     },
     asOf,
-    totals: periodTotals(business.id, asOf)
+    totals: periodTotals(business.id, asOf),
+    goal: fromCents(business.daily_goal_cents)
   };
 }
 

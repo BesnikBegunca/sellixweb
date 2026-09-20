@@ -237,7 +237,7 @@
 
 .pt-totals {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -369,7 +369,9 @@
 
 .pt-today {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   margin: 4px 0 22px;
 }
 
@@ -428,6 +430,32 @@
   margin-bottom: 6px;
 }
 
+.pt-today-pct {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: oklch(0.82 0.12 195);
+}
+
+.pt-today-goal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pt-today-form {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+}
+
+.pt-today-form .ad-field {
+  width: 140px;
+}
+
 .pt-staff-pills {
   margin-bottom: 14px;
 }
@@ -436,6 +464,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  border-color: color-mix(in srgb, var(--staff-color, oklch(0.82 0.12 195)) 55%, rgba(255,255,255,.14));
+  color: var(--staff-color, #D5DFE8);
 }
 
 .pt-staff-dot {
@@ -447,29 +477,28 @@
 }
 
 .pt-staff-pill.active {
-  background: color-mix(in srgb, var(--staff-color, oklch(0.82 0.12 195)) 88%, #04121A);
-  border-color: transparent;
-  color: #04121A;
+  background: color-mix(in srgb, var(--staff-color, oklch(0.82 0.12 195)) 14%, transparent);
+  border-color: var(--staff-color, oklch(0.82 0.12 195));
+  color: var(--staff-color, #EAF7FA);
 }
 
 .pt-table-card {
   padding: 16px;
-  overflow: hidden;
 }
 
-.pt-table-staff {
-  display: block;
-  margin: -16px -16px 12px;
-  padding: 7px 14px;
-  background: var(--staff-color, oklch(0.82 0.12 195));
-  color: #04121A;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.pt-table-card.has-staff {
+  border-color: color-mix(in srgb, var(--staff-color, rgba(255,255,255,.09)) 70%, rgba(255,255,255,.09));
+}
+
+.pt-table-card.has-staff .pt-table-name,
+.pt-table-card.has-staff .pt-table-waiter {
+  color: var(--staff-color, #F2F6FA);
+}
+
+.pt-table-waiter {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
 .pt-table-name {

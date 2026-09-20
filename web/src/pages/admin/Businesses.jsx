@@ -257,11 +257,12 @@ function SalesPanel({ business, onClose }) {
           </div>
           {tab === 'tables' ? (
             <>
-              <TodayRing totals={overview?.totals} />
+              <TodayRing totals={overview?.totals} goal={overview?.goal} />
               <TablesGrid tables={tables} />
             </>
           ) : (
             <>
+              <TodayRing totals={overview?.totals} goal={overview?.goal} />
               <TotalsGrid totals={overview?.totals} />
               <SalesCharts breakdown={breakdown} chartMode={chartMode} onChartModeChange={setChartMode} />
               <div className="pt-split">

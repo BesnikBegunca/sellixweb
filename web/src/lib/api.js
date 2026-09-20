@@ -72,6 +72,7 @@ export const api = {
   portalMe: () => request('/portal/me'),
   portalChangePassword: (currentPassword, newPassword) =>
     request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+  portalSetGoal: (goal) => request('/portal/me/goal', { method: 'PATCH', body: JSON.stringify({ goal }) }),
   portalOverview: (date) => request(`/portal/overview?date=${encodeURIComponent(date)}`),
   portalBreakdown: (query) => request(`/portal/breakdown?${query}`),
   portalTables: () => request('/portal/tables'),

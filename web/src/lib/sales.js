@@ -3,8 +3,11 @@ export const PERIODS = [
   { id: 'yesterday', label: 'Dje' },
   { id: 'week', label: '1 javë' },
   { id: 'month', label: '1 muaj' },
+  { id: 'month3', label: '3 muaj' },
+  { id: 'month6', label: '6 muaj' },
+  { id: 'month9', label: '9 muaj' },
   { id: 'year', label: '1 vit' },
-  { id: 'all', label: 'Gjithsej' }
+  { id: 'all', label: 'Total' }
 ];
 
 const MONTHS_SQ = ['Jan', 'Shk', 'Mar', 'Pri', 'Maj', 'Qer', 'Kor', 'Gus', 'Sht', 'Tet', 'Nën', 'Dhj'];

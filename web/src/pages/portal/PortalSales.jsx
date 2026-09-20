@@ -65,6 +65,14 @@ export default function PortalSales() {
           </div>
         </div>
       )}
+      <TodayRing
+        totals={overview?.totals}
+        goal={overview?.goal}
+        onSaveGoal={async (value) => {
+          const { goal } = await api.portalSetGoal(value);
+          setOverview((prev) => (prev ? { ...prev, goal } : prev));
+        }}
+      />
       <TotalsGrid totals={overview?.totals} />
       <SalesCharts breakdown={breakdown} chartMode={chartMode} onChartModeChange={setChartMode} />
       <div className="pt-split">
