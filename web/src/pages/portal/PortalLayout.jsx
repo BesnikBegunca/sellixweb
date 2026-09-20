@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { usePortal } from '../../lib/PortalContext';
 import { api } from '../../lib/api';
+import VerifiedBadge from './VerifiedBadge';
 import '../admin/admin.css';
 import './portal.css';
 
@@ -66,7 +67,10 @@ export default function PortalLayout() {
             <span></span>
           </span>
           <div>
-            <div className="ad-heading pt-name">{business?.name || 'SelliX'}</div>
+            <div className="ad-heading pt-name">
+              <span className="pt-name-text">{business?.name || 'SelliX'}</span>
+              {business?.name && <VerifiedBadge />}
+            </div>
             <div className="ad-hint">{business?.city ? `${business.city} · ` : ''}Portal i biznesit</div>
           </div>
         </div>

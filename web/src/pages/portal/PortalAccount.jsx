@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { usePortal } from '../../lib/PortalContext';
+import VerifiedBadge from './VerifiedBadge';
 import './portal.css';
 
 function Row({ label, value }) {
@@ -50,7 +51,17 @@ export default function PortalAccount() {
       <div className="pt-split">
         <div className="ad-card pt-panel">
           <h2 className="ad-heading pt-h">Biznesi</h2>
-          <Row label="Emri" value={business?.name} />
+          <Row
+            label="Emri"
+            value={
+              business?.name && (
+                <span className="pt-verified-name">
+                  {business.name}
+                  <VerifiedBadge />
+                </span>
+              )
+            }
+          />
           <Row label="NUI" value={business?.nui} />
           <Row label="Qyteti" value={business?.city} />
           <Row label="Sektori" value={business?.sector} />

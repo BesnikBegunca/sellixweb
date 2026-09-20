@@ -60,8 +60,17 @@
 }
 
 .pt-name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
   font-size: 16px;
   font-weight: 700;
+}
+
+/* Only the name is allowed to run out of room — the tick sits outside the
+   ellipsis so a long business name cannot truncate it away. */
+.pt-name-text {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,6 +122,30 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+}
+
+/* The verified tick. It inherits its size from the text it follows, so one
+   rule covers the header, the account page and anywhere else it lands. */
+.pt-verified {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.12em;
+  margin-left: 0.3em;
+}
+
+.pt-verified-shield {
+  fill: #1D9BF0;
+}
+
+.pt-verified-check {
+  stroke: #FFFFFF;
+}
+
+/* Keeps the tick glued to the end of the name instead of wrapping onto a line
+   of its own when the name is long. */
+.pt-verified-name {
+  display: inline;
 }
 
 /* Tells the user the page is updating itself, so nobody goes looking for a
