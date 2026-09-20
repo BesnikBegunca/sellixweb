@@ -347,6 +347,7 @@ export function listSales(businessId, period, asOf, limit = 50) {
     tableName: r.table_name,
     receiptNo: r.receipt_no,
     staffName: r.staff_name,
+    status: String(r.status || 'paid').toLowerCase() === 'open' ? 'open' : 'paid',
     items: bySale.get(r.id) || []
   }));
 }

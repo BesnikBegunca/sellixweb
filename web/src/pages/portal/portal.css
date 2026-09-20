@@ -367,6 +367,83 @@
   gap: 12px;
 }
 
+.pt-sales {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pt-sale {
+  overflow: hidden;
+}
+
+.pt-sale.paid {
+  border-color: #14B8A6;
+}
+
+.pt-sale-toggle {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pt-sale-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pt-sale-table {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.pt-sale-side {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.pt-sale-total {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pt-sale-status {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8FA0B2;
+}
+
+.pt-sale-status.paid {
+  color: #14B8A6;
+}
+
+.pt-sale-items {
+  padding: 0 16px 14px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.pt-sale-items .pt-list {
+  margin-top: 10px;
+}
+
+.pt-sale-items .pt-empty {
+  padding-top: 10px;
+}
+
 .pt-today {
   display: flex;
   flex-direction: column;

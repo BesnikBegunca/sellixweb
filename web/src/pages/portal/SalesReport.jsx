@@ -335,39 +335,64 @@ export function TablesGrid({ tables }) {
 
 export function SalesList({ sales }) {
   const rows = sales || [];
+  const [openId, setOpenId] = useState(null);
+
   if (rows.length === 0) {
     return <div className="pt-empty">Nuk ka faturë të sinkronizuar në këtë periudhë.</div>;
   }
+
   return (
-    <div className="ad-card" style={{ overflow: 'hidden' }}>
-      <div className="pt-panel" style={{ paddingBottom: 0 }}>
-        <h2 className="ad-heading pt-h">Faturat e fundit</h2>
-      </div>
-      <div style={{ overflowX: 'auto' }} className="ad-table-wrap">
-        <table className="ad-table">
-          <thead>
-            <tr>
-              <th>Ora</th>
-              <th>Fatura</th>
-              <th>Tavolina</th>
-              <th>Stafi</th>
-              <th>Pagesa</th>
-              <th>Totali</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((s) => (
-              <tr key={s.saleUid}>
-                <td data-label="Ora" className="ad-mono" style={{ fontSize: 12 }}>{s.soldAt}</td>
-                <td data-label="Fatura">{s.receiptNo || '—'}</td>
-                <td data-label="Tavolina">{s.tableName || 'Banak'}</td>
-                <td data-label="Stafi">{s.staffName || '—'}</td>
-                <td data-label="Pagesa">{paymentLabel(s.paymentMethod)}</td>
-                <td data-label="Totali" style={{ fontWeight: 700 }}>{formatEuro(s.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="ad-card pt-panel">
+      <h2 className="ad-heading pt-h">Faturat e fundit</h2>
+      <div className="pt-sales">
+        {rows.map((s) => {
+          const paid = s.status !== 'open';
+          const open = openId === s.saleUid;
+          const items = s.items || [];
+          return (
+            <div key={s.saleUid} className={`ad-card pt-sale${paid ? ' paid' : ''}${open ? ' open' : ''}`}>
+              <button
+                type="button"
+                className="pt-sale-toggle"
+                onClick={() => setOpenId(open ? null : s.saleUid)}
+                aria-expanded={open}
+              >
+                <div className="pt-sale-main">
+                  <div className="pt-sale-meta">
+                    <div className="pt-sale-table">{s.tableName || 'Banak'}</div>
+                    <div className="ad-hint">
+                      {s.receiptNo || 'Pa tiketë'}
+                      {s.soldAt ? ` · ${s.soldAt}` : ''}
+                      {s.staffName ? ` · ${s.staffName}` : ''}
+                    </div>
+                  </div>
+                  <div className="pt-sale-side">
+                    <div className="pt-sale-total">{formatEuro(s.total)}</div>
+                    <div className={`pt-sale-status${paid ? ' paid' : ''}`}>
+                      {paid ? 'Paguar' : 'Printuar'}
+                    </div>
+                  </div>
+                </div>
+              </button>
+              {open && (
+                <div className="pt-sale-items">
+                  {items.length === 0 ? (
+                    <div className="pt-empty">Nuk ka artikuj të sinkronizuar për këtë faturë.</div>
+                  ) : (
+                    <ul className="pt-list">
+                      {items.map((item, i) => (
+                        <li key={`${s.saleUid}-${i}`}>
+                          <span>{formatQty(item.quantity)} × {item.name}</span>
+                          <span className="pt-list-meta">{formatEuro(item.total)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
