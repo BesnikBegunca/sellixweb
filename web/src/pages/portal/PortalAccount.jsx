@@ -57,7 +57,7 @@ export default function PortalAccount() {
               business?.name && (
                 <span className="pt-verified-name">
                   {business.name}
-                  <VerifiedBadge />
+                  {business.verified && <VerifiedBadge color={business.verifiedColor} />}
                 </span>
               )
             }

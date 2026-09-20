@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
-import { effectiveStatus } from '../licenses.js';
+import { effectiveStatus, findLiveByLicenseKey } from '../licenses.js';
 import { toCents } from '../reports.js';
 import { publish } from '../events.js';
 
@@ -263,7 +263,7 @@ salesRouter.post('/sync', (req, res) => {
   const key = readKey(req);
   if (!key) return res.status(400).json({ ok: false, error: 'missing_license_key' });
 
-  const row = db.prepare('SELECT * FROM businesses WHERE license_key = ?').get(key);
+  const row = findLiveByLicenseKey(key);
   if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
   if (effectiveStatus(row) === 'revoked') return res.status(403).json({ ok: false, error: 'revoked' });
 

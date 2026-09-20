@@ -69,7 +69,7 @@ export default function PortalLayout() {
           <div>
             <div className="ad-heading pt-name">
               <span className="pt-name-text">{business?.name || 'SelliX'}</span>
-              {business?.name && <VerifiedBadge />}
+              {business?.verified && <VerifiedBadge color={business.verifiedColor} />}
             </div>
             <div className="ad-hint">{business?.city ? `${business.city} · ` : ''}Portal i biznesit</div>
           </div>

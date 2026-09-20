@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { localDate, periodQuery } from '../../lib/sales';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
+import VerifiedBadge from '../portal/VerifiedBadge';
 import {
   PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, LiveBadge
 } from '../portal/SalesReport';
@@ -13,6 +14,7 @@ const EMPTY = {
   country: 'Kosovë', contactPerson: '', phone: '', email: '', sector: '', seats: 1, notes: '',
   licenseMonths: 12
 };
+const DEFAULT_TICK = '#1D9BF0';
 
 function formatDate(sqlDate) {
   if (!sqlDate) return '—';
@@ -283,6 +285,7 @@ export default function Businesses() {
   const [salesFor, setSalesFor] = useState(null);
   const [copied, setCopied] = useState(null);
   const [extendMonths, setExtendMonths] = useState({});
+  const [tickColors, setTickColors] = useState({});
   const [portalCredential, setPortalCredential] = useState(null);
 
   const load = () => {
@@ -329,11 +332,28 @@ export default function Businesses() {
   };
 
   const onDelete = async (b) => {
-    if (!confirm(`Delete ${b.name}? Its license stops working immediately and cannot be recovered.`)) return;
+    if (!confirm(`Move ${b.name} to Recycle bin? You can restore it later. The license and portal login stop until then.`)) return;
     setBusyId(b.id);
     try {
       await api.deleteBusiness(b.id);
       setBusinesses((prev) => prev.filter((x) => x.id !== b.id));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const colorFor = (b) => tickColors[b.id] || b.verifiedColor || DEFAULT_TICK;
+
+  const onTickColor = async (b, color) => {
+    setTickColors((prev) => ({ ...prev, [b.id]: color }));
+    if (!b.verified) return;
+    setBusyId(b.id);
+    setError('');
+    try {
+      const { business } = await api.setVerifiedColor(b.id, color);
+      setBusinesses((prev) => prev.map((x) => (x.id === business.id ? business : x)));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -457,7 +477,10 @@ export default function Businesses() {
                   <tr key={b.id}>
                     <td data-label="Business">
                       <div className="ad-cell-stack">
-                        <div style={{ fontWeight: 600 }}>{b.name}</div>
+                        <div className="ad-name-row">
+                          <span style={{ fontWeight: 600 }}>{b.name}</span>
+                          {b.verified && <VerifiedBadge color={colorFor(b)} />}
+                        </div>
                         {b.contactPerson && <div className="ad-hint">{b.contactPerson}</div>}
                       </div>
                     </td>
@@ -537,6 +560,33 @@ export default function Businesses() {
                           >
                             Extend
                           </button>
+                        </div>
+                        <div className="ad-verify">
+                          <input
+                            type="color"
+                            className="ad-color"
+                            aria-label="Ngjyra e tick-ut"
+                            value={colorFor(b).toLowerCase()}
+                            disabled={busyId === b.id}
+                            onChange={(e) => onTickColor(b, e.target.value)}
+                          />
+                          {b.verified ? (
+                            <button
+                              className="ad-btn-ghost"
+                              disabled={busyId === b.id}
+                              onClick={() => runAction(b.id, () => api.unverifyBusiness(b.id))}
+                            >
+                              Hiq tick
+                            </button>
+                          ) : (
+                            <button
+                              className="ad-btn"
+                              disabled={busyId === b.id}
+                              onClick={() => runAction(b.id, () => api.verifyBusiness(b.id, colorFor(b)))}
+                            >
+                              Verifiko
+                            </button>
+                          )}
                         </div>
                         {b.isRestaurant && (
                           <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>

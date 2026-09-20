@@ -149,7 +149,10 @@ const BUSINESS_MIGRATIONS = [
   ['portal_email', "ALTER TABLE businesses ADD COLUMN portal_email TEXT NOT NULL DEFAULT ''"],
   ['portal_password_hash', "ALTER TABLE businesses ADD COLUMN portal_password_hash TEXT NOT NULL DEFAULT ''"],
   ['portal_must_change_password', 'ALTER TABLE businesses ADD COLUMN portal_must_change_password INTEGER NOT NULL DEFAULT 0'],
-  ['portal_last_login_at', 'ALTER TABLE businesses ADD COLUMN portal_last_login_at TEXT']
+  ['portal_last_login_at', 'ALTER TABLE businesses ADD COLUMN portal_last_login_at TEXT'],
+  ['verified', 'ALTER TABLE businesses ADD COLUMN verified INTEGER NOT NULL DEFAULT 0'],
+  ['verified_color', "ALTER TABLE businesses ADD COLUMN verified_color TEXT NOT NULL DEFAULT '#1D9BF0'"],
+  ['deleted_at', 'ALTER TABLE businesses ADD COLUMN deleted_at TEXT']
 ];
 for (const [column, sql] of BUSINESS_MIGRATIONS) {
   if (!businessColumns.has(column)) db.exec(sql);

@@ -8,7 +8,7 @@ import {
   clearPortalCookie,
   requirePortal
 } from '../auth.js';
-import { effectiveStatus } from '../licenses.js';
+import { effectiveStatus, parseTickColor, DEFAULT_TICK_COLOR } from '../licenses.js';
 import {
   readAsOf,
   readPeriod,
@@ -41,7 +41,9 @@ function publicBusiness(row) {
     mustChangePassword: !!row.portal_must_change_password,
     isRestaurant: isRestaurantSector(row.sector),
     licenseStatus: effectiveStatus(row),
-    licenseExpiresAt: row.license_expires_at
+    licenseExpiresAt: row.license_expires_at,
+    verified: !!row.verified,
+    verifiedColor: parseTickColor(row.verified_color, DEFAULT_TICK_COLOR)
   };
 }
 
@@ -51,7 +53,7 @@ function loadBusiness(req) {
 
 function requireActivePortal(req, res) {
   const row = loadBusiness(req);
-  if (!row || !row.portal_email) {
+  if (!row || row.deleted_at || !row.portal_email) {
     res.status(401).json({ error: 'Not authenticated' });
     return null;
   }
@@ -70,7 +72,7 @@ portalRouter.post('/login', loginLimiter, (req, res) => {
   }
 
   const row = db.prepare("SELECT * FROM businesses WHERE portal_email = ? AND portal_email <> ''").get(email);
-  if (!row || !row.portal_password_hash || !bcrypt.compareSync(password, row.portal_password_hash)) {
+  if (!row || row.deleted_at || !row.portal_password_hash || !bcrypt.compareSync(password, row.portal_password_hash)) {
     return res.status(401).json({ error: 'Email ose fjalëkalim i pasaktë' });
   }
 
@@ -101,7 +103,7 @@ portalRouter.patch('/me/password', requirePortal, (req, res) => {
     return res.status(400).json({ error: 'Fjalëkalimi i ri duhet të ketë së paku 8 karaktere' });
   }
   const row = loadBusiness(req);
-  if (!row || !row.portal_email) return res.status(401).json({ error: 'Not authenticated' });
+  if (!row || row.deleted_at || !row.portal_email) return res.status(401).json({ error: 'Not authenticated' });
 
   if (!row.portal_must_change_password) {
     if (typeof currentPassword !== 'string' || !bcrypt.compareSync(currentPassword, row.portal_password_hash)) {

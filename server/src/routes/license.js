@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
-import { effectiveStatus, deviceCount } from '../licenses.js';
+import { effectiveStatus, deviceCount, findLiveByLicenseKey, isDeleted } from '../licenses.js';
 
 export const licenseRouter = Router();
 
@@ -64,7 +64,7 @@ licenseRouter.post('/activate', (req, res) => {
   if (!key) return res.status(400).json({ valid: false, reason: 'missing_license_key' });
   if (!deviceId) return res.status(400).json({ valid: false, reason: 'missing_device_id' });
 
-  const row = db.prepare('SELECT * FROM businesses WHERE license_key = ?').get(key);
+  const row = findLiveByLicenseKey(key);
   if (!row) return res.status(404).json({ valid: false, reason: 'not_found' });
 
   const status = effectiveStatus(row);
@@ -99,7 +99,7 @@ licenseRouter.post('/check', (req, res) => {
   if (!key) return res.status(400).json({ valid: false, reason: 'missing_license_key' });
   if (!deviceId) return res.status(400).json({ valid: false, reason: 'missing_device_id' });
 
-  const row = db.prepare('SELECT * FROM businesses WHERE license_key = ?').get(key);
+  const row = findLiveByLicenseKey(key);
   if (!row) return res.status(404).json({ valid: false, reason: 'not_found' });
 
   const status = effectiveStatus(row);
@@ -177,7 +177,7 @@ licenseRouter.post('/register', (req, res) => {
   // Synchronize is meant to be pressed repeatedly until it succeeds.
   if (existing?.status === 'approved' && existing.business_id) {
     const business = db.prepare('SELECT * FROM businesses WHERE id = ?').get(existing.business_id);
-    if (business) {
+    if (business && !isDeleted(business)) {
       // Same business/license blocks as activate and check, so a client can
       // store the expiry and seat count straight away instead of having to
       // make a second call to learn them.

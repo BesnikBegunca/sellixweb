@@ -49,10 +49,12 @@ registrationsRouter.post('/:id/approve', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Registration not found' });
   if (row.status === 'approved') return res.status(409).json({ error: 'Already approved' });
 
-  const existingNui = db.prepare('SELECT id FROM businesses WHERE nui = ?').get(row.nui);
+  const existingNui = db.prepare('SELECT id, deleted_at FROM businesses WHERE nui = ?').get(row.nui);
   if (existingNui) {
     return res.status(409).json({
-      error: 'A business with that NUI already exists. Link the device from that business instead.'
+      error: existingNui.deleted_at
+        ? 'A deleted business with that NUI is in Recycle bin. Restore it or delete it forever first.'
+        : 'A business with that NUI already exists. Link the device from that business instead.'
     });
   }
 

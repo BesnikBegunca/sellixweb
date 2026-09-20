@@ -19,6 +19,24 @@ export function generateLicenseKey() {
   return `SLX-${groups.join('-')}`;
 }
 
+export const DEFAULT_TICK_COLOR = '#1D9BF0';
+
+export function isDeleted(row) {
+  return Boolean(row?.deleted_at);
+}
+
+export function findLiveByLicenseKey(key) {
+  const row = db.prepare('SELECT * FROM businesses WHERE license_key = ?').get(key);
+  if (!row || isDeleted(row)) return null;
+  return row;
+}
+
+export function parseTickColor(value, fallback = DEFAULT_TICK_COLOR) {
+  if (typeof value !== 'string') return fallback;
+  const color = value.trim();
+  return /^#[0-9A-Fa-f]{6}$/.test(color) ? color.toUpperCase() : fallback;
+}
+
 export function uniqueLicenseKey() {
   for (let attempt = 0; attempt < 10; attempt++) {
     const key = generateLicenseKey();
@@ -82,6 +100,9 @@ export function publicBusiness(row) {
     portalEmail: row.portal_email || '',
     portalEnabled: !!row.portal_password_hash,
     portalLastLoginAt: row.portal_last_login_at || null,
+    verified: !!row.verified,
+    verifiedColor: parseTickColor(row.verified_color),
+    deletedAt: row.deleted_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

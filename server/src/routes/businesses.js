@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { subscribe } from '../events.js';
-import { uniqueLicenseKey, nowSql, addMonths, publicBusiness } from '../licenses.js';
+import { uniqueLicenseKey, nowSql, addMonths, publicBusiness, parseTickColor, DEFAULT_TICK_COLOR, isDeleted } from '../licenses.js';
 import {
   readAsOf,
   readPeriod,
@@ -47,12 +47,27 @@ function parseSeats(value, fallback = 1) {
   return Math.min(100, Math.max(1, Math.trunc(n)));
 }
 
-function getBusiness(id) {
-  return db.prepare('SELECT * FROM businesses WHERE id = ?').get(Number(id));
+function getBusiness(id, { includeDeleted = false } = {}) {
+  const row = db.prepare('SELECT * FROM businesses WHERE id = ?').get(Number(id));
+  if (!row) return null;
+  if (!includeDeleted && isDeleted(row)) return null;
+  return row;
+}
+
+function nuiTakenMessage(existing) {
+  if (existing.deleted_at) {
+    return 'A deleted business with that NUI is in Recycle bin. Restore it or delete it forever first.';
+  }
+  return 'A business with that NUI already exists';
 }
 
 businessesRouter.get('/', (req, res) => {
-  const rows = db.prepare('SELECT * FROM businesses ORDER BY created_at DESC').all();
+  const rows = db.prepare('SELECT * FROM businesses WHERE deleted_at IS NULL ORDER BY created_at DESC').all();
+  res.json({ businesses: rows.map(publicBusiness) });
+});
+
+businessesRouter.get('/trash', (req, res) => {
+  const rows = db.prepare('SELECT * FROM businesses WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all();
   res.json({ businesses: rows.map(publicBusiness) });
 });
 
@@ -62,8 +77,8 @@ businessesRouter.post('/', (req, res) => {
   if (!nui) return res.status(400).json({ error: 'NUI is required' });
   if (!name) return res.status(400).json({ error: 'Business name is required' });
 
-  const taken = db.prepare('SELECT 1 FROM businesses WHERE nui = ?').get(nui);
-  if (taken) return res.status(409).json({ error: 'A business with that NUI already exists' });
+  const taken = db.prepare('SELECT id, deleted_at FROM businesses WHERE nui = ?').get(nui);
+  if (taken) return res.status(409).json({ error: nuiTakenMessage(taken) });
 
   const months = Math.min(60, Math.max(1, Number(req.body?.licenseMonths) || 12));
   const issuedAt = nowSql();
@@ -97,8 +112,8 @@ businessesRouter.patch('/:id', (req, res) => {
   if (req.body?.nui !== undefined) {
     const nui = clean(req.body.nui, 50);
     if (!nui) return res.status(400).json({ error: 'NUI is required' });
-    const taken = db.prepare('SELECT id FROM businesses WHERE nui = ? AND id != ?').get(nui, row.id);
-    if (taken) return res.status(409).json({ error: 'A business with that NUI already exists' });
+    const taken = db.prepare('SELECT id, deleted_at FROM businesses WHERE nui = ? AND id != ?').get(nui, row.id);
+    if (taken) return res.status(409).json({ error: nuiTakenMessage(taken) });
     updates.nui = nui;
   }
   for (const [bodyKey, column] of Object.entries(BODY_TO_COLUMN)) {
@@ -120,9 +135,52 @@ businessesRouter.patch('/:id', (req, res) => {
 });
 
 businessesRouter.delete('/:id', (req, res) => {
-  const info = db.prepare('DELETE FROM businesses WHERE id = ?').run(Number(req.params.id));
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  db.prepare("UPDATE businesses SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(row.id);
+  res.json({ ok: true });
+});
+
+businessesRouter.post('/:id/restore', (req, res) => {
+  const row = getBusiness(req.params.id, { includeDeleted: true });
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  if (!isDeleted(row)) return res.status(409).json({ error: 'Business is not in Recycle bin' });
+  db.prepare('UPDATE businesses SET deleted_at = NULL, updated_at = datetime(\'now\') WHERE id = ?').run(row.id);
+  res.json({ business: publicBusiness(getBusiness(row.id)) });
+});
+
+businessesRouter.delete('/:id/purge', (req, res) => {
+  const row = getBusiness(req.params.id, { includeDeleted: true });
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  if (!isDeleted(row)) return res.status(409).json({ error: 'Move the business to Recycle bin first' });
+  const info = db.prepare('DELETE FROM businesses WHERE id = ?').run(row.id);
   if (info.changes === 0) return res.status(404).json({ error: 'Business not found' });
   res.json({ ok: true });
+});
+
+businessesRouter.post('/:id/verify', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  const color = parseTickColor(req.body?.color, parseTickColor(row.verified_color));
+  db.prepare(
+    'UPDATE businesses SET verified = 1, verified_color = ?, updated_at = datetime(\'now\') WHERE id = ?'
+  ).run(color, row.id);
+  res.json({ business: publicBusiness(getBusiness(row.id)) });
+});
+
+businessesRouter.post('/:id/unverify', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  db.prepare("UPDATE businesses SET verified = 0, updated_at = datetime('now') WHERE id = ?").run(row.id);
+  res.json({ business: publicBusiness(getBusiness(row.id)) });
+});
+
+businessesRouter.patch('/:id/verify-color', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  const color = parseTickColor(req.body?.color, DEFAULT_TICK_COLOR);
+  db.prepare('UPDATE businesses SET verified_color = ?, updated_at = datetime(\'now\') WHERE id = ?').run(color, row.id);
+  res.json({ business: publicBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/license/extend', (req, res) => {

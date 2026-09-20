@@ -140,6 +140,33 @@
   padding: 7px 14px;
   font-size: 13px;
 }
+.ad-verify {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.ad-verify .ad-btn,
+.ad-verify .ad-btn-ghost {
+  padding: 7px 14px;
+  font-size: 13px;
+}
+.ad-color {
+  width: 36px;
+  min-width: 36px;
+  padding: 3px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 10px;
+  background: rgba(0,0,0,.3);
+  cursor: pointer;
+}
+.ad-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.ad-color::-webkit-color-swatch { border: none; border-radius: 6px; }
+.ad-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
 
 .ad-key-btn {
   max-width: 220px;
@@ -480,6 +507,21 @@
     min-height: 44px;
     padding: 10px 12px;
     font-size: 13px;
+  }
+  .ad-verify {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-column: 1 / -1;
+    gap: 8px;
+  }
+  .ad-verify .ad-btn,
+  .ad-verify .ad-btn-ghost {
+    width: 100%;
+    min-height: 44px;
+  }
+  .ad-color {
+    width: 100%;
+    min-height: 44px;
   }
   .ad-actions .ad-span-2,
   .ad-actions > :only-child {
