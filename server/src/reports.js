@@ -204,6 +204,112 @@ export function tableTotals(businessId, period, asOf) {
   return liveTables(businessId).tables;
 }
 
+// --- Tills ("kompjuterat") ------------------------------------------------
+//
+// A market has no tables, so the split an owner asks for is per till: how much
+// did computer 1 take, how much did computer 2. The till already stamps every
+// receipt with its `deviceId` on POST /api/sales/sync, and the same id is what
+// it activated the licence with, so the two join up without any new field.
+//
+// The number is the order the tills were activated in, which keeps "Kompjuteri
+// 2" meaning the same machine tomorrow as it does today.
+export function deviceNumbers(businessId) {
+  const rows = db
+    .prepare(
+      `SELECT device_id
+         FROM license_activations
+        WHERE business_id = ? AND TRIM(device_id) != ''
+        ORDER BY activated_at ASC, id ASC`
+    )
+    .all(businessId);
+  const numbers = new Map();
+  rows.forEach((row, index) => numbers.set(String(row.device_id), index + 1));
+  return numbers;
+}
+
+export function deviceTotals(businessId, period, asOf) {
+  const activations = db
+    .prepare(
+      `SELECT device_id, device_name, activated_at, last_seen_at
+         FROM license_activations
+        WHERE business_id = ? AND TRIM(device_id) != ''
+        ORDER BY activated_at ASC, id ASC`
+    )
+    .all(businessId);
+
+  const filter = periodFilter(period, asOf);
+  const sold = db
+    .prepare(
+      `SELECT device_id,
+              COALESCE(SUM(total_cents), 0) AS total_cents,
+              COUNT(*) AS count,
+              MAX(sold_at) AS last_sold_at
+         FROM sales
+        WHERE business_id = ?${filter.sql}
+        GROUP BY device_id`
+    )
+    .all(businessId, ...filter.params);
+
+  const byDevice = new Map(sold.map((r) => [String(r.device_id || ''), r]));
+
+  const devices = [];
+  activations.forEach((row, index) => {
+    const key = String(row.device_id);
+    const sale = byDevice.get(key);
+    byDevice.delete(key);
+    devices.push({
+      deviceId: key,
+      // A till that sold nothing this period still belongs on the page —
+      // "that one took nothing today" is exactly what the owner is checking.
+      number: index + 1,
+      machineName: String(row.device_name || '').trim(),
+      total: fromCents(sale?.total_cents),
+      count: sale?.count || 0,
+      lastSoldAt: sale?.last_sold_at || null,
+      lastSeenAt: row.last_seen_at || null,
+      activated: true
+    });
+  });
+
+  // Receipts whose till was never activated, or was activated and later
+  // released. Without these the cards would not add up to the day's total.
+  // Receipts that carry no device id at all are grouped last, since there is
+  // no till to point at.
+  const leftovers = [...byDevice.entries()].sort(([a], [b]) => {
+    if (a === b) return 0;
+    if (a === '') return 1;
+    if (b === '') return -1;
+    return a.localeCompare(b);
+  });
+  let extra = activations.length;
+  for (const [key, sale] of leftovers) {
+    devices.push({
+      deviceId: key,
+      number: key ? ++extra : null,
+      machineName: '',
+      total: fromCents(sale.total_cents),
+      count: sale.count || 0,
+      lastSoldAt: sale.last_sold_at || null,
+      lastSeenAt: null,
+      activated: false
+    });
+  }
+
+  const total = devices.reduce((sum, d) => sum + d.total, 0);
+  const count = devices.reduce((sum, d) => sum + d.count, 0);
+  for (const device of devices) {
+    device.share = total > 0 ? Math.round((device.total / total) * 1000) / 10 : 0;
+  }
+
+  return {
+    asOf,
+    period,
+    total: Math.round(total * 100) / 100,
+    count,
+    devices
+  };
+}
+
 export function dailySeries(businessId, asOf, days = 14) {
   const from = addDays(asOf, -(days - 1));
   const rows = db
@@ -319,6 +425,9 @@ export function listSales(businessId, period, asOf, limit = 50) {
 
   if (rows.length === 0) return [];
 
+  // Markets label a receipt by the till that rang it up, the way a restaurant
+  // labels one by its table.
+  const numbers = deviceNumbers(businessId);
   const ids = rows.map((r) => r.id);
   const placeholders = ids.map(() => '?').join(',');
   const items = db
@@ -345,6 +454,8 @@ export function listSales(businessId, period, asOf, limit = 50) {
     discount: fromCents(r.discount_cents),
     paymentMethod: r.payment_method,
     tableName: r.table_name,
+    deviceId: r.device_id || '',
+    deviceNumber: numbers.get(String(r.device_id || '')) || null,
     receiptNo: r.receipt_no,
     staffName: r.staff_name,
     status: String(r.status || 'paid').toLowerCase() === 'open' ? 'open' : 'paid',

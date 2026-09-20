@@ -63,6 +63,14 @@ export function monthLabel(ym) {
   return `${MONTHS_SQ[Number(m) - 1] || m} ${y.slice(2)}`;
 }
 
+// A market's tills are numbered in the order they were activated, so the owner
+// can say "kompjuteri 2" and mean the same machine every day. A receipt that
+// arrived without a device id (an old sync, or a till that never activated)
+// has no number to show.
+export function registerLabel(number) {
+  return number ? `Kompjuteri ${number}` : 'Pa identifikim';
+}
+
 export function periodQuery(period, date = localDate()) {
   return `period=${encodeURIComponent(period)}&date=${encodeURIComponent(date)}`;
 }

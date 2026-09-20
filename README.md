@@ -80,6 +80,11 @@ Once in, the owner sees:
 - **Tavolinat** — takings per table (`Tavolina 1 · 177.00 €`), shown only for
   table-service sectors: restaurants, bars, cafés, pubs, pizzerias. Sales with
   no table (takeaway, counter) count in the day's total but not here
+- **Kompjuterët** — what every other sector gets in that slot: takings per
+  till (`Kompjuteri 1 · 167.75 €`), with each one's share of the period, its
+  receipt count and the time of its last sale. A market has no floor plan to
+  show, but it does have two or three computers at the counter whose takings
+  the owner wants to compare
 - **Llogaria** — the business details on file, and a password change
 
 The whole portal is in Albanian and works on a phone.
@@ -91,7 +96,15 @@ shop's dashboard is empty — there is no sample data. Syncing is idempotent on
 the till's own `saleUid`, so re-sending a batch after a dropped connection
 never double-counts.
 
-**Shitjet and Tavolinat update themselves.** Every open page holds a server-sent
+A till is numbered by the order it activated its licence, so *Kompjuteri 2*
+means the same machine tomorrow as it does today; its name from activation is
+shown underneath. Receipts that arrive with no `deviceId` are grouped last as
+*Pa identifikim*, so the per-till figures always add up to the period's total.
+On the **Shitjet** page a market's receipts are labelled by till where a
+restaurant's are labelled by table. Admins see the same split under
+**Businesses → Shitjet**, in a *Kompjuterët* tab.
+
+**Shitjet, Tavolinat and Kompjuterët update themselves.** Every open page holds a server-sent
 event stream (`GET /api/portal/stream`, and `GET /api/businesses/:id/sales/stream`
 for the admin view). A sync that accepted anything pushes a notice to every page
 watching that business, and the page refetches — so a closed table appears in a

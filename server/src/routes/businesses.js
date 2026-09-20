@@ -11,6 +11,7 @@ import {
   overviewPayload,
   breakdownPayload,
   liveTables,
+  deviceTotals,
   listSales
 } from '../reports.js';
 
@@ -313,6 +314,12 @@ businessesRouter.get('/:id/sales/tables', (req, res) => {
 });
 
 // Live counterpart of the four endpoints above, for the admin sales panel.
+businessesRouter.get('/:id/sales/devices', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  res.json(deviceTotals(row.id, readPeriod(req, 'today'), readAsOf(req)));
+});
+
 businessesRouter.get('/:id/sales/stream', (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });

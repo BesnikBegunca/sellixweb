@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel } from '../../lib/sales';
+import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel, registerLabel } from '../../lib/sales';
 import { liveClock } from '../../lib/useLiveRefresh';
 
 const STAFF_COLORS = ['#5EEAD4', '#38BDF8', '#86EFAC', '#FBBF24', '#FB7185', '#67E8F9', '#FDBA74', '#A3E635'];
@@ -339,7 +339,93 @@ export function TablesGrid({ tables }) {
   );
 }
 
-export function SalesList({ sales }) {
+// The market's answer to TablesGrid. A shop floor has tables to lay out; a
+// market has two or three tills whose takings the owner wants to compare, so
+// these are rows with a share bar rather than a grid of squares.
+function soldAtLabel(soldAt, asOf) {
+  if (!soldAt) return '';
+  const [day, time] = String(soldAt).split(' ');
+  const clock = (time || '').slice(0, 5);
+  return day === asOf ? clock : `${dayLabel(day)} ${clock}`;
+}
+
+export function RegistersGrid({ data }) {
+  const devices = data?.devices || [];
+  const total = Number(data?.total) || 0;
+  const count = Number(data?.count) || 0;
+
+  if (devices.length === 0) {
+    return (
+      <div className="pt-empty">
+        Asnjë arkë nuk ka dërguar shitje ende. Sapo një kompjuter të aktivizohet dhe të lëshojë faturën e parë, del këtu.
+      </div>
+    );
+  }
+
+  // Only worth crowning a winner when there is something to win: with a single
+  // till, or with everything at zero, the badge would just be noise.
+  const best = devices.reduce((a, b) => (b.total > a.total ? b : a), devices[0]);
+  const hasRace = devices.filter((d) => d.total > 0).length > 1;
+  // The catch-all row for receipts with no device id is not a till, so it does
+  // not get counted as one.
+  const tills = devices.filter((d) => d.number).length;
+
+  return (
+    <div className="pt-regs">
+      <div className="ad-card pt-regs-sum">
+        <div>
+          <div className="ad-mono pt-stat-label">
+            Gjithsej nga {tills} {tills === 1 ? 'arkë' : 'arka'}
+          </div>
+          <div className="ad-heading pt-regs-sum-value">{formatEuro(total)}</div>
+        </div>
+        <div className="ad-hint">{count} {count === 1 ? 'faturë' : 'fatura'}</div>
+      </div>
+
+      {devices.map((d) => {
+        const share = Number(d.share) || 0;
+        const last = soldAtLabel(d.lastSoldAt, data?.asOf);
+        return (
+          <div
+            key={d.deviceId || 'unknown'}
+            className={`ad-card pt-reg${hasRace && d === best ? ' best' : ''}${d.total > 0 ? '' : ' quiet'}`}
+          >
+            <div className="pt-reg-head">
+              <span className="pt-reg-no" aria-hidden="true">{d.number || '?'}</span>
+              <div className="pt-reg-id">
+                <div className="ad-heading pt-reg-name">
+                  {registerLabel(d.number)}
+                  {hasRace && d === best && <span className="pt-reg-best">Më e larta</span>}
+                </div>
+                <div className="ad-hint pt-reg-sub">
+                  {d.machineName ||
+                    (!d.number
+                      ? 'Fatura pa ID arke'
+                      : d.activated
+                        ? 'Pa emër'
+                        : 'Arkë e pa-aktivizuar')}
+                </div>
+              </div>
+              <div className="pt-reg-money">
+                <div className="pt-reg-total">{formatEuro(d.total)}</div>
+                <div className="ad-hint">{d.count} {d.count === 1 ? 'faturë' : 'fatura'}</div>
+              </div>
+            </div>
+            <div className="pt-reg-bar" role="img" aria-label={`${share}% e shitjeve`}>
+              <div className="pt-reg-bar-fill" style={{ width: `${Math.max(share > 0 ? 2 : 0, share)}%` }} />
+            </div>
+            <div className="pt-reg-foot">
+              <span>{share}% e shitjeve</span>
+              <span>{last ? `Shitja e fundit ${last}` : 'Pa shitje në këtë periudhë'}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function SalesList({ sales, isRestaurant = true }) {
   const rows = sales || [];
   const [openId, setOpenId] = useState(null);
 
@@ -365,7 +451,11 @@ export function SalesList({ sales }) {
               >
                 <div className="pt-sale-main">
                   <div className="pt-sale-meta">
-                    <div className="pt-sale-table">{s.tableName || 'Banak'}</div>
+                    {/* A restaurant receipt belongs to a table; a market
+                        receipt belongs to the till that rang it up. */}
+                    <div className="pt-sale-table">
+                      {isRestaurant ? (s.tableName || 'Banak') : registerLabel(s.deviceNumber)}
+                    </div>
                     <div className="ad-hint">
                       {s.receiptNo || 'Pa tiketë'}
                       {s.soldAt ? ` · ${s.soldAt}` : ''}

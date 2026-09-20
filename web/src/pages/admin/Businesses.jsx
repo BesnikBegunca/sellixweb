@@ -4,7 +4,8 @@ import { localDate, periodQuery } from '../../lib/sales';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
 import VerifiedBadge from '../portal/VerifiedBadge';
 import {
-  PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, LiveBadge, TodayRing
+  PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, RegistersGrid,
+  LiveBadge, TodayRing
 } from '../portal/SalesReport';
 import '../portal/portal.css';
 import './admin.css';
@@ -186,6 +187,7 @@ function SalesPanel({ business, onClose }) {
   const [overview, setOverview] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
   const [tables, setTables] = useState(null);
+  const [devices, setDevices] = useState(null);
   const [sales, setSales] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -204,7 +206,8 @@ function SalesPanel({ business, onClose }) {
       api.getBusinessSalesBreakdown(businessId, q),
       api.getBusinessSales(businessId, q)
     ];
-    if (isRestaurant) requests.push(api.getBusinessSalesTables(businessId));
+    // A restaurant's fourth call is its floor; a market's is its tills.
+    requests.push(isRestaurant ? api.getBusinessSalesTables(businessId) : api.getBusinessSalesDevices(businessId, q));
     try {
       const results = await Promise.all(requests);
       if (id !== requestId.current) return;
@@ -212,6 +215,7 @@ function SalesPanel({ business, onClose }) {
       setBreakdown(results[1]);
       setSales(results[2].sales);
       setTables(isRestaurant ? results[3].tables : []);
+      setDevices(isRestaurant ? null : results[3]);
       setError('');
     } catch (e) {
       if (id === requestId.current) setError(e.message);
@@ -243,23 +247,31 @@ function SalesPanel({ business, onClose }) {
       ) : (
         <>
           <div className="pt-page-head" style={{ marginBottom: 14 }}>
-            {tab === 'sales' && <PeriodPills period={period} onChange={setPeriod} />}
-            {isRestaurant && (
-              <div className="pt-pills pt-pills-sm">
-                <button type="button" className={`pt-pill${tab === 'sales' ? ' active' : ''}`} onClick={() => setTab('sales')}>
-                  Shitjet
-                </button>
+            {/* The floor is live rather than period-based, so the period
+                pills stay hidden there; per-till takings do depend on it. */}
+            {tab !== 'tables' && <PeriodPills period={period} onChange={setPeriod} />}
+            <div className="pt-pills pt-pills-sm">
+              <button type="button" className={`pt-pill${tab === 'sales' ? ' active' : ''}`} onClick={() => setTab('sales')}>
+                Shitjet
+              </button>
+              {isRestaurant ? (
                 <button type="button" className={`pt-pill${tab === 'tables' ? ' active' : ''}`} onClick={() => setTab('tables')}>
                   Tavolinat
                 </button>
-              </div>
-            )}
+              ) : (
+                <button type="button" className={`pt-pill${tab === 'registers' ? ' active' : ''}`} onClick={() => setTab('registers')}>
+                  Kompjuterët
+                </button>
+              )}
+            </div>
           </div>
           {tab === 'tables' ? (
             <>
               <TodayRing totals={overview?.totals} goal={overview?.goal} />
               <TablesGrid tables={tables} />
             </>
+          ) : tab === 'registers' ? (
+            <RegistersGrid data={devices} />
           ) : (
             <>
               <TodayRing totals={overview?.totals} goal={overview?.goal} />
@@ -269,7 +281,7 @@ function SalesPanel({ business, onClose }) {
                 <PaymentsList payments={breakdown?.payments} />
                 <ProductsList products={breakdown?.products} />
               </div>
-              <SalesList sales={sales} />
+              <SalesList sales={sales} isRestaurant={isRestaurant} />
             </>
           )}
         </>
@@ -592,11 +604,11 @@ export default function Businesses() {
                             </button>
                           )}
                         </div>
-                        {b.isRestaurant && (
-                          <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>
-                            Shitjet
-                          </button>
-                        )}
+                        {/* Every business has sales to look at: a restaurant
+                            splits them by table, a market by till. */}
+                        <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>
+                          Shitjet
+                        </button>
                         {b.licenseStatus === 'revoked' ? (
                           <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.reactivateLicense(b.id))}>
                             Reactivate

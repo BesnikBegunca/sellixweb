@@ -15,6 +15,7 @@ import {
   overviewPayload,
   breakdownPayload,
   liveTables,
+  deviceTotals,
   listSales,
   isRestaurantSector
 } from '../reports.js';
@@ -149,6 +150,14 @@ portalRouter.get('/tables', requirePortal, (req, res) => {
 
 // Held open by the browser. It carries no data — it only tells the page that
 // this business has new sales, and the page refetches the endpoints above.
+// The market counterpart of /tables: takings per till, for shops that have
+// computers at the counter instead of tables on a floor.
+portalRouter.get('/devices', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  res.json(deviceTotals(row.id, readPeriod(req, 'today'), readAsOf(req)));
+});
+
 portalRouter.get('/stream', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;

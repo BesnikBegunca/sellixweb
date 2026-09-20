@@ -1,10 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { api } from '../../lib/api';
+import { usePortal } from '../../lib/PortalContext';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
 import { localDate, periodQuery } from '../../lib/sales';
 import { PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, LiveBadge, TodayRing } from './SalesReport';
 
 export default function PortalSales() {
+  const { business } = usePortal();
+  const isRestaurant = !!business?.isRestaurant;
   const date = localDate();
   const [period, setPeriod] = useState('today');
   const [chartMode, setChartMode] = useState('days');
@@ -61,7 +64,9 @@ export default function PortalSales() {
       {!hasAny && (
         <div className="ad-card pt-panel">
           <div className="pt-empty">
-            Nuk ka shitje të sinkronizuara ende. Mbyll një tavolinë ose një faturë në POS — faqja përditësohet vetë.
+            {isRestaurant
+              ? 'Nuk ka shitje të sinkronizuara ende. Mbyll një tavolinë ose një faturë në POS — faqja përditësohet vetë.'
+              : 'Nuk ka shitje të sinkronizuara ende. Lësho faturën e parë në arkë — faqja përditësohet vetë.'}
           </div>
         </div>
       )}
@@ -79,7 +84,7 @@ export default function PortalSales() {
         <PaymentsList payments={breakdown?.payments} />
         <ProductsList products={breakdown?.products} />
       </div>
-      <SalesList sales={sales} />
+      <SalesList sales={sales} isRestaurant={isRestaurant} />
     </div>
   );
 }

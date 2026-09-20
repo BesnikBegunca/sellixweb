@@ -86,9 +86,13 @@ export default function PortalLayout() {
         <NavLink to="/portal" end className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
           Shitjet
         </NavLink>
-        {business?.isRestaurant && (
+        {business?.isRestaurant ? (
           <NavLink to="/portal/tables" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
             Tavolinat
+          </NavLink>
+        ) : (
+          <NavLink to="/portal/registers" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
+            Kompjuterët
           </NavLink>
         )}
         <NavLink to="/portal/account" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>

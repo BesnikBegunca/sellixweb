@@ -240,6 +240,10 @@ Content-Type: application/json
 - `tableName` comes as `"Tavolina 1"`, `"Tavolina 2"`, … Takeaway / counter
   sales omit it (or send empty). They count in the day's total, not in the
   tables list.
+- `deviceId` is what splits a market's takings per till. Send the same id the
+  licence was activated with, on every sync, or the receipts land in the
+  portal's *Pa identifikim* group instead of under *Kompjuteri 1*, *Kompjuteri
+  2* and so on. Restaurants do not depend on it — they split by `tableName`.
 - Up to **500** sales per request.
 - Response: `{ "ok": true, "accepted": 1, "rejected": 0 }`
 
