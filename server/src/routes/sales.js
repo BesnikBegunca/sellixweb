@@ -231,6 +231,10 @@ const insertFloor = db.prepare(`
   ) VALUES (
     @business_id, @table_name, @occupied, @total_cents, @staff_name, datetime('now')
   )
+  ON CONFLICT (business_id, table_name, staff_name) DO UPDATE SET
+    occupied = excluded.occupied,
+    total_cents = excluded.total_cents,
+    updated_at = datetime('now')
 `);
 const clearFloor = db.prepare('DELETE FROM restaurant_tables WHERE business_id = ?');
 
@@ -251,7 +255,13 @@ function parseFloorTable(raw) {
 }
 
 const replaceFloor = db.transaction((businessId, rawTables) => {
-  const parsed = rawTables.map(parseFloorTable).filter(Boolean).slice(0, 48);
+  const byKey = new Map();
+  for (const raw of Array.isArray(rawTables) ? rawTables : []) {
+    const table = parseFloorTable(raw);
+    if (!table) continue;
+    byKey.set(`${table.table_name}\0${table.staff_name}`, table);
+  }
+  const parsed = [...byKey.values()].slice(0, 200);
   clearFloor.run(businessId);
   for (const table of parsed) {
     insertFloor.run({ business_id: businessId, ...table });

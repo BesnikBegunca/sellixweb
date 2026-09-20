@@ -3,12 +3,15 @@ import { Navigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { usePortal } from '../../lib/PortalContext';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
-import { TablesGrid, LiveBadge } from './SalesReport';
+import { TablesGrid, LiveBadge, TodayRing } from './SalesReport';
+import { localDate } from '../../lib/sales';
 
 export default function PortalTables() {
   const { business } = usePortal();
   const isRestaurant = !!business?.isRestaurant;
+  const date = localDate();
   const [floor, setFloor] = useState(null);
+  const [overview, setOverview] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const requestId = useRef(0);
@@ -17,9 +20,13 @@ export default function PortalTables() {
     if (!isRestaurant) return;
     const id = ++requestId.current;
     try {
-      const data = await api.portalTables();
+      const [data, ov] = await Promise.all([
+        api.portalTables(),
+        api.portalOverview(date)
+      ]);
       if (id !== requestId.current) return;
       setFloor(data);
+      setOverview(ov);
       setError('');
     } catch (e) {
       if (id === requestId.current) setError(e.message);
@@ -27,10 +34,10 @@ export default function PortalTables() {
     } finally {
       if (id === requestId.current) setLoading(false);
     }
-  }, [isRestaurant]);
+  }, [isRestaurant, date]);
 
   const { lastUpdated, live } = useLiveRefresh(load, {
-    deps: [isRestaurant],
+    deps: [isRestaurant, date],
     stream: isRestaurant ? '/portal/stream' : undefined
   });
 
@@ -51,6 +58,7 @@ export default function PortalTables() {
         Takeaway dhe banaku hyjnë te Shitjet, jo këtu.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
+      <TodayRing totals={overview?.totals} />
       <TablesGrid tables={floor?.tables} />
     </div>
   );

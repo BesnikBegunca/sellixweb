@@ -172,9 +172,39 @@ db.exec(`
     total_cents INTEGER NOT NULL DEFAULT 0,
     staff_name TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (business_id, table_name)
+    PRIMARY KEY (business_id, table_name, staff_name)
   )
 `);
+
+const restaurantTablePk = db
+  .prepare('PRAGMA table_info(restaurant_tables)')
+  .all()
+  .filter((c) => c.pk > 0)
+  .sort((a, b) => a.pk - b.pk)
+  .map((c) => c.name)
+  .join(',');
+if (restaurantTablePk && restaurantTablePk !== 'business_id,table_name,staff_name') {
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE restaurant_tables_v2 (
+      business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+      table_name TEXT NOT NULL,
+      occupied INTEGER NOT NULL DEFAULT 0,
+      total_cents INTEGER NOT NULL DEFAULT 0,
+      staff_name TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (business_id, table_name, staff_name)
+    );
+    INSERT INTO restaurant_tables_v2 (
+      business_id, table_name, occupied, total_cents, staff_name, updated_at
+    )
+    SELECT business_id, table_name, occupied, total_cents, staff_name, updated_at
+    FROM restaurant_tables;
+    DROP TABLE restaurant_tables;
+    ALTER TABLE restaurant_tables_v2 RENAME TO restaurant_tables;
+  `);
+  db.pragma('foreign_keys = ON');
+}
 
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"

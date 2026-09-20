@@ -1,5 +1,21 @@
+import { useEffect, useMemo, useState } from 'react';
 import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel } from '../../lib/sales';
 import { liveClock } from '../../lib/useLiveRefresh';
+
+const STAFF_COLORS = ['#1D9BF0', '#22C55E', '#F59E0B', '#A855F7', '#F43F5E', '#14B8A6', '#6366F1', '#FB7185'];
+const STAFF_UNNAMED = 'Pa kamarjer';
+
+export function staffLabel(name) {
+  const trimmed = String(name || '').trim();
+  return trimmed || STAFF_UNNAMED;
+}
+
+export function staffColor(name) {
+  const key = staffLabel(name);
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return STAFF_COLORS[hash % STAFF_COLORS.length];
+}
 
 // Says why the numbers changed by themselves. "LIVE" means the push stream is
 // open and a receipt lands here the moment the till syncs it; "Auto" means the
@@ -58,29 +74,46 @@ export function PeriodPills({ period, onChange }) {
   );
 }
 
-export function TotalsGrid({ totals }) {
-  const cards = [
-    { key: 'today', label: 'Sot' },
-    { key: 'yesterday', label: 'Dje' },
-    { key: 'week', label: '1 javë' },
-    { key: 'month', label: '1 muaj' },
-    { key: 'year', label: '1 vit' },
-    { key: 'all', label: 'Gjithsej' }
-  ];
+export function TodayRing({ totals }) {
+  const today = totals?.today || { total: 0, count: 0 };
+  const yesterday = totals?.yesterday || { total: 0, count: 0 };
+  const denom = Math.max(Number(yesterday.total) || 0, Number(today.total) || 0, 0.01);
+  const pct = Number(today.total) > 0 ? Math.min(100, (Number(today.total) / denom) * 100) : 0;
+  const radius = 102;
+  const circ = 2 * Math.PI * radius;
+  const [drawn, setDrawn] = useState(0);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setDrawn(pct));
+    return () => cancelAnimationFrame(frame);
+  }, [pct]);
+
   return (
-    <div className="pt-totals">
-      {cards.map((c) => {
-        const row = totals?.[c.key] || { total: 0, count: 0 };
-        return (
-          <div key={c.key} className="ad-card pt-stat">
-            <div className="ad-mono pt-stat-label">{c.label}</div>
-            <div className="ad-heading pt-stat-value">{formatEuro(row.total)}</div>
-            <div className="ad-hint">{row.count} {row.count === 1 ? 'porosi' : 'porosi'}</div>
-          </div>
-        );
-      })}
+    <div className="pt-today">
+      <div className="pt-today-ring" role="img" aria-label={`Sot ${formatEuro(today.total)}`}>
+        <svg className="pt-today-svg" viewBox="0 0 240 240" aria-hidden="true">
+          <circle className="pt-today-track" cx="120" cy="120" r={radius} />
+          <circle
+            className="pt-today-fill"
+            cx="120"
+            cy="120"
+            r={radius}
+            strokeDasharray={circ}
+            strokeDashoffset={circ - (circ * drawn) / 100}
+          />
+        </svg>
+        <div className="pt-today-inner">
+          <div className="ad-mono pt-today-label">Sot</div>
+          <div className="ad-heading pt-today-value">{formatEuro(today.total)}</div>
+          <div className="ad-hint">{today.count} {today.count === 1 ? 'porosi' : 'porosi'}</div>
+        </div>
+      </div>
     </div>
   );
+}
+
+export function TotalsGrid({ totals }) {
+  return <TodayRing totals={totals} />;
 }
 
 export function SalesCharts({ breakdown, chartMode, onChartModeChange }) {
@@ -152,18 +185,72 @@ export function ProductsList({ products }) {
 
 export function TablesGrid({ tables }) {
   const rows = tables || [];
+  const [staffFilter, setStaffFilter] = useState('');
+  const staffNames = useMemo(() => {
+    const names = [...new Set(rows.map((t) => staffLabel(t.staffName)))];
+    return names.sort((a, b) => a.localeCompare(b, 'sq', { sensitivity: 'base' }));
+  }, [rows]);
+
+  useEffect(() => {
+    if (staffFilter && !staffNames.includes(staffFilter)) setStaffFilter('');
+  }, [staffFilter, staffNames]);
+
   if (rows.length === 0) {
     return <div className="pt-empty">Nuk ka shitje me tavolinë në këtë periudhë. Takeaway / banaku nuk shfaqen këtu.</div>;
   }
+
+  const visible = staffFilter ? rows.filter((t) => staffLabel(t.staffName) === staffFilter) : rows;
+  const showStaffChrome = staffNames.length > 1 || (staffNames.length === 1 && staffNames[0] !== STAFF_UNNAMED);
+
   return (
-    <div className="pt-tables">
-      {rows.map((t) => (
-        <div key={t.name} className="ad-card pt-table-card">
-          <div className="ad-heading pt-table-name">{t.name}</div>
-          <div className="pt-table-total">{formatEuro(t.total)}</div>
-          <div className="ad-hint">{t.count} {t.count === 1 ? 'porosi' : 'porosi'}</div>
+    <div>
+      {showStaffChrome && (
+        <div className="pt-pills pt-staff-pills" role="tablist" aria-label="Kamarjerët">
+          <button
+            type="button"
+            className={`pt-pill${staffFilter === '' ? ' active' : ''}`}
+            onClick={() => setStaffFilter('')}
+          >
+            Të gjithë
+          </button>
+          {staffNames.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={`pt-pill pt-staff-pill${staffFilter === name ? ' active' : ''}`}
+              style={{ '--staff-color': staffColor(name) }}
+              onClick={() => setStaffFilter(name)}
+            >
+              <span className="pt-staff-dot" />
+              {name}
+            </button>
+          ))}
         </div>
-      ))}
+      )}
+      {visible.length === 0 ? (
+        <div className="pt-empty">Ky kamarjer nuk ka tavolinë të hapur.</div>
+      ) : (
+        <div className="pt-tables">
+          {visible.map((t) => {
+            const waiter = staffLabel(t.staffName);
+            const color = staffColor(t.staffName);
+            return (
+              <div
+                key={`${t.name}::${t.staffName || ''}`}
+                className="ad-card pt-table-card"
+                style={showStaffChrome ? { '--staff-color': color } : undefined}
+              >
+                {showStaffChrome && (
+                  <div className="pt-table-staff">{waiter}</div>
+                )}
+                <div className="ad-heading pt-table-name">{t.name}</div>
+                <div className="pt-table-total">{formatEuro(t.total)}</div>
+                <div className="ad-hint">{t.count} {t.count === 1 ? 'porosi' : 'porosi'}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { localDate, periodQuery } from '../../lib/sales';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
 import VerifiedBadge from '../portal/VerifiedBadge';
 import {
-  PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, LiveBadge
+  PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, LiveBadge, TodayRing
 } from '../portal/SalesReport';
 import '../portal/portal.css';
 import './admin.css';
@@ -243,7 +243,7 @@ function SalesPanel({ business, onClose }) {
       ) : (
         <>
           <div className="pt-page-head" style={{ marginBottom: 14 }}>
-            <PeriodPills period={period} onChange={setPeriod} />
+            {tab === 'sales' && <PeriodPills period={period} onChange={setPeriod} />}
             {isRestaurant && (
               <div className="pt-pills pt-pills-sm">
                 <button type="button" className={`pt-pill${tab === 'sales' ? ' active' : ''}`} onClick={() => setTab('sales')}>
@@ -256,7 +256,10 @@ function SalesPanel({ business, onClose }) {
             )}
           </div>
           {tab === 'tables' ? (
-            <TablesGrid tables={tables} />
+            <>
+              <TodayRing totals={overview?.totals} />
+              <TablesGrid tables={tables} />
+            </>
           ) : (
             <>
               <TotalsGrid totals={overview?.totals} />
