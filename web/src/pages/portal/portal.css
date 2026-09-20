@@ -39,6 +39,9 @@
   gap: 8px;
   flex-shrink: 0;
 }
+.pt-header-actions .ad-btn-ghost {
+  white-space: nowrap;
+}
 
 .pt-mark {
   display: block;
@@ -396,10 +399,53 @@
     padding-left: 14px;
     padding-right: 14px;
   }
+  .pt-top {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    gap: 10px;
+  }
   .pt-tabs {
     padding-left: 14px;
     padding-right: 14px;
     overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .pt-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .pt-tab {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+  }
+  .pt-page-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pt-pills {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .pt-pills::-webkit-scrollbar {
+    display: none;
+  }
+  .pt-pill {
+    flex: 1 0 auto;
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+  .pt-list li {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .pt-list-meta,
+  .pt-list li > span:last-child {
+    word-break: break-word;
   }
   .pt-totals {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -416,5 +462,18 @@
   }
   .pt-bar-label {
     font-size: 9px;
+  }
+}
+
+@media (max-width: 420px) {
+  .pt-top {
+    flex-wrap: wrap;
+  }
+  .pt-header-actions {
+    width: 100%;
+  }
+  .pt-header-actions .ad-btn-ghost {
+    flex: 1;
+    min-height: 42px;
   }
 }

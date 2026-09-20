@@ -178,7 +178,7 @@ export function SalesList({ sales }) {
       <div className="pt-panel" style={{ paddingBottom: 0 }}>
         <h2 className="ad-heading pt-h">Faturat e fundit</h2>
       </div>
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto' }} className="ad-table-wrap">
         <table className="ad-table">
           <thead>
             <tr>

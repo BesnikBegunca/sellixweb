@@ -262,7 +262,7 @@ export default function Landing() {
           <p style={{ fontSize: 18, lineHeight: 1.55, color: '#8FA0B2', margin: '0 0 34px', maxWidth: 460 }}>
             {isSq ? 'Për çdo sektor një zgjidhje e dedikuar — shkarkoje, instaloje, shit brenda ditës.' : 'A dedicated solution for every sector — download it, install it, sell the same day.'}
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
+          <div className="lp-cta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
             <a href="#shkarko" className="lp-btn-primary" style={{ padding: '15px 26px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15 }}>
               {isSq ? 'Shkarko aplikacionin' : 'Download the app'}
             </a>
@@ -390,7 +390,7 @@ export default function Landing() {
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}><span style={{ flex: 'none', width: 7, height: 7, marginTop: 7, borderRadius: 2, background: ACCENT }}></span><span style={{ fontSize: 14, color: '#D5DFE8', lineHeight: 1.45 }}>{inc}</span></div>
               ))}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <div className="lp-cta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <a href="#kontakt" className="lp-btn-primary" style={{ padding: '15px 24px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span>{t.winBtn}</span>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500, opacity: 0.75 }}>WINDOWS 10 / 11 · 64-BIT</span>

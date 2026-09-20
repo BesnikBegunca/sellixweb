@@ -26,7 +26,7 @@ function StatusBadge({ status }) {
 
 function Field({ label, children, span = 1 }) {
   return (
-    <div style={{ gridColumn: `span ${span}` }}>
+    <div className={span > 1 ? 'ad-span-2' : undefined}>
       <label style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
@@ -51,7 +51,7 @@ function BusinessForm({ initial, sectors, onCancel, onSubmit, submitting }) {
         {isEdit ? `Edit ${initial.name}` : 'New business'}
       </h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      <div className="ad-form-grid">
         <Field label="NUI *">
           <input className="ad-field" required value={form.nui} onChange={set('nui')} placeholder="811000000" />
         </Field>
@@ -106,7 +106,7 @@ function BusinessForm({ initial, sectors, onCancel, onSubmit, submitting }) {
         </Field>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+      <div className="ad-form-actions">
         <button className="ad-btn" type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Create business & license'}
         </button>
@@ -136,7 +136,7 @@ function DevicesPanel({ business, onClose, onChanged }) {
 
   return (
     <div className="ad-card" style={{ padding: 20, marginBottom: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+      <div className="ad-page-head" style={{ marginBottom: 14 }}>
         <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
           Activated devices — {business.name}
         </h2>
@@ -158,12 +158,14 @@ function DevicesPanel({ business, onClose, onChanged }) {
           <tbody>
             {devices.map((d) => (
               <tr key={d.id}>
-                <td>{d.deviceName || '—'}</td>
-                <td className="ad-mono" style={{ fontSize: 12 }}>{d.deviceId}</td>
-                <td className="ad-hint">{formatDate(d.activatedAt)}</td>
-                <td className="ad-hint">{formatDate(d.lastSeenAt)}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <button className="ad-btn-danger" onClick={() => release(d.id)}>Release</button>
+                <td data-label="Device">{d.deviceName || '—'}</td>
+                <td data-label="Device ID" className="ad-mono" style={{ fontSize: 12, wordBreak: 'break-all' }}>{d.deviceId}</td>
+                <td data-label="Activated" className="ad-hint">{formatDate(d.activatedAt)}</td>
+                <td data-label="Last seen" className="ad-hint">{formatDate(d.lastSeenAt)}</td>
+                <td data-label="Actions" className="ad-actions-cell">
+                  <div className="ad-actions">
+                    <button className="ad-btn-danger ad-span-2" onClick={() => release(d.id)}>Release</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -224,16 +226,14 @@ function SalesPanel({ business, onClose }) {
 
   return (
     <div className="ad-card" style={{ padding: 20, marginBottom: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+      <div className="ad-page-head" style={{ marginBottom: 14 }}>
         <div className="pt-live-row">
           <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
             Shitjet — {business.name}
           </h2>
           <LiveBadge live={live} lastUpdated={lastUpdated} />
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="ad-btn-ghost" onClick={onClose}>Close</button>
-        </div>
+        <button type="button" className="ad-btn-ghost" onClick={onClose}>Close</button>
       </div>
       {error && <div className="ad-error" style={{ marginBottom: 10 }}>{error}</div>}
       {loading && !overview ? (
@@ -377,9 +377,9 @@ export default function Businesses() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Businesses</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="ad-page-head">
+        <h1 className="ad-heading">Businesses</h1>
+        <div className="ad-page-tools">
           <span className="ad-hint">{businesses ? `${businesses.length} total` : ''}</span>
           {!editing && (
             <button className="ad-btn" onClick={() => setEditing({ ...EMPTY })}>+ New business</button>
@@ -436,7 +436,7 @@ export default function Businesses() {
         ) : businesses.length === 0 ? (
           <div style={{ padding: 24, color: '#8FA0B2' }}>No businesses yet. Add one to issue its license key.</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="ad-table-wrap">
             <table className="ad-table">
               <thead>
                 <tr>
@@ -456,21 +456,24 @@ export default function Businesses() {
                 {businesses.map((b) => (
                   <tr key={b.id}>
                     <td data-label="Business">
-                      <div style={{ fontWeight: 600 }}>{b.name}</div>
-                      {b.contactPerson && <div className="ad-hint">{b.contactPerson}</div>}
+                      <div className="ad-cell-stack">
+                        <div style={{ fontWeight: 600 }}>{b.name}</div>
+                        {b.contactPerson && <div className="ad-hint">{b.contactPerson}</div>}
+                      </div>
                     </td>
                     <td data-label="NUI" className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
                     <td data-label="Location">
-                      <div>{b.city || '—'}</div>
-                      <div className="ad-hint">{[b.zipCode, b.country].filter(Boolean).join(' · ')}</div>
+                      <div className="ad-cell-stack">
+                        <div>{b.city || '—'}</div>
+                        <div className="ad-hint">{[b.zipCode, b.country].filter(Boolean).join(' · ')}</div>
+                      </div>
                     </td>
                     <td data-label="Sector">{b.sector || '—'}</td>
                     <td data-label="License key">
                       <button
-                        className="ad-btn-ghost ad-mono"
+                        className="ad-btn-ghost ad-mono ad-key-btn"
                         title="Copy license key"
                         onClick={() => copyKey(b.licenseKey)}
-                        style={{ fontSize: 12, padding: '6px 10px' }}
                       >
                         {copied === b.licenseKey ? 'Copied!' : b.licenseKey}
                       </button>
@@ -484,13 +487,12 @@ export default function Businesses() {
                     </td>
                     <td data-label="Portal">
                       {b.portalEnabled ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                        <div className="ad-cell-stack">
                           <span className="ad-badge ad-badge-new">Active</span>
                           <span className="ad-hint" style={{ wordBreak: 'break-all' }}>{b.portalEmail}</span>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <div className="ad-mini-actions">
                             <button
                               className="ad-btn-ghost"
-                              style={{ padding: '5px 9px', fontSize: 11 }}
                               disabled={busyId === b.id}
                               onClick={() => createPortalAccount(b)}
                             >
@@ -498,7 +500,6 @@ export default function Businesses() {
                             </button>
                             <button
                               className="ad-btn-danger"
-                              style={{ padding: '5px 9px', fontSize: 11 }}
                               disabled={busyId === b.id}
                               onClick={() => removePortalAccount(b)}
                             >
@@ -509,7 +510,6 @@ export default function Businesses() {
                       ) : (
                         <button
                           className="ad-btn-ghost"
-                          style={{ padding: '6px 10px', fontSize: 12 }}
                           disabled={busyId === b.id}
                           onClick={() => createPortalAccount(b)}
                         >
@@ -517,30 +517,32 @@ export default function Businesses() {
                         </button>
                       )}
                     </td>
-                    <td data-label="Actions">
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
+                    <td data-label="Actions" className="ad-actions-cell">
+                      <div className="ad-actions">
+                        <div className="ad-extend">
+                          <select
+                            className="ad-field"
+                            aria-label="Extend months"
+                            value={extendMonths[b.id] || 1}
+                            onChange={(e) => setExtendMonths({ ...extendMonths, [b.id]: Number(e.target.value) })}
+                          >
+                            {[1, 3, 6, 12, 24].map((m) => (
+                              <option key={m} value={m}>{m} mo</option>
+                            ))}
+                          </select>
+                          <button
+                            className="ad-btn"
+                            disabled={busyId === b.id}
+                            onClick={() => runAction(b.id, () => api.extendLicense(b.id, extendMonths[b.id] || 1))}
+                          >
+                            Extend
+                          </button>
+                        </div>
                         {b.isRestaurant && (
-                          <button className="ad-btn-ghost" onClick={() => setSalesFor(b)}>
+                          <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>
                             Shitjet
                           </button>
                         )}
-                        <select
-                          className="ad-field"
-                          style={{ width: 'auto', padding: '6px 8px', fontSize: 12 }}
-                          value={extendMonths[b.id] || 1}
-                          onChange={(e) => setExtendMonths({ ...extendMonths, [b.id]: Number(e.target.value) })}
-                        >
-                          {[1, 3, 6, 12, 24].map((m) => (
-                            <option key={m} value={m}>{m} mo</option>
-                          ))}
-                        </select>
-                        <button
-                          className="ad-btn-ghost"
-                          disabled={busyId === b.id}
-                          onClick={() => runAction(b.id, () => api.extendLicense(b.id, extendMonths[b.id] || 1))}
-                        >
-                          Extend
-                        </button>
                         {b.licenseStatus === 'revoked' ? (
                           <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.reactivateLicense(b.id))}>
                             Reactivate

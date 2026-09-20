@@ -29,8 +29,8 @@ export default function Leads() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Leads</h1>
+      <div className="ad-page-head">
+        <h1 className="ad-heading">Leads</h1>
         <span className="ad-hint">{leads ? `${leads.length} total` : ''}</span>
       </div>
 
@@ -42,7 +42,7 @@ export default function Leads() {
         ) : leads.length === 0 ? (
           <div style={{ padding: 24, color: '#8FA0B2' }}>No submissions yet.</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="ad-table-wrap">
             <table className="ad-table">
               <thead>
                 <tr>
@@ -65,7 +65,6 @@ export default function Leads() {
                     <td data-label="Status">
                       <select
                         className="ad-field"
-                        style={{ width: 'auto', padding: '6px 10px', fontSize: 13 }}
                         value={lead.status}
                         disabled={updating === lead.id}
                         onChange={(e) => onStatusChange(lead.id, e.target.value)}

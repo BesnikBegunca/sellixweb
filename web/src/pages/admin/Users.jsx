@@ -69,7 +69,9 @@ export default function Users() {
 
   return (
     <div>
-      <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 20px' }}>Admin users</h1>
+      <div className="ad-page-head">
+        <h1 className="ad-heading">Admin users</h1>
+      </div>
 
       {error && <div className="ad-error" style={{ marginBottom: 14 }}>{error}</div>}
       {tempCred && (
@@ -85,7 +87,7 @@ export default function Users() {
 
       <div className="ad-card" style={{ padding: 20, marginBottom: 20 }}>
         <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>Invite admin</h2>
-        <form onSubmit={onCreate} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <form onSubmit={onCreate} className="ad-inline-form">
           <div style={{ flex: '1 1 200px' }}>
             <label style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Email</label>
             <input className="ad-field" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -102,7 +104,7 @@ export default function Users() {
         {users === null ? (
           <div style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="ad-table-wrap">
             <table className="ad-table">
               <thead>
                 <tr>
@@ -126,8 +128,8 @@ export default function Users() {
                         <span className="ad-badge ad-badge-closed">Active</span>
                       )}
                     </td>
-                    <td data-label="Actions">
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <td data-label="Actions" className="ad-actions-cell">
+                      <div className="ad-actions">
                         <button className="ad-btn-ghost" disabled={busyId === u.id} onClick={() => onReset(u.id)}>Reset password</button>
                         {u.id !== me?.id && (
                           <button className="ad-btn-danger" disabled={busyId === u.id} onClick={() => onDelete(u.id)}>Remove</button>

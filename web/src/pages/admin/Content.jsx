@@ -69,7 +69,7 @@ function SectorEditor({ sector, onChange }) {
       <LabeledField label="Receipt rows">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {s.rows.map((r, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8 }}>
+            <div key={i} className="ad-row-edit">
               <input className="ad-field" placeholder="Item" value={r.n} onChange={(e) => updateRow(i, 'n', e.target.value)} />
               <input className="ad-field" placeholder="Price" value={r.v} onChange={(e) => updateRow(i, 'v', e.target.value)} style={{ maxWidth: 110 }} />
               <button type="button" className="ad-btn-danger" onClick={() => removeRow(i)}>×</button>
@@ -130,7 +130,7 @@ function CompareEditor({ compare, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {sq.map((_, i) => (
-        <div key={i} className="ad-card" style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'start' }}>
+        <div key={i} className="ad-card ad-compare-row" style={{ padding: 14 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span className="ad-hint">Old way (SQ)</span>
             <input className="ad-field" value={compare.sq[i].a} onChange={(e) => updateField(i, 'sq', 'a', e.target.value)} />
@@ -205,9 +205,9 @@ export default function Content() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Site content</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="ad-page-head">
+        <h1 className="ad-heading">Site content</h1>
+        <div className="ad-page-tools">
           {status && <span className="ad-hint" style={{ color: 'oklch(0.86 0.12 195)' }}>{status}</span>}
           <button className="ad-btn" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
         </div>
@@ -227,7 +227,7 @@ export default function Content() {
 
       <div className="ad-card" style={{ padding: 20, marginBottom: 20 }}>
         <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>Sector cards</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+        <div className="ad-chip-row" style={{ marginBottom: 18 }}>
           {content.cats.map((c, i) => (
             <button
               key={i}

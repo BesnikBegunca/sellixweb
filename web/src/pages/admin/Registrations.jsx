@@ -80,8 +80,8 @@ export default function Registrations() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Registrations</h1>
+      <div className="ad-page-head">
+        <h1 className="ad-heading">Registrations</h1>
         <span className="ad-hint">{registrations ? `${pendingCount} waiting` : ''}</span>
       </div>
 
@@ -133,7 +133,7 @@ export default function Registrations() {
               )}
 
               {reg.status === 'pending' && (
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 14, flexWrap: 'wrap' }}>
+                <div className="ad-reg-actions">
                   <label style={{ display: 'grid', gap: 4 }}>
                     <span className="ad-hint">Devices</span>
                     <input
