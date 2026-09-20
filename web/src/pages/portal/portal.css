@@ -477,7 +477,16 @@
 .pt-today-fill {
   stroke: oklch(0.82 0.12 195);
   stroke-linecap: round;
-  transition: stroke-dashoffset 1.1s cubic-bezier(.22,.7,.25,1);
+  transition: stroke-dashoffset 1.1s cubic-bezier(.22,.7,.25,1), stroke .35s ease;
+}
+
+.pt-today-ring.is-over .pt-today-fill {
+  stroke: #EF4444;
+}
+
+.pt-today-ring.is-over .pt-today-label,
+.pt-today-ring.is-over .pt-today-pct {
+  color: #EF4444;
 }
 
 .pt-today-inner {

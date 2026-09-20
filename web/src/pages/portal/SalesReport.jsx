@@ -77,7 +77,9 @@ export function PeriodPills({ period, onChange }) {
 export function TodayRing({ totals, goal = 0, onSaveGoal }) {
   const today = totals?.today || { total: 0, count: 0 };
   const target = Number(goal) || 0;
-  const pct = target > 0 ? Math.min(100, (Number(today.total) / target) * 100) : 0;
+  const rawPct = target > 0 ? (Number(today.total) / target) * 100 : 0;
+  const over = target > 0 && Number(today.total) > target;
+  const pct = Math.min(100, rawPct);
   const radius = 102;
   const circ = 2 * Math.PI * radius;
   const [drawn, setDrawn] = useState(0);
@@ -117,7 +119,11 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
 
   return (
     <div className="pt-today">
-      <div className="pt-today-ring" role="img" aria-label={`Sot ${formatEuro(today.total)}`}>
+      <div
+        className={`pt-today-ring${over ? ' is-over' : ''}`}
+        role="img"
+        aria-label={`Sot ${formatEuro(today.total)}${over ? ', objektivi u tejkalua' : ''}`}
+      >
         <svg className="pt-today-svg" viewBox="0 0 240 240" aria-hidden="true">
           <circle className="pt-today-track" cx="120" cy="120" r={radius} />
           <circle
@@ -134,7 +140,7 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
           <div className="ad-heading pt-today-value">{formatEuro(today.total)}</div>
           <div className="ad-hint">{today.count} {today.count === 1 ? 'porosi' : 'porosi'}</div>
           {target > 0 && (
-            <div className="pt-today-pct">{Math.round(pct)}% · {formatEuro(target)}</div>
+            <div className="pt-today-pct">{Math.round(rawPct)}% · {formatEuro(target)}</div>
           )}
         </div>
       </div>
