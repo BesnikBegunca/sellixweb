@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel, registerLabel } from '../../lib/sales';
+import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel, registerLabel, DEFAULT_DAILY_GOAL, periodGoal, periodLabel } from '../../lib/sales';
 import { liveClock } from '../../lib/useLiveRefresh';
 
 const STAFF_COLORS = ['#5EEAD4', '#38BDF8', '#86EFAC', '#FBBF24', '#FB7185', '#67E8F9', '#FDBA74', '#A3E635'];
@@ -74,19 +74,21 @@ export function PeriodPills({ period, onChange }) {
   );
 }
 
-export function TodayRing({ totals, goal = 0, onSaveGoal }) {
-  const today = totals?.today || { total: 0, count: 0 };
-  const target = Number(goal) || 0;
-  const rawPct = target > 0 ? (Number(today.total) / target) * 100 : 0;
-  const over = target > 0 && Number(today.total) > target;
+export function TodayRing({ totals, goal = 0, period = 'today', onSaveGoal }) {
+  const stats = totals?.[period] || totals?.today || { total: 0, count: 0 };
+  const dailyGoal = Number(goal) > 0 ? Number(goal) : DEFAULT_DAILY_GOAL;
+  const target = periodGoal(dailyGoal, period);
+  const rawPct = target > 0 ? (Number(stats.total) / target) * 100 : 0;
+  const over = target > 0 && Number(stats.total) > target;
   const pct = Math.min(100, rawPct);
   const radius = 102;
   const circ = 2 * Math.PI * radius;
   const [drawn, setDrawn] = useState(0);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(target ? String(target) : '');
+  const [draft, setDraft] = useState(String(dailyGoal));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const label = periodLabel(period);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setDrawn(pct));
@@ -94,8 +96,8 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
   }, [pct]);
 
   useEffect(() => {
-    if (!editing) setDraft(target ? String(target) : '');
-  }, [target, editing]);
+    if (!editing) setDraft(String(dailyGoal));
+  }, [dailyGoal, editing]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -122,7 +124,7 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
       <div
         className={`pt-today-ring${over ? ' is-over' : ''}`}
         role="img"
-        aria-label={`Sot ${formatEuro(today.total)}${over ? ', objektivi u tejkalua' : ''}`}
+        aria-label={`${label} ${formatEuro(stats.total)}${over ? ', objektivi u tejkalua' : ''}`}
       >
         <svg className="pt-today-svg" viewBox="0 0 240 240" aria-hidden="true">
           <circle className="pt-today-track" cx="120" cy="120" r={radius} />
@@ -136,9 +138,9 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
           />
         </svg>
         <div className="pt-today-inner">
-          <div className="ad-mono pt-today-label">Sot</div>
-          <div className="ad-heading pt-today-value">{formatEuro(today.total)}</div>
-          <div className="ad-hint">{today.count} {today.count === 1 ? 'porosi' : 'porosi'}</div>
+          <div className="ad-mono pt-today-label">{label}</div>
+          <div className="ad-heading pt-today-value">{formatEuro(stats.total)}</div>
+          <div className="ad-hint">{stats.count} {stats.count === 1 ? 'porosi' : 'porosi'}</div>
           {target > 0 && (
             <div className="pt-today-pct">{Math.round(rawPct)}% · {formatEuro(target)}</div>
           )}
@@ -154,7 +156,7 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
                 min="0"
                 step="1"
                 inputMode="decimal"
-                placeholder="p.sh. 500"
+                placeholder="p.sh. 200"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 aria-label="Objektivi ditor në euro"
@@ -164,7 +166,7 @@ export function TodayRing({ totals, goal = 0, onSaveGoal }) {
             </form>
           ) : (
             <button type="button" className="ad-btn-ghost" onClick={() => setEditing(true)}>
-              {target > 0 ? 'Ndrysho objektivin' : 'Cakto objektivin'}
+              Ndrysho objektivin
             </button>
           )}
           {error && <div className="ad-error">{error}</div>}

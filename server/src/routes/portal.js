@@ -183,3 +183,25 @@ portalRouter.get('/shifts', requirePortal, (req, res) => {
   if (!row) return;
   res.json(listShiftCloses(row.id));
 });
+
+const renewalLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 6,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Kërkesa u dërgua tashmë. Provoni përsëri pas një ore.' }
+});
+
+portalRouter.post('/renewal-request', requirePortal, renewalLimiter, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const name = String(row.contact_person || row.portal_email || row.name || 'Biznes').slice(0, 200);
+  const phone = String(row.phone || row.portal_email || 'portal').slice(0, 60);
+  db.prepare('INSERT INTO leads (name, business, phone, category) VALUES (?, ?, ?, ?)').run(
+    name,
+    row.name,
+    phone,
+    'Vazhdim licence'
+  );
+  res.json({ ok: true });
+});

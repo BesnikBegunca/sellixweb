@@ -1,10 +1,95 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { usePortal } from '../../lib/PortalContext';
 import { api } from '../../lib/api';
+import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
 import '../admin/admin.css';
 import './portal.css';
+
+const RENEWAL_HOUR_MS = 60 * 60 * 1000;
+
+function renewalKey(id) {
+  return `sellix_renewal_prompt_${id}`;
+}
+
+function LicenseRenewalPrompt({ business }) {
+  const [open, setOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const info = parseLicenseExpiry(business?.licenseExpiresAt);
+
+  useEffect(() => {
+    if (!business?.id) return undefined;
+    const tick = () => {
+      const expiry = parseLicenseExpiry(business.licenseExpiresAt);
+      if (!expiry || expiry.days > 7 || expiry.days < 0) {
+        setOpen(false);
+        return;
+      }
+      let last = 0;
+      try {
+        last = Number(window.localStorage.getItem(renewalKey(business.id))) || 0;
+      } catch {
+        last = 0;
+      }
+      if (!last || Date.now() - last >= RENEWAL_HOUR_MS) setOpen(true);
+    };
+    tick();
+    const timer = setInterval(tick, 30000);
+    return () => clearInterval(timer);
+  }, [business?.id, business?.licenseExpiresAt]);
+
+  const snooze = () => {
+    try {
+      window.localStorage.setItem(renewalKey(business.id), String(Date.now()));
+    } catch {
+      /* ignore */
+    }
+    setOpen(false);
+    setError('');
+  };
+
+  const send = async () => {
+    setSending(true);
+    setError('');
+    try {
+      await api.portalRenewalRequest();
+      snooze();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!open || !info) return null;
+
+  const daysText = info.days === 0
+    ? 'sot'
+    : info.days === 1
+      ? 'për 1 ditë'
+      : `për ${info.days} ditë`;
+
+  return (
+    <div className="pt-modal-back" role="dialog" aria-modal="true" aria-labelledby="pt-renewal-title">
+      <div className="ad-card pt-modal">
+        <h2 id="pt-renewal-title" className="ad-heading pt-h" style={{ marginBottom: 8 }}>Licenca skadon së shpejti</h2>
+        <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
+          Licenca e {business?.name || 'biznesit'} skadon {daysText}, më {info.date} në ora {info.time}.
+          Dërgo kërkesën për vazhdim që SelliX ta rinovojë.
+        </p>
+        {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
+        <div className="pt-modal-actions">
+          <button type="button" className="ad-btn-ghost" onClick={snooze} disabled={sending}>Cancel</button>
+          <button type="button" className="ad-btn" onClick={send} disabled={sending}>
+            {sending ? 'Duke dërguar…' : 'Dërgo kërkesën për vazhdim'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ForcedPasswordChange() {
   const { business, setBusiness } = usePortal();
@@ -78,7 +163,7 @@ export default function PortalLayout() {
           <button type="button" className="ad-btn-ghost" onClick={() => window.location.reload()}>
             Rifresko
           </button>
-          <button type="button" className="ad-btn-ghost" onClick={onLogout}>Dil</button>
+          <button type="button" className="pt-btn-dil" onClick={onLogout}>Dil</button>
         </div>
       </header>
 
@@ -112,6 +197,7 @@ export default function PortalLayout() {
       <div className="pt-foot">
         <Link to="/" className="ad-hint" style={{ textDecoration: 'underline' }}>← Faqja e SelliX</Link>
       </div>
+      <LicenseRenewalPrompt business={business} />
     </div>
   );
 }

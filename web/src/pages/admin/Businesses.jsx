@@ -284,7 +284,7 @@ function SalesPanel({ business, onClose }) {
             <GjendjaTable data={shifts} />
           ) : (
             <>
-              <TodayRing totals={overview?.totals} goal={overview?.goal} />
+              <TodayRing totals={overview?.totals} goal={overview?.goal} period={period} />
               <TotalsGrid totals={overview?.totals} />
               <SalesCharts breakdown={breakdown} chartMode={chartMode} onChartModeChange={setChartMode} />
               <div className="pt-split">

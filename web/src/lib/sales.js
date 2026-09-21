@@ -74,3 +74,47 @@ export function registerLabel(number) {
 export function periodQuery(period, date = localDate()) {
   return `period=${encodeURIComponent(period)}&date=${encodeURIComponent(date)}`;
 }
+
+export const DEFAULT_DAILY_GOAL = 200;
+
+const PERIOD_GOAL_DAYS = {
+  today: 1,
+  yesterday: 1,
+  week: 7,
+  month: 30,
+  month3: 90,
+  month6: 180,
+  month9: 270,
+  year: 365,
+  all: 365
+};
+
+export function periodGoal(dailyGoal, period = 'today') {
+  const daily = Number(dailyGoal) > 0 ? Number(dailyGoal) : DEFAULT_DAILY_GOAL;
+  return daily * (PERIOD_GOAL_DAYS[period] || 1);
+}
+
+export function periodLabel(period) {
+  return PERIODS.find((p) => p.id === period)?.label || 'Sot';
+}
+
+export function parseLicenseExpiry(raw) {
+  if (!raw) return null;
+  const match = String(raw).trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!match) return null;
+  const expires = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6] || 0)
+  );
+  const ms = expires.getTime() - Date.now();
+  return {
+    date: `${match[3]}.${match[2]}.${match[1]}`,
+    time: `${match[4]}:${match[5]}`,
+    days: Math.ceil(ms / 86400000),
+    expires
+  };
+}

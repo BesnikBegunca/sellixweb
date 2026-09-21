@@ -73,6 +73,7 @@ export default function PortalSales() {
       <TodayRing
         totals={overview?.totals}
         goal={overview?.goal}
+        period={period}
         onSaveGoal={async (value) => {
           const { goal } = await api.portalSetGoal(value);
           setOverview((prev) => (prev ? { ...prev, goal } : prev));

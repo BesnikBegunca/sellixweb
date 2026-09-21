@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { usePortal } from '../../lib/PortalContext';
+import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
 import './portal.css';
 
@@ -66,7 +67,28 @@ export default function PortalAccount() {
           <Row label="Qyteti" value={business?.city} />
           <Row label="Sektori" value={business?.sector} />
           <Row label="Email" value={business?.email} />
-          <Row label="Licenca skadon" value={business?.licenseExpiresAt?.slice(0, 10)} />
+          <Row
+            label="Licenca skadon"
+            value={
+              (() => {
+                const info = parseLicenseExpiry(business?.licenseExpiresAt);
+                if (!info) return '—';
+                const daysText = info.days < 0
+                  ? 'Ka skaduar'
+                  : info.days === 0
+                    ? 'Skadon sot'
+                    : info.days === 1
+                      ? '1 ditë'
+                      : `${info.days} ditë`;
+                return (
+                  <span style={{ display: 'block', textAlign: 'right', lineHeight: 1.4 }}>
+                    <span style={{ display: 'block' }}>{daysText}</span>
+                    <span className="ad-hint">{info.date} · {info.time}</span>
+                  </span>
+                );
+              })()
+            }
+          />
         </div>
 
         <div className="ad-card pt-panel">

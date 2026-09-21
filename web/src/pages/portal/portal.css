@@ -43,6 +43,27 @@
   white-space: nowrap;
 }
 
+.pt-btn-dil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid #7F1D1D;
+  background: #7F1D1D;
+  color: #FECACA;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pt-btn-dil:hover {
+  background: #991B1B;
+  border-color: #991B1B;
+  color: #FEE2E2;
+}
+
 .pt-mark {
   display: block;
   width: 28px;
@@ -688,7 +709,8 @@
   .pt-header-actions {
     width: 100%;
   }
-  .pt-header-actions .ad-btn-ghost {
+  .pt-header-actions .ad-btn-ghost,
+  .pt-header-actions .pt-btn-dil {
     flex: 1;
     min-height: 42px;
   }
@@ -981,4 +1003,27 @@
   .pt-gj-kind {
     margin-left: 10px;
   }
+}
+
+.pt-modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .58);
+}
+
+.pt-modal {
+  width: min(420px, 100%);
+  padding: 22px;
+}
+
+.pt-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }

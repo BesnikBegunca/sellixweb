@@ -88,6 +88,7 @@ export const api = {
   portalDevices: (query) => request(`/portal/devices?${query}`),
   portalSales: (query) => request(`/portal/sales?${query}`),
   portalShifts: () => request('/portal/shifts'),
+  portalRenewalRequest: () => request('/portal/renewal-request', { method: 'POST' }),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),

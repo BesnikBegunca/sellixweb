@@ -473,7 +473,7 @@ export function overviewPayload(business, asOf) {
     },
     asOf,
     totals: periodTotals(business.id, asOf),
-    goal: fromCents(business.daily_goal_cents)
+    goal: fromCents(business.daily_goal_cents) || 200
   };
 }
 
