@@ -60,7 +60,15 @@ export function saveSetupFromPath(sourcePath, originalName, uploadedBy = '') {
     throw new Error('Setup file not found');
   }
   const dest = setupFilePath();
-  fs.copyFileSync(sourcePath, dest);
+  // Prefer rename so a 60MB upload does not need 2× free disk.
+  try {
+    if (path.resolve(sourcePath) !== path.resolve(dest) && fs.existsSync(dest)) {
+      fs.unlinkSync(dest);
+    }
+    fs.renameSync(sourcePath, dest);
+  } catch {
+    fs.copyFileSync(sourcePath, dest);
+  }
   const size = fs.statSync(dest).size;
   const safeName = sanitizeFileName(originalName) || 'Sellix-Setup.exe';
   const existing = getSetupMeta();

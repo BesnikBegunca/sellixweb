@@ -146,8 +146,11 @@ export const api = {
   uploadSetup: (file, onProgress) =>
     new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${API_URL}/api/setup/upload`);
+      xhr.open('PUT', `${API_URL}/api/setup/upload`);
       xhr.withCredentials = true;
+      xhr.timeout = 30 * 60 * 1000;
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name || 'Sellix Setup.exe'));
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
       };
@@ -161,9 +164,8 @@ export const api = {
         if (xhr.status >= 200 && xhr.status < 300) resolve(data);
         else reject(new Error(data?.error || `Upload failed (${xhr.status})`));
       };
-      xhr.onerror = () => reject(new Error('Upload failed'));
-      const body = new FormData();
-      body.append('file', file);
-      xhr.send(body);
+      xhr.onerror = () => reject(new Error('Upload failed — kontrollo lidhjen'));
+      xhr.ontimeout = () => reject(new Error('Upload timeout'));
+      xhr.send(file);
     })
 };

@@ -59,7 +59,9 @@ app.use(
       // plain status instead of a 500 from the error handler.
       callback(null, !origin || CLIENT_ORIGINS.includes(origin));
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'X-Filename', 'Authorization']
   })
 );
 // 500 receipts with line items comfortably fit under 2mb; the previous 200kb

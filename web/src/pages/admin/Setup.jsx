@@ -91,7 +91,11 @@ export default function Setup() {
 
             <input ref={inputRef} type="file" accept=".exe,.msi,.dmg,.pkg,.zip" hidden onChange={onFile} />
             <button className="ad-btn" type="button" onClick={onPick} disabled={uploading} style={{ width: '100%' }}>
-              {uploading ? `Duke ngarkuar… ${progress}%` : info.available ? 'Ngarko setup të ri' : 'Ngarko setup'}
+              {uploading
+                ? (progress > 0 ? `Duke ngarkuar… ${progress}%` : 'Duke nisur ngarkimin…')
+                : info.available
+                  ? 'Ngarko setup të ri'
+                  : 'Ngarko setup'}
             </button>
 
             {uploading && (

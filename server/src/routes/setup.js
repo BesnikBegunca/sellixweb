@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
-import multer from 'multer';
 import { requireAuth } from '../auth.js';
 import {
   adminSetupInfo,
@@ -16,18 +15,7 @@ import {
 
 export const setupRouter = Router();
 
-const upload = multer({
-  dest: setupsDir,
-  limits: { fileSize: 400 * 1024 * 1024 },
-  fileFilter(_req, file, cb) {
-    const name = (file.originalname || '').toLowerCase();
-    if (name.endsWith('.exe') || name.endsWith('.msi') || name.endsWith('.dmg') || name.endsWith('.pkg') || name.endsWith('.zip')) {
-      cb(null, true);
-      return;
-    }
-    cb(new Error('Allowed types: .exe, .msi, .dmg, .pkg, .zip'));
-  }
-});
+const MAX_BYTES = 400 * 1024 * 1024;
 
 setupRouter.get('/', (_req, res) => {
   res.json(publicSetupInfo());
@@ -60,30 +48,76 @@ setupRouter.get('/download', (req, res) => {
   stream.pipe(res);
 });
 
-setupRouter.post('/upload', requireAuth, (req, res) => {
-  upload.single('file')(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({ error: err.message || 'Upload failed' });
-    }
-    if (!req.file) {
-      return res.status(400).json({ error: 'Zgjidh një skedar setup.' });
+// Raw binary body (not multipart) — more reliable for large .exe uploads behind proxies.
+setupRouter.put('/upload', requireAuth, (req, res) => {
+  const length = Number(req.headers['content-length'] || 0);
+  if (!Number.isFinite(length) || length <= 0) {
+    return res.status(400).json({ error: 'Content-Length mungon.' });
+  }
+  if (length > MAX_BYTES) {
+    return res.status(413).json({ error: 'Skedari është shumë i madh (max 400 MB).' });
+  }
+
+  let originalName = 'Sellix Setup.exe';
+  try {
+    originalName = decodeURIComponent(String(req.headers['x-filename'] || originalName));
+  } catch {
+    originalName = String(req.headers['x-filename'] || originalName);
+  }
+  const lower = originalName.toLowerCase();
+  if (!/\.(exe|msi|dmg|pkg|zip)$/.test(lower)) {
+    return res.status(400).json({ error: 'Allowed types: .exe, .msi, .dmg, .pkg, .zip' });
+  }
+
+  const tmp = path.join(setupsDir, `upload-${Date.now()}-${process.pid}.tmp`);
+  const ws = fs.createWriteStream(tmp);
+  let settled = false;
+
+  const fail = (status, message) => {
+    if (settled) return;
+    settled = true;
+    try {
+      ws.destroy();
+    } catch {
+      /* ignore */
     }
     try {
-      const info = saveSetupFromPath(
-        req.file.path,
-        req.file.originalname || 'Sellix Setup.exe',
-        req.user?.email || ''
-      );
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* temp already moved/replaced */
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    } catch {
+      /* ignore */
+    }
+    if (!res.headersSent) res.status(status).json({ error: message });
+  };
+
+  ws.on('error', () => fail(500, 'Nuk u shkrua skedari në disk.'));
+  req.on('aborted', () => fail(499, 'Upload u ndërpre.'));
+  req.on('error', () => fail(500, 'Upload failed'));
+
+  req.pipe(ws);
+
+  ws.on('finish', () => {
+    if (settled) return;
+    settled = true;
+    try {
+      const stat = fs.statSync(tmp);
+      if (stat.size <= 0) {
+        try {
+          fs.unlinkSync(tmp);
+        } catch {
+          /* ignore */
+        }
+        return res.status(400).json({ error: 'Skedari bosh.' });
       }
-      // saveSetupFromPath copies; remove multer temp if still there under different name
+      const info = saveSetupFromPath(tmp, originalName, req.user?.email || '');
+      try {
+        if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+      } catch {
+        /* ignore */
+      }
       res.json(info);
     } catch (e) {
       try {
-        if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
       } catch {
         /* ignore */
       }

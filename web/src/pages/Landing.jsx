@@ -447,13 +447,9 @@ export default function Landing() {
             <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 'clamp(28px,3.2vw,40px)', letterSpacing: '-0.03em', margin: '0 0 16px', lineHeight: 1.06 }}>
               {isSq ? '15 minuta, biznesi yt, ekrani yt' : '15 minutes, your business, your screen'}
             </h2>
-            <p style={{ fontSize: 16, color: '#8FA0B2', lineHeight: 1.6, margin: '0 0 26px', maxWidth: 380 }}>
+            <p style={{ fontSize: 16, color: '#8FA0B2', lineHeight: 1.6, margin: '0 0 0', maxWidth: 380 }}>
               {isSq ? 'Tregojmë saktësisht zgjidhjen e sektorit tënd — pa prezantime të gjata.' : "We show exactly your sector's setup — no long pitch."}
             </p>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#8FA0B2', lineHeight: 2 }}>
-              <div>+383 44 000 000</div>
-              <div>shitje@sellix.software</div>
-            </div>
           </div>
           <form onSubmit={onSubmit} style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <input className="lp-field" required placeholder={t.ph.name} style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
