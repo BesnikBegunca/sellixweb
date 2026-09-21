@@ -165,9 +165,6 @@ export default function Landing() {
   const [content, setContent] = useState(null);
   const [lang, setLang] = useState('sq');
   const [catIdx, setCatIdx] = useState(0);
-  const [sent, setSent] = useState(false);
-  const [form, setForm] = useState({ name: '', business: '', phone: '', category: '' });
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [setupReady, setSetupReady] = useState(false);
 
@@ -185,41 +182,23 @@ export default function Landing() {
   }
 
   const t = content.t[lang];
-  const cats = content.cats;
-  const cat = cats[catIdx][lang];
+  const cats = content.cats || [];
+  const safeIdx = Math.min(catIdx, Math.max(0, cats.length - 1));
+  const cat = cats[safeIdx]?.[lang] || cats[0]?.[lang];
   const compare = content.compare[lang];
   const includes = content.includes[lang];
-  const quotes = content.quotes[lang];
   const price = content.price;
   const isSq = lang === 'sq';
-  const setupHref = setupReady ? api.setupDownloadUrl() : '#kontakt';
+  const setupHref = setupReady ? api.setupDownloadUrl() : '#shkarko';
 
   const langBtn = (on) => ({
     padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '.06em',
     background: on ? '#F2F6FA' : 'transparent', color: on ? '#06121A' : '#8FA0B2'
   });
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
-    try {
-      await api.submitLead({
-        name: form.name,
-        business: form.business,
-        phone: form.phone,
-        category: form.category || cats[0][lang].n
-      });
-      setSent(true);
-      setForm({ name: '', business: '', phone: '', category: '' });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const inputStyle = { padding: '15px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,.12)', background: 'rgba(0,0,0,.3)', color: '#F2F6FA', fontSize: 15, outline: 'none' };
+  if (!cat) {
+    return <div style={{ minHeight: '100vh', background: '#070D14' }} />;
+  }
 
   return (
     <div className="lp" style={{ color: '#F2F6FA', fontFamily: 'Manrope,Helvetica,sans-serif', minHeight: '100dvh', overflowX: 'hidden', position: 'relative' }}>
@@ -238,7 +217,6 @@ export default function Landing() {
             <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
             <a className="lp-navlink" href="#krahaso">{isSq ? 'Pse Sellix' : 'Why Sellix'}</a>
             <a className="lp-navlink" href="#shkarko">{isSq ? 'Çmimi' : 'Pricing'}</a>
-            <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
             <a className="lp-navlink" href="#shto">{isSq ? 'App' : 'App'}</a>
           </div>
           <div className="lp-header-tools" style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, border: '1px solid rgba(255,255,255,.1)', borderRadius: 999 }}>
@@ -281,7 +259,7 @@ export default function Landing() {
               {isSq ? 'Shiko zgjidhjet' : 'See the solutions'}
             </a>
           </div>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#61707F', letterSpacing: '.04em' }}>Windows 10/11 · macOS 12+ · {price} €/{isSq ? 'muaj' : 'mo'}</div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#61707F', letterSpacing: '.04em' }}>Windows 10/11 · {price} €/{isSq ? 'muaj' : 'mo'}</div>
         </div>
 
         <div style={{ minWidth: 0 }}>
@@ -326,9 +304,9 @@ export default function Landing() {
               onClick={() => setCatIdx(i)}
               style={{
                 padding: '11px 17px', borderRadius: 999, fontSize: 14, fontWeight: 600,
-                border: i === catIdx ? `1px solid oklch(0.82 0.12 195 / 0.6)` : '1px solid rgba(255,255,255,.1)',
-                background: i === catIdx ? `oklch(0.82 0.12 195 / 0.15)` : 'rgba(255,255,255,.03)',
-                color: i === catIdx ? '#EAF7FA' : '#8FA0B2'
+                border: i === safeIdx ? `1px solid oklch(0.82 0.12 195 / 0.6)` : '1px solid rgba(255,255,255,.1)',
+                background: i === safeIdx ? `oklch(0.82 0.12 195 / 0.15)` : 'rgba(255,255,255,.03)',
+                color: i === safeIdx ? '#EAF7FA' : '#8FA0B2'
               }}
             >
               {c[lang].n}
@@ -406,10 +384,6 @@ export default function Landing() {
                 <span>{t.winBtn}</span>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500, opacity: 0.75 }}>WINDOWS 10 / 11 · 64-BIT</span>
               </a>
-              <a href="#kontakt" className="lp-btn-outline2" style={{ padding: '15px 24px', borderRadius: 14, border: '1px solid rgba(255,255,255,.18)', color: '#F2F6FA', fontWeight: 700, fontSize: 15, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span>{t.macBtn}</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500, color: '#7D8C9A' }}>MACOS 12+ · {isSq ? 'Kërko demo' : 'Request demo'}</span>
-              </a>
             </div>
           </div>
 
@@ -431,49 +405,6 @@ export default function Landing() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 90px' }}>
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '.16em', color: ACCENT, marginBottom: 26 }}>04 — {isSq ? 'REFERENCA' : 'REFERENCES'}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16 }}>
-          {quotes.map((q, i) => (
-            <div key={i} style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 20, padding: 28, background: 'rgba(255,255,255,.02)', display: 'flex', flexDirection: 'column', gap: 22 }}>
-              <p style={{ margin: 0, fontFamily: "'Space Grotesk',sans-serif", fontSize: 19, lineHeight: 1.35, letterSpacing: '-0.015em', color: '#EAF2F8' }}>{q.text}</p>
-              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#6D7E8E', letterSpacing: '.08em', lineHeight: 1.6 }}>{q.who}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="kontakt" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 90px' }}>
-        <div style={{ border: '1px solid rgba(255,255,255,.09)', borderRadius: 26, padding: 'clamp(24px,3vw,46px)', background: 'linear-gradient(150deg, rgba(255,255,255,.04), rgba(255,255,255,.012))', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px,1fr))', gap: 40 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '.16em', color: ACCENT, marginBottom: 14 }}>05 — {isSq ? 'DEMO' : 'DEMO'}</div>
-            <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 'clamp(28px,3.2vw,40px)', letterSpacing: '-0.03em', margin: '0 0 16px', lineHeight: 1.06 }}>
-              {isSq ? '15 minuta, biznesi yt, ekrani yt' : '15 minutes, your business, your screen'}
-            </h2>
-            <p style={{ fontSize: 16, color: '#8FA0B2', lineHeight: 1.6, margin: '0 0 0', maxWidth: 380 }}>
-              {isSq ? 'Tregojmë saktësisht zgjidhjen e sektorit tënd — pa prezantime të gjata.' : "We show exactly your sector's setup — no long pitch."}
-            </p>
-          </div>
-          <form onSubmit={onSubmit} style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input className="lp-field" required placeholder={t.ph.name} style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <input className="lp-field" required placeholder={t.ph.biz} style={inputStyle} value={form.business} onChange={(e) => setForm({ ...form, business: e.target.value })} />
-            <input className="lp-field" required placeholder={t.ph.phone} style={inputStyle} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            <select className="lp-field" required style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-              <option value="" disabled style={{ background: '#0A121A' }}>{isSq ? 'Zgjidh sektorin' : 'Choose a sector'}</option>
-              {cats.map((c, i) => (
-                <option key={i} value={c[lang].n} style={{ background: '#0A121A' }}>{c[lang].n}</option>
-              ))}
-            </select>
-            <button type="submit" disabled={submitting} style={{ padding: '16px 22px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, background: ACCENT, color: '#04121A', opacity: submitting ? 0.7 : 1 }}>
-              {t.submit}
-            </button>
-            <div style={{ fontSize: 13, color: error ? '#F87171' : ACCENT_SOFT, minHeight: 20 }}>
-              {error ? (isSq ? 'Diçka shkoi keq. Provo përsëri.' : 'Something went wrong. Try again.') : sent ? t.sent : ''}
-            </div>
-          </form>
         </div>
       </section>
 
@@ -503,7 +434,6 @@ export default function Landing() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, fontSize: 14, color: '#8FA0B2' }}>
             <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
             <a className="lp-navlink" href={setupHref}>{isSq ? 'Shkarko' : 'Download'}</a>
-            <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
             <a className="lp-navlink" href="#shto">{isSq ? 'Shto në telefon' : 'Add to phone'}</a>
             <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>
             <Link className="lp-navlink" to="/admin/login">{isSq ? 'Hyrje Admin' : 'Admin Login'}</Link>

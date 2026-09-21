@@ -11,9 +11,27 @@ export function seed({ quiet = false } = {}) {
   const email = process.env.SEED_ADMIN_EMAIL;
   const password = process.env.SEED_ADMIN_PASSWORD;
 
-  const contentRow = db.prepare('SELECT id FROM site_content WHERE id = 1').get();
+  const contentRow = db.prepare('SELECT data FROM site_content WHERE id = 1').get();
   if (contentRow) {
-    log('Site content already seeded — leaving existing content untouched.');
+    try {
+      const data = JSON.parse(contentRow.data);
+      data.cats = DEFAULT_CONTENT.cats;
+      delete data.quotes;
+      if (data.t?.sq) {
+        delete data.t.sq.submit;
+        delete data.t.sq.sent;
+        delete data.t.sq.ph;
+      }
+      if (data.t?.en) {
+        delete data.t.en.submit;
+        delete data.t.en.sent;
+        delete data.t.en.ph;
+      }
+      db.prepare(`UPDATE site_content SET data = ?, updated_at = datetime('now') WHERE id = 1`).run(JSON.stringify(data));
+      log('Synced landing categories (restorante, kafene, markete, butique, këpucë).');
+    } catch (err) {
+      log(`Could not sync site content: ${err.message}`);
+    }
   } else {
     db.prepare('INSERT INTO site_content (id, data) VALUES (1, ?)').run(JSON.stringify(DEFAULT_CONTENT));
     log('Seeded default site content.');
