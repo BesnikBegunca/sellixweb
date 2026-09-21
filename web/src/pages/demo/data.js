@@ -1,7 +1,8 @@
 // Seed data for the interactive landing-page demo. Everything lives in memory;
 // nothing here touches the API.
 
-export const BUSINESS = 'Friends SHPK';
+export const BUSINESS = 'Caffe Bar';
+export const CITY = 'Prishtinë';
 
 export const CATEGORIES = [
   { id: 'kafe', n: 'Kafe', icon: 'coffee' },
@@ -45,7 +46,7 @@ export const PRODUCTS = [
 
 export const STAFF = [
   { id: 's0', name: 'Administrator', role: 'manager', pin: '0000', wage: 0 },
-  { id: 's1', name: 'Besnik Begunca', role: 'waiter', pin: '1234', wage: 12 },
+  { id: 's1', name: 'Kamarieri', role: 'waiter', pin: '1234', wage: 12 },
   { id: 's2', name: 'Niki', role: 'waiter', pin: '5678', wage: 10 },
 ];
 

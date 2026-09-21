@@ -55,17 +55,3 @@ export function LineChart({ values, labels, width = 640, height = 220, max, tick
     </svg>
   );
 }
-
-export function Bars({ values, labels, height = 120, highlightLast = true }) {
-  const max = Math.max(...values, 1);
-  return (
-    <div className="sx-bars" style={{ height }}>
-      {values.map((v, i) => (
-        <div key={i} className="sx-bar-col">
-          <div className={`sx-bar ${highlightLast && i === values.length - 1 ? 'is-on' : ''}`} style={{ height: `${Math.max(4, (v / max) * 100)}%` }} title={`${v.toFixed(2)}€`} />
-          <span>{labels[i]}</span>
-        </div>
-      ))}
-    </div>
-  );
-}

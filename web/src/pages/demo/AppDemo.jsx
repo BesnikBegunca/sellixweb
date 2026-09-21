@@ -5,6 +5,7 @@ import PhoneApp from './PhoneApp';
 import { initialState } from './data';
 import { reducer } from './store';
 import './demo.css';
+import './phone-portal.css';
 
 const APP_W = 1200;
 const APP_H = 740;
@@ -32,10 +33,10 @@ const COPY = {
   sq: {
     kicker: '01 — PROVO APP-IN',
     title: 'Provoje SelliX këtu, pa e shkarkuar',
-    sub: 'Një kopje e plotë e aplikacionit, direkt në shfletues. Hyr si kamarier, merr porosi, paguaj — dhe shiko si menaxheri e sheh gjithçka live në telefon.',
-    steps: [['1', 'Hyr me PIN', 'Kamarier 1234 · Menaxher 0000'], ['2', 'Hap tavolinë', 'Shto produkte, printo, paguaj'], ['3', 'Shiko telefonin', 'Njoftimi arrin menjëherë']],
+    sub: 'Një kopje e plotë e aplikacionit, direkt në shfletues. Hyr si kamarier, merr porosi, paguaj — dhe shiko si pronari i kafiterisë e sheh gjithçka live në telefon, te portali i biznesit.',
+    steps: [['1', 'Hyr me PIN', 'Kamarier 1234 · Menaxher 0000'], ['2', 'Hap tavolinë', 'Shto produkte, printo, paguaj'], ['3', 'Shiko telefonin', 'Portali i pronarit përditësohet live']],
     desk: 'SelliX POS — Windows',
-    phone: 'SelliX Menaxher — iOS',
+    phone: 'Portali i biznesit — iPhone',
     reset: 'Rinis',
     scroll: 'Rrëshqit anash për ta parë të plotë',
     light: 'Light', dark: 'Dark',
@@ -43,10 +44,10 @@ const COPY = {
   en: {
     kicker: '01 — TRY THE APP',
     title: 'Try SelliX right here, no download',
-    sub: 'A full copy of the app, running in your browser. Log in as a waiter, take orders, charge — and watch the manager see everything live on the phone.',
-    steps: [['1', 'Log in with PIN', 'Waiter 1234 · Manager 0000'], ['2', 'Open a table', 'Add items, print, charge'], ['3', 'Watch the phone', 'The alert lands instantly']],
+    sub: 'A full copy of the app, running in your browser. Log in as a waiter, take orders, charge — and watch the café owner see it all live on the phone, in the business portal.',
+    steps: [['1', 'Log in with PIN', 'Waiter 1234 · Manager 0000'], ['2', 'Open a table', 'Add items, print, charge'], ['3', 'Watch the phone', 'The owner portal updates live']],
     desk: 'SelliX POS — Windows',
-    phone: 'SelliX Manager — iOS',
+    phone: 'Business portal — iPhone',
     reset: 'Reset',
     scroll: 'Swipe sideways to see it all',
     light: 'Light', dark: 'Dark',
