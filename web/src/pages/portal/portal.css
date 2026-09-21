@@ -833,3 +833,151 @@
     text-align: left;
   }
 }
+
+.pt-gj-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.pt-gj-stat {
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+}
+
+.pt-gj-stat-value {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.pt-gj {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pt-gj-head,
+.pt-gj-row,
+.pt-gj-day {
+  display: grid;
+  grid-template-columns: 1.1fr 1.2fr 1.2fr 0.9fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.pt-gj-head {
+  padding: 0 14px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8FA0B2;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.pt-gj-block {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  overflow: hidden;
+}
+
+.pt-gj-row {
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.pt-gj-date,
+.pt-gj-close,
+.pt-gj-period {
+  font-size: 14px;
+}
+
+.pt-gj-total,
+.pt-gj-day-total {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+  color: oklch(0.82 0.12 195);
+}
+
+.pt-gj-kind {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8FA0B2;
+}
+
+.pt-gj-kind.printed {
+  color: #FBBF24;
+}
+
+.pt-gj-day {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: oklch(0.82 0.12 195 / 0.1);
+  border: 1px solid oklch(0.82 0.12 195 / 0.18);
+}
+
+.pt-gj-day-label {
+  grid-column: 1 / 4;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pt-gj-waiters {
+  padding: 0 14px 12px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.pt-gj-waiters .pt-list {
+  margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+  .pt-gj-head {
+    display: none;
+  }
+  .pt-gj-row,
+  .pt-gj-day {
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+  }
+  .pt-gj-date {
+    font-weight: 700;
+  }
+  .pt-gj-total {
+    font-size: 18px;
+  }
+  .pt-gj-close,
+  .pt-gj-period {
+    grid-column: 1 / -1;
+    color: #8FA0B2;
+    font-size: 13px;
+  }
+  .pt-gj-close::before,
+  .pt-gj-period::before {
+    content: attr(data-label) ' · ';
+    font-weight: 700;
+    color: #A9B7C6;
+  }
+  .pt-gj-kind {
+    margin-left: 10px;
+  }
+  .pt-gj-day-label {
+    grid-column: 1;
+  }
+}

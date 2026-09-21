@@ -207,6 +207,28 @@ if (restaurantTablePk && restaurantTablePk !== 'business_id,table_name,staff_nam
   db.pragma('foreign_keys = ON');
 }
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shift_closes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    event_uid TEXT NOT NULL,
+    shift_uid TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL DEFAULT 'closed',
+    device_id TEXT NOT NULL DEFAULT '',
+    opened_at TEXT NOT NULL,
+    closed_at TEXT NOT NULL,
+    closed_by TEXT NOT NULL DEFAULT '',
+    total_cents INTEGER NOT NULL DEFAULT 0,
+    paid_cents INTEGER NOT NULL DEFAULT 0,
+    open_cents INTEGER NOT NULL DEFAULT 0,
+    expenses_cents INTEGER NOT NULL DEFAULT 0,
+    waiters_json TEXT NOT NULL DEFAULT '[]',
+    synced_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (business_id, event_uid)
+  )
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_shift_closes_business_closed ON shift_closes (business_id, closed_at)');
+
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"
 );

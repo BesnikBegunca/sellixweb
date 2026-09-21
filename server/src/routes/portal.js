@@ -17,6 +17,7 @@ import {
   liveTables,
   deviceTotals,
   listSales,
+  listShiftCloses,
   isRestaurantSector
 } from '../reports.js';
 import { subscribe } from '../events.js';
@@ -175,4 +176,10 @@ portalRouter.get('/sales', requirePortal, (req, res) => {
     period,
     sales: listSales(row.id, period, asOf, limit)
   });
+});
+
+portalRouter.get('/shifts', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  res.json(listShiftCloses(row.id));
 });

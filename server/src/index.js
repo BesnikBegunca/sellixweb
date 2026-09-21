@@ -13,6 +13,7 @@ import { businessesRouter } from './routes/businesses.js';
 import { licenseRouter } from './routes/license.js';
 import { registrationsRouter } from './routes/registrations.js';
 import { salesRouter } from './routes/sales.js';
+import { shiftsRouter } from './routes/shifts.js';
 import { portalRouter } from './routes/portal.js';
 import { seed } from './seed.js';
 
@@ -82,6 +83,7 @@ app.use('/api/businesses', businessesRouter);
 app.use('/api/license', licenseRouter);
 app.use('/api/registrations', registrationsRouter);
 app.use('/api/sales', salesRouter);
+app.use('/api/shifts', shiftsRouter);
 app.use('/api/portal', portalRouter);
 
 // In production the built frontend ships inside the same container, so one

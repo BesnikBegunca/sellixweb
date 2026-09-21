@@ -95,6 +95,11 @@ export default function PortalLayout() {
             Kompjuterët
           </NavLink>
         )}
+        {business?.isRestaurant && (
+          <NavLink to="/portal/gjendja" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
+            Gjendja
+          </NavLink>
+        )}
         <NavLink to="/portal/account" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
           Llogaria
         </NavLink>

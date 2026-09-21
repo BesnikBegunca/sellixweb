@@ -87,10 +87,12 @@ export const api = {
   portalTables: () => request('/portal/tables'),
   portalDevices: (query) => request(`/portal/devices?${query}`),
   portalSales: (query) => request(`/portal/sales?${query}`),
+  portalShifts: () => request('/portal/shifts'),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),
   getBusinessSalesTables: (id) => request(`/businesses/${id}/sales/tables`),
   getBusinessSalesDevices: (id, query) => request(`/businesses/${id}/sales/devices?${query}`),
-  getBusinessSales: (id, query) => request(`/businesses/${id}/sales?${query}`)
+  getBusinessSales: (id, query) => request(`/businesses/${id}/sales?${query}`),
+  getBusinessSalesShifts: (id) => request(`/businesses/${id}/sales/shifts`)
 };

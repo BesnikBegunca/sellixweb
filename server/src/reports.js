@@ -487,3 +487,49 @@ export function breakdownPayload(businessId, period, asOf) {
     products: topProducts(businessId, period, asOf)
   };
 }
+
+function parseWaiters(raw) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((w) => ({
+        name: String(w?.name || '').trim(),
+        total: Number(w?.total) || 0,
+        paid: Number(w?.paid) || 0,
+        open: Number(w?.open) || 0
+      }))
+      .filter((w) => w.name);
+  } catch {
+    return [];
+  }
+}
+
+/** Closed gjendja rows posted by the restaurant till. */
+export function listShiftCloses(businessId) {
+  const rows = db.prepare(`
+    SELECT * FROM shift_closes
+    WHERE business_id = ?
+    ORDER BY closed_at DESC, id DESC
+  `).all(businessId);
+
+  const shifts = rows.map((r) => ({
+    uid: r.event_uid,
+    shiftUid: r.shift_uid,
+    kind: r.kind === 'printed' ? 'printed' : 'closed',
+    openedAt: r.opened_at,
+    closedAt: r.closed_at,
+    closedBy: r.closed_by || '',
+    total: fromCents(r.total_cents),
+    paid: fromCents(r.paid_cents),
+    open: fromCents(r.open_cents),
+    waiters: parseWaiters(r.waiters_json)
+  }));
+
+  const closed = shifts.filter((s) => s.kind === 'closed');
+  return {
+    count: closed.length,
+    total: closed.reduce((sum, s) => sum + s.total, 0),
+    shifts
+  };
+}

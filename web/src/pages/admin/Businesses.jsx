@@ -5,7 +5,7 @@ import { useLiveRefresh } from '../../lib/useLiveRefresh';
 import VerifiedBadge from '../portal/VerifiedBadge';
 import {
   PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, RegistersGrid,
-  LiveBadge, TodayRing
+  LiveBadge, TodayRing, GjendjaTable
 } from '../portal/SalesReport';
 import '../portal/portal.css';
 import './admin.css';
@@ -189,6 +189,7 @@ function SalesPanel({ business, onClose }) {
   const [tables, setTables] = useState(null);
   const [devices, setDevices] = useState(null);
   const [sales, setSales] = useState(null);
+  const [shifts, setShifts] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   // Only the newest load may write state: switching period or business fires a
@@ -208,6 +209,7 @@ function SalesPanel({ business, onClose }) {
     ];
     // A restaurant's fourth call is its floor; a market's is its tills.
     requests.push(isRestaurant ? api.getBusinessSalesTables(businessId) : api.getBusinessSalesDevices(businessId, q));
+    if (isRestaurant) requests.push(api.getBusinessSalesShifts(businessId));
     try {
       const results = await Promise.all(requests);
       if (id !== requestId.current) return;
@@ -216,6 +218,7 @@ function SalesPanel({ business, onClose }) {
       setSales(results[2].sales);
       setTables(isRestaurant ? results[3].tables : []);
       setDevices(isRestaurant ? null : results[3]);
+      setShifts(isRestaurant ? results[4] : null);
       setError('');
     } catch (e) {
       if (id === requestId.current) setError(e.message);
@@ -249,7 +252,7 @@ function SalesPanel({ business, onClose }) {
           <div className="pt-page-head" style={{ marginBottom: 14 }}>
             {/* The floor is live rather than period-based, so the period
                 pills stay hidden there; per-till takings do depend on it. */}
-            {tab !== 'tables' && <PeriodPills period={period} onChange={setPeriod} />}
+            {tab !== 'tables' && tab !== 'gjendja' && <PeriodPills period={period} onChange={setPeriod} />}
             <div className="pt-pills pt-pills-sm">
               <button type="button" className={`pt-pill${tab === 'sales' ? ' active' : ''}`} onClick={() => setTab('sales')}>
                 Shitjet
@@ -263,6 +266,11 @@ function SalesPanel({ business, onClose }) {
                   Kompjuterët
                 </button>
               )}
+              {isRestaurant && (
+                <button type="button" className={`pt-pill${tab === 'gjendja' ? ' active' : ''}`} onClick={() => setTab('gjendja')}>
+                  Gjendja
+                </button>
+              )}
             </div>
           </div>
           {tab === 'tables' ? (
@@ -272,6 +280,8 @@ function SalesPanel({ business, onClose }) {
             </>
           ) : tab === 'registers' ? (
             <RegistersGrid data={devices} />
+          ) : tab === 'gjendja' ? (
+            <GjendjaTable data={shifts} />
           ) : (
             <>
               <TodayRing totals={overview?.totals} goal={overview?.goal} />
