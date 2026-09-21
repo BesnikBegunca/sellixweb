@@ -17,6 +17,11 @@
 .lp-navlink { color: inherit; transition: color .15s; }
 .lp-navlink:hover { color: #F2F6FA; }
 
+.lp-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
 .lp-header-inner { min-width: 0; }
 .lp-header-links { flex: 1 1 auto; justify-content: flex-end; white-space: nowrap; }
 .lp-header-tools { flex-shrink: 0; }
@@ -112,6 +117,55 @@
   }
 }
 
+.lp-a2hs-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 90px;
+}
+
+.lp-a2hs-card {
+  border: 1px solid oklch(0.82 0.12 195 / 0.35);
+  border-radius: 26px;
+  padding: clamp(24px, 4vw, 40px);
+  background: linear-gradient(160deg, oklch(0.82 0.12 195 / 0.12), rgba(255,255,255,.03));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.lp-a2hs-hero-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  box-shadow: 0 18px 40px -16px rgba(0,0,0,.8);
+}
+
+.lp-a2hs-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: .16em;
+  color: oklch(0.82 0.12 195);
+  margin-bottom: 8px;
+}
+
+.lp-a2hs-hero-text h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: clamp(24px, 3vw, 36px);
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+  line-height: 1.1;
+}
+
+.lp-a2hs-hero-text p {
+  margin: 0;
+  color: #8FA0B2;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
 .lp-a2hs-wrap {
   width: 100%;
 }
@@ -122,11 +176,11 @@
   gap: 14px;
   width: 100%;
   max-width: 420px;
-  margin: 0 auto;
-  padding: 12px 16px;
-  border: 1px solid rgba(255,255,255,.14);
+  margin: 8px auto 0;
+  padding: 14px 18px;
+  border: 1px solid rgba(255,255,255,.16);
   border-radius: 18px;
-  background: linear-gradient(160deg, rgba(11,28,66,.9), rgba(7,13,20,.9));
+  background: #0B1C42;
   color: #F2F6FA;
   cursor: pointer;
   text-align: left;
@@ -177,6 +231,10 @@
   align-items: flex-end;
   justify-content: center;
   padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top, 16px));
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  padding-left: max(16px, env(safe-area-inset-left, 16px));
+  padding-right: max(16px, env(safe-area-inset-right, 16px));
 }
 
 .lp-a2hs-sheet {

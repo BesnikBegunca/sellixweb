@@ -6,6 +6,17 @@
   color: #F2F6FA;
   font-family: Manrope, Helvetica, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+.ad-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 .ad input, .ad select, .ad textarea, .ad button { font-family: inherit; }
 .ad input::placeholder, .ad textarea::placeholder { color: #61707F; }
@@ -275,6 +286,9 @@
   top: 0;
   z-index: 25;
   padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  padding-left: calc(16px + env(safe-area-inset-left, 0px));
+  padding-right: calc(16px + env(safe-area-inset-right, 0px));
   border-bottom: 1px solid rgba(255,255,255,.07);
   background: rgba(7,13,20,.9);
   backdrop-filter: blur(14px);
@@ -308,6 +322,8 @@
     width: min(82vw, 280px) !important;
     height: 100vh !important;
     min-height: 100vh !important;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
     transform: translateX(-110%);
     transition: transform .2s ease;
     z-index: 60;

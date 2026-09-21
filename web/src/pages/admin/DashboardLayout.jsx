@@ -28,7 +28,7 @@ function ForcedPasswordChange() {
   };
 
   return (
-    <div className="ad" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="ad ad-login">
       <div className="ad-card" style={{ padding: 28, width: '100%', maxWidth: 400 }}>
         <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>SETUP REQUIRED</div>
         <h1 className="ad-heading" style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px', letterSpacing: '-0.02em' }}>Set a new password</h1>

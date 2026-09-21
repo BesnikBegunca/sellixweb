@@ -32,7 +32,7 @@ export default function Login() {
   };
 
   return (
-    <div className="ad" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="ad ad-login">
       <div style={{ width: '100%', maxWidth: 380 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 34, justifyContent: 'center' }}>
           <span style={{ display: 'block', width: 30, height: 21, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>

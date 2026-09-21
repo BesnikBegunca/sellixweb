@@ -215,7 +215,7 @@ export default function Landing() {
   const inputStyle = { padding: '15px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,.12)', background: 'rgba(0,0,0,.3)', color: '#F2F6FA', fontSize: 15, outline: 'none' };
 
   return (
-    <div className="lp" style={{ color: '#F2F6FA', fontFamily: 'Manrope,Helvetica,sans-serif', minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
+    <div className="lp" style={{ color: '#F2F6FA', fontFamily: 'Manrope,Helvetica,sans-serif', minHeight: '100dvh', overflowX: 'hidden', position: 'relative' }}>
       <div style={{ position: 'absolute', top: -240, left: '50%', width: 1100, height: 800, transform: 'translateX(-50%)', background: `radial-gradient(ellipse at center, oklch(0.82 0.12 195 / 0.12), transparent 65%)`, filter: 'blur(10px)', pointerEvents: 'none' }}></div>
 
       <nav className="lp-header" style={{ position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(18px)', background: 'rgba(7,13,20,.72)', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
@@ -232,6 +232,7 @@ export default function Landing() {
             <a className="lp-navlink" href="#krahaso">{isSq ? 'Pse Sellix' : 'Why Sellix'}</a>
             <a className="lp-navlink" href="#shkarko">{isSq ? 'Çmimi' : 'Pricing'}</a>
             <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
+            <a className="lp-navlink" href="#shto">{isSq ? 'App' : 'App'}</a>
           </div>
           <div className="lp-header-tools" style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, border: '1px solid rgba(255,255,255,.1)', borderRadius: 999 }}>
             <button onClick={() => setLang('sq')} style={langBtn(lang === 'sq')}>SQ</button>
@@ -471,26 +472,38 @@ export default function Landing() {
         </div>
       </section>
 
+      <section id="shto" className="lp-a2hs-section">
+        <div className="lp-a2hs-card">
+          <img src="/pwa-icon.png" alt="SelliX" className="lp-a2hs-hero-icon" width="96" height="96" />
+          <div className="lp-a2hs-hero-text">
+            <div className="lp-a2hs-kicker">{isSq ? 'NË TELEFON' : 'ON YOUR PHONE'}</div>
+            <h2>{isSq ? 'Shto SelliX në ekranin kryesor' : 'Add SelliX to the home screen'}</h2>
+            <p>
+              {isSq
+                ? 'Ikona e app-it, emri SelliX. Shtyp butonin më poshtë.'
+                : 'App icon, name SelliX. Tap the button below.'}
+            </p>
+          </div>
+          <AddToHome lang={lang} />
+        </div>
+      </section>
+
       <footer style={{ borderTop: '1px solid rgba(255,255,255,.07)', padding: '34px 24px 46px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <div className="lp-a2hs-wrap">
-            <AddToHome lang={lang} />
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <img src="/pwa-icon.png" alt="" width="30" height="30" style={{ borderRadius: 8 }} />
+            <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>SelliX</span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-              <img src="/pwa-icon.png" alt="" width="30" height="30" style={{ borderRadius: 8 }} />
-              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>SelliX</span>
-            </div>
-            <span style={{ flex: 1 }}></span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, fontSize: 14, color: '#8FA0B2' }}>
-              <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
-              <a className="lp-navlink" href="#shkarko">{isSq ? 'Shkarko' : 'Download'}</a>
-              <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
-              <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>
-              <Link className="lp-navlink" to="/admin/login">{isSq ? 'Hyrje Admin' : 'Admin Login'}</Link>
-            </div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#4F5E6D', letterSpacing: '.1em' }}>SELLIX SOFTWARE · 2026</div>
+          <span style={{ flex: 1 }}></span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, fontSize: 14, color: '#8FA0B2' }}>
+            <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
+            <a className="lp-navlink" href="#shkarko">{isSq ? 'Shkarko' : 'Download'}</a>
+            <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
+            <a className="lp-navlink" href="#shto">{isSq ? 'Shto në telefon' : 'Add to phone'}</a>
+            <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>
+            <Link className="lp-navlink" to="/admin/login">{isSq ? 'Hyrje Admin' : 'Admin Login'}</Link>
           </div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#4F5E6D', letterSpacing: '.1em' }}>SELLIX SOFTWARE · 2026</div>
         </div>
       </footer>
     </div>

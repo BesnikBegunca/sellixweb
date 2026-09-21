@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
 
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
-}
-
 function isIos() {
   const ua = window.navigator.userAgent || '';
   const iPhone = /iPad|iPhone|iPod/i.test(ua);
@@ -14,22 +9,16 @@ function isIos() {
 
 export default function AddToHome({ lang = 'sq' }) {
   const [deferred, setDeferred] = useState(null);
-  const [installed, setInstalled] = useState(false);
   const [iosOpen, setIosOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const sq = lang === 'sq';
 
   useEffect(() => {
-    if (isStandalone()) {
-      setInstalled(true);
-      return undefined;
-    }
     const onPrompt = (e) => {
       e.preventDefault();
       setDeferred(e);
     };
     const onInstalled = () => {
-      setInstalled(true);
       setDeferred(null);
       setIosOpen(false);
     };
@@ -40,8 +29,6 @@ export default function AddToHome({ lang = 'sq' }) {
       window.removeEventListener('appinstalled', onInstalled);
     };
   }, []);
-
-  if (installed) return null;
 
   const onClick = async () => {
     if (deferred) {
@@ -54,7 +41,6 @@ export default function AddToHome({ lang = 'sq' }) {
       } finally {
         setBusy(false);
         setDeferred(null);
-        if (isStandalone()) setInstalled(true);
       }
       return;
     }
