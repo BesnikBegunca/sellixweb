@@ -15,6 +15,16 @@ import {
   listSales,
   listShiftCloses
 } from '../reports.js';
+import {
+  parseReportKind,
+  parseReportPeriod,
+  previewReport,
+  listSavedReports,
+  createSavedReport,
+  readSavedReport,
+  deleteSavedReport,
+  sendPdf
+} from '../savedReports.js';
 
 export const businessesRouter = Router();
 businessesRouter.use(requireAuth);
@@ -350,4 +360,58 @@ businessesRouter.get('/:id/sales', (req, res) => {
   const period = readPeriod(req, 'today');
   const limit = Number(req.query?.limit) || 50;
   res.json({ asOf, period, sales: listSales(row.id, period, asOf, limit) });
+});
+
+businessesRouter.get('/:id/reports/preview', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  const kind = parseReportKind(req.query?.kind);
+  const period = parseReportPeriod(kind, req.query?.period);
+  if (!kind || !period) return res.status(400).json({ error: 'Zgjidh 1 muaj ose 1 vit.' });
+  const snapshot = previewReport(row, kind, period);
+  if (!snapshot) return res.status(400).json({ error: 'Periudha e zgjedhur nuk është valide.' });
+  res.json({
+    kind: snapshot.kind,
+    period: snapshot.periodKey,
+    from: snapshot.from,
+    to: snapshot.to,
+    title: snapshot.title,
+    total: snapshot.total,
+    count: snapshot.count
+  });
+});
+
+businessesRouter.get('/:id/reports', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  res.json({ reports: listSavedReports(row.id) });
+});
+
+businessesRouter.post('/:id/reports', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  const kind = parseReportKind(req.body?.kind);
+  const period = parseReportPeriod(kind, req.body?.period);
+  if (!kind || !period) return res.status(400).json({ error: 'Zgjidh 1 muaj ose 1 vit nga lista.' });
+  try {
+    const { report } = createSavedReport(row, kind, period);
+    res.json({ report });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Raporti nuk u krijua.' });
+  }
+});
+
+businessesRouter.get('/:id/reports/:rid/file', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  const file = readSavedReport(row.id, req.params.rid);
+  if (!file || file.missing) return res.status(404).json({ error: 'Raporti nuk u gjet.' });
+  sendPdf(res, file.buffer, file.row.file_name);
+});
+
+businessesRouter.delete('/:id/reports/:rid', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  if (!deleteSavedReport(row.id, req.params.rid)) return res.status(404).json({ error: 'Raporti nuk u gjet.' });
+  res.json({ ok: true });
 });

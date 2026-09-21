@@ -97,6 +97,194 @@ function periodFilter(period, asOf, column = 'sold_at') {
   };
 }
 
+export function rangeFilter(from, to, column = 'sold_at') {
+  return {
+    sql: ` AND date(${column}) >= ? AND date(${column}) <= ?`,
+    params: [from, to]
+  };
+}
+
+const MONTHS_SQ = [
+  'Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor',
+  'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'
+];
+
+export function calendarMonthBounds(ym, asOf) {
+  const match = String(ym || '').match(/^(\d{4})-(\d{2})$/);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  if (m < 1 || m > 12) return null;
+  const from = `${match[1]}-${match[2]}-01`;
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let to = `${match[1]}-${match[2]}-${String(last).padStart(2, '0')}`;
+  if (asOf && to > asOf) to = asOf;
+  if (asOf && from > asOf) return null;
+  return { from, to };
+}
+
+export function calendarYearBounds(year, asOf) {
+  const y = String(year || '').trim();
+  if (!/^\d{4}$/.test(y)) return null;
+  const from = `${y}-01-01`;
+  let to = `${y}-12-31`;
+  if (asOf && to > asOf) to = asOf;
+  if (asOf && from > asOf) return null;
+  return { from, to };
+}
+
+export function reportTitle(kind, periodKey) {
+  if (kind === 'year') return `Raport vjetor · ${periodKey}`;
+  const [y, m] = String(periodKey).split('-');
+  const month = MONTHS_SQ[Number(m) - 1] || m;
+  return `Raport mujor · ${month} ${y}`;
+}
+
+export function staffBreakdown(businessId, from, to) {
+  const filter = rangeFilter(from, to);
+  const rows = db
+    .prepare(
+      `SELECT CASE WHEN TRIM(COALESCE(staff_name, '')) = '' THEN 'Pa emër' ELSE TRIM(staff_name) END AS name,
+              COALESCE(SUM(total_cents), 0) AS total_cents,
+              COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?${filter.sql}
+       GROUP BY CASE WHEN TRIM(COALESCE(staff_name, '')) = '' THEN 'Pa emër' ELSE TRIM(staff_name) END
+       ORDER BY total_cents DESC`
+    )
+    .all(businessId, ...filter.params);
+  return rows.map((r) => ({
+    name: r.name,
+    total: fromCents(r.total_cents),
+    count: r.count
+  }));
+}
+
+export function sumRange(businessId, from, to) {
+  const filter = rangeFilter(from, to);
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?${filter.sql}`
+    )
+    .get(businessId, ...filter.params);
+  return { total: fromCents(row.total_cents), count: row.count };
+}
+
+export function dailySeriesRange(businessId, from, to) {
+  const rows = db
+    .prepare(
+      `SELECT date(sold_at) AS day,
+              COALESCE(SUM(total_cents), 0) AS total_cents,
+              COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?
+         AND date(sold_at) >= ?
+         AND date(sold_at) <= ?
+       GROUP BY date(sold_at)
+       ORDER BY day ASC`
+    )
+    .all(businessId, from, to);
+  return rows.map((r) => ({
+    date: r.day,
+    total: fromCents(r.total_cents),
+    count: r.count
+  }));
+}
+
+export function monthlySeriesRange(businessId, from, to) {
+  const rows = db
+    .prepare(
+      `SELECT strftime('%Y-%m', sold_at) AS month,
+              COALESCE(SUM(total_cents), 0) AS total_cents,
+              COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?
+         AND date(sold_at) >= ?
+         AND date(sold_at) <= ?
+       GROUP BY strftime('%Y-%m', sold_at)
+       ORDER BY month ASC`
+    )
+    .all(businessId, from, to);
+  return rows.map((r) => ({
+    month: r.month,
+    total: fromCents(r.total_cents),
+    count: r.count
+  }));
+}
+
+function paymentsInRange(businessId, from, to) {
+  const filter = rangeFilter(from, to);
+  const rows = db
+    .prepare(
+      `SELECT CASE WHEN TRIM(payment_method) = '' THEN 'unknown' ELSE payment_method END AS method,
+              COALESCE(SUM(total_cents), 0) AS total_cents,
+              COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?${filter.sql}
+       GROUP BY CASE WHEN TRIM(payment_method) = '' THEN 'unknown' ELSE payment_method END
+       ORDER BY total_cents DESC`
+    )
+    .all(businessId, ...filter.params);
+  return rows.map((r) => ({
+    method: r.method,
+    total: fromCents(r.total_cents),
+    count: r.count
+  }));
+}
+
+function productsInRange(businessId, from, to, limit = 15) {
+  const filter = rangeFilter(from, to, 's.sold_at');
+  const rows = db
+    .prepare(
+      `SELECT i.name AS name,
+              COALESCE(SUM(i.quantity), 0) AS quantity,
+              COALESCE(SUM(i.total_cents), 0) AS total_cents
+       FROM sale_items i
+       JOIN sales s ON s.id = i.sale_id
+       WHERE s.business_id = ?${filter.sql}
+       GROUP BY i.name
+       ORDER BY total_cents DESC, quantity DESC
+       LIMIT ?`
+    )
+    .all(businessId, ...filter.params, limit);
+  return rows.map((r) => ({
+    name: r.name,
+    quantity: Number(r.quantity) || 0,
+    total: fromCents(r.total_cents)
+  }));
+}
+
+export function reportSnapshot(business, kind, periodKey, asOf = shopToday()) {
+  const bounds = kind === 'year'
+    ? calendarYearBounds(periodKey, asOf)
+    : calendarMonthBounds(periodKey, asOf);
+  if (!bounds) return null;
+  const { from, to } = bounds;
+  const totals = sumRange(business.id, from, to);
+  return {
+    business: {
+      name: business.name,
+      nui: business.nui,
+      city: business.city,
+      sector: business.sector
+    },
+    kind,
+    periodKey,
+    from,
+    to,
+    title: reportTitle(kind, periodKey),
+    total: totals.total,
+    count: totals.count,
+    staff: staffBreakdown(business.id, from, to),
+    payments: paymentsInRange(business.id, from, to),
+    products: productsInRange(business.id, from, to),
+    days: kind === 'month' ? dailySeriesRange(business.id, from, to) : [],
+    months: kind === 'year' ? monthlySeriesRange(business.id, from, to) : []
+  };
+}
+
 function sumSales(businessId, period, asOf) {
   const filter = periodFilter(period, asOf);
   const row = db

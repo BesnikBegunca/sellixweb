@@ -1027,3 +1027,102 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+.pt-reports {
+  display: grid;
+  gap: 14px;
+}
+
+.pt-report-make .pt-h {
+  margin-bottom: 6px;
+}
+
+.pt-report-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pt-report-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.pt-report-preview {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(20, 184, 166, .08);
+  border: 1px solid rgba(20, 184, 166, .22);
+}
+
+.pt-report-total {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #14B8A6;
+}
+
+.pt-report-count,
+.pt-report-range {
+  font-weight: 700;
+}
+
+.pt-report-go {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 44px;
+}
+
+.pt-report-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pt-report-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.pt-report-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pt-report-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.pt-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .pt-report-form,
+  .pt-report-preview {
+    grid-template-columns: 1fr;
+  }
+  .pt-report-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pt-report-actions .ad-btn,
+  .pt-report-actions .ad-btn-ghost {
+    flex: 1;
+    min-height: 44px;
+  }
+}

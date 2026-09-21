@@ -17,6 +17,30 @@ async function request(path, options = {}) {
   return data;
 }
 
+export async function downloadPdf(path, fallbackName = 'raport.pdf') {
+  const res = await fetch(`${API_URL}/api${path}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  });
+  if (!res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    const data = isJson ? await res.json() : null;
+    throw new Error(data?.error || `Request failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get('content-disposition') || '';
+  const match = cd.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] || fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
 // Server-sent events for the live sales views. Same base URL and same cookie
 // as request() above, so the stream authenticates exactly like a fetch does.
 export function openStream(path) {
@@ -92,11 +116,25 @@ export const api = {
   portalShifts: () => request('/portal/shifts'),
   portalRenewalRequest: () => request('/portal/renewal-request', { method: 'POST' }),
   portalAckNotice: () => request('/portal/notice/ack', { method: 'POST' }),
+  portalReports: () => request('/portal/reports'),
+  portalReportPreview: (kind, period) =>
+    request(`/portal/reports/preview?kind=${encodeURIComponent(kind)}&period=${encodeURIComponent(period)}`),
+  portalCreateReport: (kind, period) =>
+    request('/portal/reports', { method: 'POST', body: JSON.stringify({ kind, period }) }),
+  portalDownloadReport: (id) => downloadPdf(`/portal/reports/${id}/file`),
+  portalDeleteReport: (id) => request(`/portal/reports/${id}`, { method: 'DELETE' }),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),
   getBusinessSalesTables: (id) => request(`/businesses/${id}/sales/tables`),
   getBusinessSalesDevices: (id, query) => request(`/businesses/${id}/sales/devices?${query}`),
   getBusinessSales: (id, query) => request(`/businesses/${id}/sales?${query}`),
-  getBusinessSalesShifts: (id) => request(`/businesses/${id}/sales/shifts`)
+  getBusinessSalesShifts: (id) => request(`/businesses/${id}/sales/shifts`),
+  getBusinessReports: (id) => request(`/businesses/${id}/reports`),
+  getBusinessReportPreview: (id, kind, period) =>
+    request(`/businesses/${id}/reports/preview?kind=${encodeURIComponent(kind)}&period=${encodeURIComponent(period)}`),
+  createBusinessReport: (id, kind, period) =>
+    request(`/businesses/${id}/reports`, { method: 'POST', body: JSON.stringify({ kind, period }) }),
+  downloadBusinessReport: (id, rid) => downloadPdf(`/businesses/${id}/reports/${rid}/file`),
+  deleteBusinessReport: (id, rid) => request(`/businesses/${id}/reports/${rid}`, { method: 'DELETE' })
 };

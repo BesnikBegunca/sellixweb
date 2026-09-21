@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // On Railway the container filesystem is wiped on every deploy, so the database
 // lives on a mounted volume instead. DATA_DIR points at that mount in
 // production and falls back to ../data for local development.
-const dataDir = process.env.DATA_DIR
+export const dataDir = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(__dirname, '..', 'data');
 fs.mkdirSync(dataDir, { recursive: true });
@@ -229,6 +229,23 @@ db.exec(`
   )
 `);
 db.exec('CREATE INDEX IF NOT EXISTS idx_shift_closes_business_closed ON shift_closes (business_id, closed_at)');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS saved_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    period_key TEXT NOT NULL,
+    period_from TEXT NOT NULL,
+    period_to TEXT NOT NULL,
+    title TEXT NOT NULL,
+    total_cents INTEGER NOT NULL DEFAULT 0,
+    sale_count INTEGER NOT NULL DEFAULT 0,
+    file_name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_saved_reports_business ON saved_reports (business_id, created_at DESC)');
 
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"

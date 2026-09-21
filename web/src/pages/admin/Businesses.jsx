@@ -7,6 +7,7 @@ import {
   PeriodPills, TotalsGrid, SalesCharts, PaymentsList, ProductsList, SalesList, TablesGrid, RegistersGrid,
   LiveBadge, TodayRing, GjendjaTable
 } from '../portal/SalesReport';
+import BusinessReports from './BusinessReports';
 import '../portal/portal.css';
 import './admin.css';
 
@@ -252,7 +253,7 @@ function SalesPanel({ business, onClose }) {
           <div className="pt-page-head" style={{ marginBottom: 14 }}>
             {/* The floor is live rather than period-based, so the period
                 pills stay hidden there; per-till takings do depend on it. */}
-            {tab !== 'tables' && tab !== 'gjendja' && <PeriodPills period={period} onChange={setPeriod} />}
+            {tab !== 'tables' && tab !== 'gjendja' && tab !== 'raporte' && <PeriodPills period={period} onChange={setPeriod} />}
             <div className="pt-pills pt-pills-sm">
               <button type="button" className={`pt-pill${tab === 'sales' ? ' active' : ''}`} onClick={() => setTab('sales')}>
                 Shitjet
@@ -271,6 +272,9 @@ function SalesPanel({ business, onClose }) {
                   Gjendja
                 </button>
               )}
+              <button type="button" className={`pt-pill${tab === 'raporte' ? ' active' : ''}`} onClick={() => setTab('raporte')}>
+                Raportet
+              </button>
             </div>
           </div>
           {tab === 'tables' ? (
@@ -282,6 +286,8 @@ function SalesPanel({ business, onClose }) {
             <RegistersGrid data={devices} />
           ) : tab === 'gjendja' ? (
             <GjendjaTable data={shifts} />
+          ) : tab === 'raporte' ? (
+            <BusinessReports businessId={businessId} />
           ) : (
             <>
               <TodayRing totals={overview?.totals} goal={overview?.goal} period={period} />

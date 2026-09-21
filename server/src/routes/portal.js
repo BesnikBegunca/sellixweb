@@ -21,6 +21,16 @@ import {
   isRestaurantSector
 } from '../reports.js';
 import { subscribe } from '../events.js';
+import {
+  parseReportKind,
+  parseReportPeriod,
+  previewReport,
+  listSavedReports,
+  createSavedReport,
+  readSavedReport,
+  deleteSavedReport,
+  sendPdf
+} from '../savedReports.js';
 
 export const portalRouter = Router();
 
@@ -186,6 +196,68 @@ portalRouter.get('/shifts', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
   res.json(listShiftCloses(row.id));
+});
+
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Shumë raporte. Provoni përsëri pas një ore.' }
+});
+
+portalRouter.get('/reports/preview', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const kind = parseReportKind(req.query?.kind);
+  const period = parseReportPeriod(kind, req.query?.period);
+  if (!kind || !period) return res.status(400).json({ error: 'Zgjidh 1 muaj ose 1 vit.' });
+  const snapshot = previewReport(row, kind, period);
+  if (!snapshot) return res.status(400).json({ error: 'Periudha e zgjedhur nuk është valide.' });
+  res.json({
+    kind: snapshot.kind,
+    period: snapshot.periodKey,
+    from: snapshot.from,
+    to: snapshot.to,
+    title: snapshot.title,
+    total: snapshot.total,
+    count: snapshot.count
+  });
+});
+
+portalRouter.get('/reports', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  res.json({ reports: listSavedReports(row.id) });
+});
+
+portalRouter.post('/reports', requirePortal, reportLimiter, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const kind = parseReportKind(req.body?.kind);
+  const period = parseReportPeriod(kind, req.body?.period);
+  if (!kind || !period) return res.status(400).json({ error: 'Zgjidh 1 muaj ose 1 vit nga lista.' });
+  try {
+    const { report } = createSavedReport(row, kind, period);
+    res.json({ report });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Raporti nuk u krijua.' });
+  }
+});
+
+portalRouter.get('/reports/:id/file', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const file = readSavedReport(row.id, req.params.id);
+  if (!file || file.missing) return res.status(404).json({ error: 'Raporti nuk u gjet.' });
+  sendPdf(res, file.buffer, file.row.file_name);
+});
+
+portalRouter.delete('/reports/:id', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  if (!deleteSavedReport(row.id, req.params.id)) return res.status(404).json({ error: 'Raporti nuk u gjet.' });
+  res.json({ ok: true });
 });
 
 const renewalLimiter = rateLimit({

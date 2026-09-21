@@ -20,6 +20,7 @@ import PortalTables from './pages/portal/PortalTables';
 import PortalRegisters from './pages/portal/PortalRegisters';
 import PortalAccount from './pages/portal/PortalAccount';
 import PortalGjendja from './pages/portal/PortalGjendja';
+import PortalReports from './pages/portal/PortalReports';
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="tables" element={<PortalTables />} />
               <Route path="registers" element={<PortalRegisters />} />
               <Route path="gjendja" element={<PortalGjendja />} />
+              <Route path="reports" element={<PortalReports />} />
               <Route path="account" element={<PortalAccount />} />
             </Route>
           </Route>

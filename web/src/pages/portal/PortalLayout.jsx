@@ -206,6 +206,9 @@ export default function PortalLayout() {
             Gjendja
           </NavLink>
         )}
+        <NavLink to="/portal/reports" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
+          Raportet
+        </NavLink>
         <NavLink to="/portal/account" className={({ isActive }) => `pt-tab${isActive ? ' active' : ''}`}>
           Llogaria
         </NavLink>
