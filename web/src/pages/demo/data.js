@@ -47,7 +47,7 @@ export const PRODUCTS = [
 export const STAFF = [
   { id: 's0', name: 'Administrator', role: 'manager', pin: '0000', wage: 0 },
   { id: 's1', name: 'Kamarieri', role: 'waiter', pin: '1234', wage: 12 },
-  { id: 's2', name: 'Niki', role: 'waiter', pin: '5678', wage: 10 },
+  { id: 's2', name: 'Kamarieri 2', role: 'waiter', pin: '5678', wage: 10 },
 ];
 
 // Revenue for the six days before today (rolling window ending yesterday).
