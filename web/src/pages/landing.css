@@ -111,3 +111,128 @@
     justify-content: center;
   }
 }
+
+.lp-a2hs-wrap {
+  width: 100%;
+}
+
+.lp-a2hs {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(11,28,66,.9), rgba(7,13,20,.9));
+  color: #F2F6FA;
+  cursor: pointer;
+  text-align: left;
+}
+
+.lp-a2hs:hover {
+  border-color: oklch(0.82 0.12 195 / 0.55);
+}
+
+.lp-a2hs:disabled {
+  opacity: .7;
+  cursor: default;
+}
+
+.lp-a2hs-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.lp-a2hs-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lp-a2hs-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.lp-a2hs-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: oklch(0.86 0.12 195);
+}
+
+.lp-a2hs-back {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0,0,0,.58);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+
+.lp-a2hs-sheet {
+  width: min(420px, 100%);
+  background: #0C1620;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  padding: 22px 20px 18px;
+  text-align: center;
+  margin-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.lp-a2hs-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  margin-bottom: 10px;
+}
+
+.lp-a2hs-sheet-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.lp-a2hs-sheet p {
+  margin: 0 0 14px;
+  color: #8FA0B2;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.lp-a2hs-steps {
+  text-align: left;
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: #D5DFE8;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.lp-a2hs-close {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: oklch(0.82 0.12 195);
+  color: #04121A;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.lp-a2hs-ios-share {
+  display: inline-block;
+  vertical-align: -3px;
+  color: oklch(0.86 0.12 195);
+}

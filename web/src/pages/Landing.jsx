@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import AddToHome from './AddToHome';
 import './landing.css';
 
 const ACCENT = 'oklch(0.82 0.12 195)';
@@ -471,22 +472,25 @@ export default function Landing() {
       </section>
 
       <footer style={{ borderTop: '1px solid rgba(255,255,255,.07)', padding: '34px 24px 46px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <span style={{ display: 'block', width: 30, height: 21, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#F2F6FA' }}></span>
-            </span>
-            <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>SelliX</span>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <div className="lp-a2hs-wrap">
+            <AddToHome lang={lang} />
           </div>
-          <span style={{ flex: 1 }}></span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, fontSize: 14, color: '#8FA0B2' }}>
-            <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
-            <a className="lp-navlink" href="#shkarko">{isSq ? 'Shkarko' : 'Download'}</a>
-            <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
-            <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>
-            <Link className="lp-navlink" to="/admin/login">{isSq ? 'Hyrje Admin' : 'Admin Login'}</Link>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+              <img src="/pwa-icon.png" alt="" width="30" height="30" style={{ borderRadius: 8 }} />
+              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>SelliX</span>
+            </div>
+            <span style={{ flex: 1 }}></span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, fontSize: 14, color: '#8FA0B2' }}>
+              <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
+              <a className="lp-navlink" href="#shkarko">{isSq ? 'Shkarko' : 'Download'}</a>
+              <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
+              <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>
+              <Link className="lp-navlink" to="/admin/login">{isSq ? 'Hyrje Admin' : 'Admin Login'}</Link>
+            </div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#4F5E6D', letterSpacing: '.1em' }}>SELLIX SOFTWARE · 2026</div>
           </div>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#4F5E6D', letterSpacing: '.1em' }}>SELLIX SOFTWARE · 2026</div>
         </div>
       </footer>
     </div>
