@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
-import { subscribe } from '../events.js';
+import { subscribe, publish } from '../events.js';
 import { uniqueLicenseKey, nowSql, addMonths, publicBusiness, parseTickColor, DEFAULT_TICK_COLOR, isDeleted } from '../licenses.js';
 import {
   readAsOf,
@@ -198,6 +198,16 @@ businessesRouter.post('/:id/license/extend', (req, res) => {
     "UPDATE businesses SET license_expires_at = ?, license_status = 'active', updated_at = datetime('now') WHERE id = ?"
   ).run(addMonths(base, months), row.id);
 
+  res.json({ business: publicBusiness(getBusiness(row.id)) });
+});
+
+businessesRouter.post('/:id/license/notify', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  db.prepare(
+    "UPDATE businesses SET license_notice_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
+  ).run(row.id);
+  publish(row.id, { renewal: true });
   res.json({ business: publicBusiness(getBusiness(row.id)) });
 });
 

@@ -44,6 +44,7 @@ function publicBusiness(row) {
     isRestaurant: isRestaurantSector(row.sector),
     licenseStatus: effectiveStatus(row),
     licenseExpiresAt: row.license_expires_at,
+    licenseNoticeAt: row.license_notice_at || null,
     verified: !!row.verified,
     verifiedColor: parseTickColor(row.verified_color, DEFAULT_TICK_COLOR)
   };
@@ -203,5 +204,17 @@ portalRouter.post('/renewal-request', requirePortal, renewalLimiter, (req, res) 
     phone,
     'Vazhdim licence'
   );
+  db.prepare(
+    "UPDATE businesses SET license_notice_at = NULL, updated_at = datetime('now') WHERE id = ?"
+  ).run(row.id);
+  res.json({ ok: true });
+});
+
+portalRouter.post('/notice/ack', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  db.prepare(
+    "UPDATE businesses SET license_notice_at = NULL, updated_at = datetime('now') WHERE id = ?"
+  ).run(row.id);
   res.json({ ok: true });
 });

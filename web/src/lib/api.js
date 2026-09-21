@@ -54,6 +54,7 @@ export const api = {
   verifyBusiness: (id, color) => request(`/businesses/${id}/verify`, { method: 'POST', body: JSON.stringify({ color }) }),
   unverifyBusiness: (id) => request(`/businesses/${id}/unverify`, { method: 'POST' }),
   setVerifiedColor: (id, color) => request(`/businesses/${id}/verify-color`, { method: 'PATCH', body: JSON.stringify({ color }) }),
+  notifyLicense: (id) => request(`/businesses/${id}/license/notify`, { method: 'POST' }),
   extendLicense: (id, months) => request(`/businesses/${id}/license/extend`, { method: 'POST', body: JSON.stringify({ months }) }),
   revokeLicense: (id) => request(`/businesses/${id}/license/revoke`, { method: 'POST' }),
   reactivateLicense: (id) => request(`/businesses/${id}/license/reactivate`, { method: 'POST' }),
@@ -89,6 +90,7 @@ export const api = {
   portalSales: (query) => request(`/portal/sales?${query}`),
   portalShifts: () => request('/portal/shifts'),
   portalRenewalRequest: () => request('/portal/renewal-request', { method: 'POST' }),
+  portalAckNotice: () => request('/portal/notice/ack', { method: 'POST' }),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),

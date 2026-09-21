@@ -578,3 +578,52 @@
     padding: 8px 10px;
   }
 }
+
+.ad-lic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.ad-lic-card {
+  padding: 18px;
+}
+
+.ad-lic-card.urgent {
+  border-color: rgba(251, 191, 36, .45);
+}
+
+.ad-lic-card.expired {
+  border-color: rgba(248, 113, 113, .4);
+}
+
+.ad-lic-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ad-lic-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ad-lic-days {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #14B8A6;
+  margin-bottom: 4px;
+}
+
+.ad-lic-card.urgent .ad-lic-days {
+  color: #FBBF24;
+}
+
+.ad-lic-card.expired .ad-lic-days {
+  color: #F87171;
+}

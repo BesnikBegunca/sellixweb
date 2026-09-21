@@ -95,6 +95,7 @@ export function publicBusiness(row) {
     licenseStatus: effectiveStatus(row),
     licenseIssuedAt: row.license_issued_at,
     licenseExpiresAt: row.license_expires_at,
+    licenseNoticeAt: row.license_notice_at || null,
     devicesUsed: deviceCount(row.id),
     isRestaurant: isRestaurantSector(row.sector),
     portalEmail: row.portal_email || '',

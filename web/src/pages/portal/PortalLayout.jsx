@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { usePortal } from '../../lib/PortalContext';
-import { api } from '../../lib/api';
+import { api, openStream } from '../../lib/api';
 import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
 import '../admin/admin.css';
@@ -14,33 +14,64 @@ function renewalKey(id) {
 }
 
 function LicenseRenewalPrompt({ business }) {
+  const { refresh, setBusiness } = usePortal();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const info = parseLicenseExpiry(business?.licenseExpiresAt);
+  const adminNotice = Boolean(business?.licenseNoticeAt);
 
   useEffect(() => {
     if (!business?.id) return undefined;
+    const source = openStream('/portal/stream');
+    const onPush = () => {
+      refresh();
+    };
+    if (source) source.addEventListener('sales', onPush);
+    const poll = setInterval(() => refresh(), 20000);
+    return () => {
+      if (source) {
+        source.removeEventListener('sales', onPush);
+        source.close();
+      }
+      clearInterval(poll);
+    };
+  }, [business?.id, refresh]);
+
+  useEffect(() => {
+    if (!business?.id) return undefined;
+    if (adminNotice) {
+      setOpen(true);
+      return undefined;
+    }
+    const expiry = parseLicenseExpiry(business.licenseExpiresAt);
+    if (!expiry || expiry.days > 7 || expiry.days < 0) {
+      setOpen(false);
+      return undefined;
+    }
+    let last = 0;
+    try {
+      last = Number(window.localStorage.getItem(renewalKey(business.id))) || 0;
+    } catch {
+      last = 0;
+    }
     const tick = () => {
-      const expiry = parseLicenseExpiry(business.licenseExpiresAt);
-      if (!expiry || expiry.days > 7 || expiry.days < 0) {
-        setOpen(false);
-        return;
-      }
-      let last = 0;
-      try {
-        last = Number(window.localStorage.getItem(renewalKey(business.id))) || 0;
-      } catch {
-        last = 0;
-      }
       if (!last || Date.now() - last >= RENEWAL_HOUR_MS) setOpen(true);
     };
     tick();
     const timer = setInterval(tick, 30000);
     return () => clearInterval(timer);
-  }, [business?.id, business?.licenseExpiresAt]);
+  }, [business?.id, business?.licenseExpiresAt, adminNotice]);
 
-  const snooze = () => {
+  const snooze = async () => {
+    if (adminNotice) {
+      try {
+        await api.portalAckNotice();
+        setBusiness({ ...business, licenseNoticeAt: null });
+      } catch {
+        /* still close locally */
+      }
+    }
     try {
       window.localStorage.setItem(renewalKey(business.id), String(Date.now()));
     } catch {
@@ -55,7 +86,13 @@ function LicenseRenewalPrompt({ business }) {
     setError('');
     try {
       await api.portalRenewalRequest();
-      snooze();
+      setBusiness({ ...business, licenseNoticeAt: null });
+      try {
+        window.localStorage.setItem(renewalKey(business.id), String(Date.now()));
+      } catch {
+        /* ignore */
+      }
+      setOpen(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -65,19 +102,19 @@ function LicenseRenewalPrompt({ business }) {
 
   if (!open || !info) return null;
 
-  const daysText = info.days === 0
-    ? 'sot'
-    : info.days === 1
-      ? 'për 1 ditë'
-      : `për ${info.days} ditë`;
+  const daysLeft = info.days < 0 ? 0 : info.days;
+  const message = info.days < 0
+    ? 'Licenca juaj ka skaduar. Dërgo kërkesën për vazhdim.'
+    : info.days === 0
+      ? 'Licenca juaj skadon sot. Dërgo kërkesën për vazhdim.'
+      : `Licenca juaj skadon edhe ${daysLeft} ${daysLeft === 1 ? 'ditë' : 'ditë'}. Dërgo kërkesën për vazhdim.`;
 
   return (
     <div className="pt-modal-back" role="dialog" aria-modal="true" aria-labelledby="pt-renewal-title">
       <div className="ad-card pt-modal">
-        <h2 id="pt-renewal-title" className="ad-heading pt-h" style={{ marginBottom: 8 }}>Licenca skadon së shpejti</h2>
+        <h2 id="pt-renewal-title" className="ad-heading pt-h" style={{ marginBottom: 8 }}>Licenca skadon</h2>
         <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-          Licenca e {business?.name || 'biznesit'} skadon {daysText}, më {info.date} në ora {info.time}.
-          Dërgo kërkesën për vazhdim që SelliX ta rinovojë.
+          {message}
         </p>
         {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
         <div className="pt-modal-actions">

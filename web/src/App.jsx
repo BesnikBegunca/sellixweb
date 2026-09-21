@@ -8,6 +8,7 @@ import Leads from './pages/admin/Leads';
 import Businesses from './pages/admin/Businesses';
 import Registrations from './pages/admin/Registrations';
 import RecycleBin from './pages/admin/RecycleBin';
+import Licenses from './pages/admin/Licenses';
 import Content from './pages/admin/Content';
 import Users from './pages/admin/Users';
 import { PortalProvider } from './lib/PortalContext';
@@ -38,6 +39,7 @@ export default function App() {
             <Route index element={<Leads />} />
             <Route path="leads" element={<Leads />} />
             <Route path="businesses" element={<Businesses />} />
+            <Route path="licenses" element={<Licenses />} />
             <Route path="recycle-bin" element={<RecycleBin />} />
             <Route path="registrations" element={<Registrations />} />
             <Route path="content" element={<Content />} />
