@@ -3,10 +3,9 @@ import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
 import {
-  signPortalToken,
-  setPortalCookie,
-  clearPortalCookie,
-  requirePortal
+  requirePortal,
+  beginPortalSession,
+  endPortalSession
 } from '../auth.js';
 import { effectiveStatus, parseTickColor, DEFAULT_TICK_COLOR } from '../licenses.js';
 import {
@@ -95,12 +94,12 @@ portalRouter.post('/login', loginLimiter, (req, res) => {
   }
 
   db.prepare("UPDATE businesses SET portal_last_login_at = datetime('now') WHERE id = ?").run(row.id);
-  setPortalCookie(res, signPortalToken(row));
+  beginPortalSession(row, req, res);
   res.json({ business: publicBusiness(row) });
 });
 
 portalRouter.post('/logout', (req, res) => {
-  clearPortalCookie(res);
+  endPortalSession(req, res);
   res.json({ ok: true });
 });
 
@@ -113,22 +112,16 @@ portalRouter.get('/me', requirePortal, (req, res) => {
 });
 
 portalRouter.patch('/me/password', requirePortal, (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
+  const { newPassword } = req.body || {};
   if (typeof newPassword !== 'string' || newPassword.length < 8) {
     return res.status(400).json({ error: 'Fjalëkalimi i ri duhet të ketë së paku 8 karaktere' });
   }
   const row = loadBusiness(req);
   if (!row || row.deleted_at || !row.portal_email) return res.status(401).json({ error: 'Not authenticated' });
 
-  if (!row.portal_must_change_password) {
-    if (typeof currentPassword !== 'string' || !bcrypt.compareSync(currentPassword, row.portal_password_hash)) {
-      return res.status(401).json({ error: 'Fjalëkalimi aktual është i pasaktë' });
-    }
-  }
-
   db.prepare(
-    'UPDATE businesses SET portal_password_hash = ?, portal_must_change_password = 0 WHERE id = ?'
-  ).run(bcrypt.hashSync(newPassword, 12), row.id);
+    'UPDATE businesses SET portal_password_hash = ?, portal_password_plain = ?, portal_must_change_password = 0 WHERE id = ?'
+  ).run(bcrypt.hashSync(newPassword, 12), newPassword, row.id);
   res.json({ ok: true });
 });
 

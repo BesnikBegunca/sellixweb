@@ -154,10 +154,16 @@ const BUSINESS_MIGRATIONS = [
   ['verified_color', "ALTER TABLE businesses ADD COLUMN verified_color TEXT NOT NULL DEFAULT '#1D9BF0'"],
   ['deleted_at', 'ALTER TABLE businesses ADD COLUMN deleted_at TEXT'],
   ['daily_goal_cents', 'ALTER TABLE businesses ADD COLUMN daily_goal_cents INTEGER NOT NULL DEFAULT 0'],
-  ['license_notice_at', 'ALTER TABLE businesses ADD COLUMN license_notice_at TEXT']
+  ['license_notice_at', 'ALTER TABLE businesses ADD COLUMN license_notice_at TEXT'],
+  ['portal_password_plain', "ALTER TABLE businesses ADD COLUMN portal_password_plain TEXT NOT NULL DEFAULT ''"]
 ];
 for (const [column, sql] of BUSINESS_MIGRATIONS) {
   if (!businessColumns.has(column)) db.exec(sql);
+}
+
+const adminColumns = new Set(db.prepare('PRAGMA table_info(admin_users)').all().map((c) => c.name));
+if (!adminColumns.has('password_plain')) {
+  db.exec("ALTER TABLE admin_users ADD COLUMN password_plain TEXT NOT NULL DEFAULT ''");
 }
 
 const salesColumns = new Set(db.prepare('PRAGMA table_info(sales)').all().map((c) => c.name));
@@ -250,3 +256,20 @@ db.exec('CREATE INDEX IF NOT EXISTS idx_saved_reports_business ON saved_reports 
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_portal_email ON businesses (portal_email) WHERE portal_email <> ''"
 );
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS login_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    account_id INTEGER NOT NULL,
+    jti TEXT NOT NULL UNIQUE,
+    device_id TEXT NOT NULL DEFAULT '',
+    device_label TEXT NOT NULL DEFAULT '',
+    user_agent TEXT NOT NULL DEFAULT '',
+    ip TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    revoked_at TEXT
+  )
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_login_sessions_account ON login_sessions (kind, account_id, revoked_at)');

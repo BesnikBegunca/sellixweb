@@ -32,8 +32,8 @@ export function seed({ quiet = false } = {}) {
 
   const hash = bcrypt.hashSync(password, 12);
   db.prepare(
-    'INSERT INTO admin_users (email, name, password_hash, must_change_password) VALUES (?, ?, ?, 1)'
-  ).run(email, 'Admin', hash);
+    'INSERT INTO admin_users (email, name, password_hash, password_plain, must_change_password) VALUES (?, ?, ?, ?, 1)'
+  ).run(email, 'Admin', hash, password);
   log(`Created admin user ${email}. They must change their password on first login.`);
 }
 

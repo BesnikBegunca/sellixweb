@@ -5,6 +5,7 @@ import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { subscribe, publish } from '../events.js';
 import { uniqueLicenseKey, nowSql, addMonths, publicBusiness, parseTickColor, DEFAULT_TICK_COLOR, isDeleted } from '../licenses.js';
+import { countActiveDevices, listActiveDevices, revokeAccountSessions } from '../sessions.js';
 import {
   readAsOf,
   readPeriod,
@@ -73,14 +74,22 @@ function nuiTakenMessage(existing) {
   return 'A business with that NUI already exists';
 }
 
+function adminBusiness(row) {
+  return {
+    ...publicBusiness(row),
+    portalPassword: row.portal_password_plain || '',
+    portalLoginDevices: countActiveDevices('portal', row.id)
+  };
+}
+
 businessesRouter.get('/', (req, res) => {
   const rows = db.prepare('SELECT * FROM businesses WHERE deleted_at IS NULL ORDER BY created_at DESC').all();
-  res.json({ businesses: rows.map(publicBusiness) });
+  res.json({ businesses: rows.map(adminBusiness) });
 });
 
 businessesRouter.get('/trash', (req, res) => {
   const rows = db.prepare('SELECT * FROM businesses WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all();
-  res.json({ businesses: rows.map(publicBusiness) });
+  res.json({ businesses: rows.map(adminBusiness) });
 });
 
 businessesRouter.post('/', (req, res) => {
@@ -113,7 +122,7 @@ businessesRouter.post('/', (req, res) => {
     )
     .run(values);
 
-  res.status(201).json({ business: publicBusiness(getBusiness(info.lastInsertRowid)) });
+  res.status(201).json({ business: adminBusiness(getBusiness(info.lastInsertRowid)) });
 });
 
 businessesRouter.patch('/:id', (req, res) => {
@@ -143,7 +152,7 @@ businessesRouter.patch('/:id', (req, res) => {
       id: row.id
     });
   }
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.delete('/:id', (req, res) => {
@@ -158,7 +167,7 @@ businessesRouter.post('/:id/restore', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Business not found' });
   if (!isDeleted(row)) return res.status(409).json({ error: 'Business is not in Recycle bin' });
   db.prepare('UPDATE businesses SET deleted_at = NULL, updated_at = datetime(\'now\') WHERE id = ?').run(row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.delete('/:id/purge', (req, res) => {
@@ -177,14 +186,14 @@ businessesRouter.post('/:id/verify', (req, res) => {
   db.prepare(
     'UPDATE businesses SET verified = 1, verified_color = ?, updated_at = datetime(\'now\') WHERE id = ?'
   ).run(color, row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/unverify', (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });
   db.prepare("UPDATE businesses SET verified = 0, updated_at = datetime('now') WHERE id = ?").run(row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.patch('/:id/verify-color', (req, res) => {
@@ -192,7 +201,7 @@ businessesRouter.patch('/:id/verify-color', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Business not found' });
   const color = parseTickColor(req.body?.color, DEFAULT_TICK_COLOR);
   db.prepare('UPDATE businesses SET verified_color = ?, updated_at = datetime(\'now\') WHERE id = ?').run(color, row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/license/extend', (req, res) => {
@@ -208,7 +217,7 @@ businessesRouter.post('/:id/license/extend', (req, res) => {
     "UPDATE businesses SET license_expires_at = ?, license_status = 'active', updated_at = datetime('now') WHERE id = ?"
   ).run(addMonths(base, months), row.id);
 
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/license/notify', (req, res) => {
@@ -218,21 +227,21 @@ businessesRouter.post('/:id/license/notify', (req, res) => {
     "UPDATE businesses SET license_notice_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
   ).run(row.id);
   publish(row.id, { renewal: true });
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/license/revoke', (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });
   db.prepare("UPDATE businesses SET license_status = 'revoked', updated_at = datetime('now') WHERE id = ?").run(row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/license/reactivate', (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });
   db.prepare("UPDATE businesses SET license_status = 'active', updated_at = datetime('now') WHERE id = ?").run(row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.post('/:id/license/regenerate', (req, res) => {
@@ -245,7 +254,7 @@ businessesRouter.post('/:id/license/regenerate', (req, res) => {
     uniqueLicenseKey(),
     row.id
   );
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 businessesRouter.get('/:id/devices', (req, res) => {
@@ -263,6 +272,12 @@ businessesRouter.get('/:id/devices', (req, res) => {
       lastSeenAt: d.last_seen_at
     }))
   });
+});
+
+businessesRouter.get('/:id/portal-sessions', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  res.json({ devices: listActiveDevices('portal', row.id) });
 });
 
 businessesRouter.delete('/:id/devices/:deviceId', (req, res) => {
@@ -294,12 +309,12 @@ businessesRouter.post('/:id/portal-account', (req, res) => {
   const tempPassword = generateTempPassword();
   db.prepare(
     `UPDATE businesses
-        SET portal_email = ?, portal_password_hash = ?, portal_must_change_password = 1,
+        SET portal_email = ?, portal_password_hash = ?, portal_password_plain = ?, portal_must_change_password = 1,
             updated_at = datetime('now')
       WHERE id = ?`
-  ).run(email, bcrypt.hashSync(tempPassword, 12), row.id);
+  ).run(email, bcrypt.hashSync(tempPassword, 12), tempPassword, row.id);
 
-  res.json({ business: publicBusiness(getBusiness(row.id)), tempPassword });
+  res.json({ business: adminBusiness(getBusiness(row.id)), tempPassword });
 });
 
 businessesRouter.delete('/:id/portal-account', (req, res) => {
@@ -307,11 +322,12 @@ businessesRouter.delete('/:id/portal-account', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Business not found' });
   db.prepare(
     `UPDATE businesses
-        SET portal_email = '', portal_password_hash = '', portal_must_change_password = 0,
+        SET portal_email = '', portal_password_hash = '', portal_password_plain = '', portal_must_change_password = 0,
             updated_at = datetime('now')
       WHERE id = ?`
   ).run(row.id);
-  res.json({ business: publicBusiness(getBusiness(row.id)) });
+  revokeAccountSessions('portal', row.id);
+  res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
 // Same sales rows the till posted to POST /api/sales/sync — filtered by this

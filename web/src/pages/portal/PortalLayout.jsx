@@ -126,7 +126,7 @@ function ForcedPasswordChange() {
     if (newPassword !== confirm) return setError('Fjalëkalimet nuk përputhen.');
     setSubmitting(true);
     try {
-      await api.portalChangePassword(undefined, newPassword);
+      await api.portalChangePassword(newPassword);
       setBusiness({ ...business, mustChangePassword: false });
     } catch (err) {
       setError(err.message);

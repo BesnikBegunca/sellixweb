@@ -18,7 +18,7 @@ function ForcedPasswordChange() {
     if (newPassword !== confirm) return setError('Passwords do not match.');
     setSubmitting(true);
     try {
-      await api.changeOwnPassword(undefined, newPassword);
+      await api.changeOwnPassword(newPassword);
       setUser({ ...user, mustChangePassword: false });
     } catch (err) {
       setError(err.message);

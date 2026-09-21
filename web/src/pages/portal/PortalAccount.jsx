@@ -16,7 +16,6 @@ function Row({ label, value }) {
 
 export default function PortalAccount() {
   const { business } = usePortal();
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -31,9 +30,8 @@ export default function PortalAccount() {
     if (newPassword !== confirm) return setError('Fjalëkalimet nuk përputhen.');
     setSubmitting(true);
     try {
-      await api.portalChangePassword(currentPassword, newPassword);
+      await api.portalChangePassword(newPassword);
       setDone('Fjalëkalimi u ndryshua.');
-      setCurrentPassword('');
       setNewPassword('');
       setConfirm('');
     } catch (err) {
@@ -94,7 +92,6 @@ export default function PortalAccount() {
         <div className="ad-card pt-panel">
           <h2 className="ad-heading pt-h">Ndrysho fjalëkalimin</h2>
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input className="ad-field" type="password" required autoComplete="current-password" placeholder="Fjalëkalimi aktual" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
             <input className="ad-field" type="password" required autoComplete="new-password" placeholder="Fjalëkalimi i ri" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             <input className="ad-field" type="password" required autoComplete="new-password" placeholder="Përsërit fjalëkalimin e ri" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             {error && <div className="ad-error">{error}</div>}

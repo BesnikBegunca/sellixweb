@@ -85,6 +85,7 @@ export const api = {
   reactivateLicense: (id) => request(`/businesses/${id}/license/reactivate`, { method: 'POST' }),
   regenerateLicense: (id) => request(`/businesses/${id}/license/regenerate`, { method: 'POST' }),
   getBusinessDevices: (id) => request(`/businesses/${id}/devices`),
+  getBusinessPortalSessions: (id) => request(`/businesses/${id}/portal-sessions`),
   releaseBusinessDevice: (id, deviceId) => request(`/businesses/${id}/devices/${deviceId}`, { method: 'DELETE' }),
   createPortalAccount: (id, email) =>
     request(`/businesses/${id}/portal-account`, { method: 'POST', body: JSON.stringify({ email }) }),
@@ -99,14 +100,15 @@ export const api = {
   createUser: (email, name) => request('/users', { method: 'POST', body: JSON.stringify({ email, name }) }),
   deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
   resetUserPassword: (id) => request(`/users/${id}/reset-password`, { method: 'POST' }),
-  changeOwnPassword: (currentPassword, newPassword) =>
-    request('/users/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+  getUserSessions: (id) => request(`/users/${id}/sessions`),
+  changeOwnPassword: (newPassword) =>
+    request('/users/me/password', { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
 
   portalLogin: (email, password) => request('/portal/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   portalLogout: () => request('/portal/logout', { method: 'POST' }),
   portalMe: () => request(`/portal/me?t=${Date.now()}`),
-  portalChangePassword: (currentPassword, newPassword) =>
-    request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+  portalChangePassword: (newPassword) =>
+    request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
   portalSetGoal: (goal) => request('/portal/me/goal', { method: 'PATCH', body: JSON.stringify({ goal }) }),
   portalOverview: (date) => request(`/portal/overview?date=${encodeURIComponent(date)}`),
   portalBreakdown: (query) => request(`/portal/breakdown?${query}`),

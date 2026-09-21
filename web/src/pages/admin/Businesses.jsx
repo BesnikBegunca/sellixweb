@@ -314,6 +314,8 @@ export default function Businesses() {
   const [submitting, setSubmitting] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [devicesFor, setDevicesFor] = useState(null);
+  const [portalLoginsFor, setPortalLoginsFor] = useState(null);
+  const [portalLoginDevices, setPortalLoginDevices] = useState(null);
   const [salesFor, setSalesFor] = useState(null);
   const [copied, setCopied] = useState(null);
   const [extendMonths, setExtendMonths] = useState({});
@@ -427,6 +429,18 @@ export default function Businesses() {
     await runAction(b.id, () => api.deletePortalAccount(b.id));
   };
 
+  const openPortalLogins = async (b) => {
+    setPortalLoginsFor(b);
+    setPortalLoginDevices(null);
+    try {
+      const { devices } = await api.getBusinessPortalSessions(b.id);
+      setPortalLoginDevices(devices || []);
+    } catch (e) {
+      setError(e.message);
+      setPortalLoginDevices([]);
+    }
+  };
+
   return (
     <div>
       <div className="ad-page-head">
@@ -454,6 +468,45 @@ export default function Businesses() {
 
       {devicesFor && (
         <DevicesPanel business={devicesFor} onClose={() => setDevicesFor(null)} onChanged={load} />
+      )}
+
+      {portalLoginsFor && (
+        <div className="ad-card" style={{ padding: 16, marginBottom: 16 }}>
+          <div className="ad-page-head" style={{ marginBottom: 10 }}>
+            <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+              Hyrjet e portalit — {portalLoginsFor.name}
+            </h2>
+            <button type="button" className="ad-btn-ghost" onClick={() => { setPortalLoginsFor(null); setPortalLoginDevices(null); }}>
+              Close
+            </button>
+          </div>
+          {portalLoginDevices === null ? (
+            <div className="ad-hint">Loading…</div>
+          ) : portalLoginDevices.length === 0 ? (
+            <div className="ad-hint">Nuk ka pajisje të kyçura tani në portal.</div>
+          ) : (
+            <div className="ad-table-wrap">
+              <table className="ad-table">
+                <thead>
+                  <tr>
+                    <th>Pajisja</th>
+                    <th>Hyrë</th>
+                    <th>Aktiv</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {portalLoginDevices.map((d) => (
+                    <tr key={d.deviceId}>
+                      <td data-label="Pajisja">{d.label}</td>
+                      <td data-label="Hyrë" className="ad-hint">{String(d.createdAt || '').slice(0, 16)}</td>
+                      <td data-label="Aktiv" className="ad-hint">{String(d.lastSeenAt || '').slice(0, 16)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {salesFor && (
@@ -545,6 +598,19 @@ export default function Businesses() {
                         <div className="ad-cell-stack">
                           <span className="ad-badge ad-badge-new">Active</span>
                           <span className="ad-hint" style={{ wordBreak: 'break-all' }}>{b.portalEmail}</span>
+                          {b.portalPassword ? (
+                            <code className="ad-mono" style={{ fontSize: 12, wordBreak: 'break-all' }}>{b.portalPassword}</code>
+                          ) : (
+                            <span className="ad-hint">Fjalëkalim i panjohur — Reset</span>
+                          )}
+                          <button
+                            type="button"
+                            className="ad-btn-ghost"
+                            style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => openPortalLogins(b)}
+                          >
+                            {b.portalLoginDevices || 0} pajisje
+                          </button>
                           <div className="ad-mini-actions">
                             <button
                               className="ad-btn-ghost"

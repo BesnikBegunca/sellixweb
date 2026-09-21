@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
-import { signToken, setSessionCookie, clearSessionCookie, requireAuth } from '../auth.js';
+import { beginAdminSession, endAdminSession, requireAuth } from '../auth.js';
 
 export const authRouter = Router();
 
@@ -27,13 +27,12 @@ authRouter.post('/login', loginLimiter, (req, res) => {
   if (!row || !bcrypt.compareSync(password, row.password_hash)) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
-  const token = signToken(row);
-  setSessionCookie(res, token);
+  beginAdminSession(row, req, res);
   res.json({ user: publicUser(row) });
 });
 
 authRouter.post('/logout', (req, res) => {
-  clearSessionCookie(res);
+  endAdminSession(req, res);
   res.json({ ok: true });
 });
 
