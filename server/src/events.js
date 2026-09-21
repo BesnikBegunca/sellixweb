@@ -28,6 +28,7 @@ function bucket(businessId) {
 function send(res, payload) {
   try {
     res.write(payload);
+    if (typeof res.flush === 'function') res.flush();
   } catch {
     // The socket died between the check and the write; the close handler
     // cleans it up.
@@ -63,6 +64,7 @@ export function subscribe(businessId, req, res) {
     // back until the buffer fills. This turns buffering off for the stream.
     'X-Accel-Buffering': 'no'
   });
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
   const id = nextId++;
   set.set(id, res);
@@ -88,8 +90,12 @@ export function subscribe(businessId, req, res) {
 export function publish(businessId, payload) {
   const set = streams.get(businessId);
   if (!set || set.size === 0) return;
-  const frame = `event: sales\ndata: ${JSON.stringify({ at: Date.now(), ...payload })}\n\n`;
-  for (const res of set.values()) send(res, frame);
+  const data = JSON.stringify({ at: Date.now(), ...payload });
+  const frames = [`event: sales\ndata: ${data}\n\n`];
+  if (payload?.renewal) frames.push(`event: renewal\ndata: ${data}\n\n`);
+  for (const res of set.values()) {
+    for (const frame of frames) send(res, frame);
+  }
 }
 
 // One timer for every stream: a comment line keeps proxies and load balancers

@@ -97,6 +97,8 @@ portalRouter.post('/logout', (req, res) => {
 portalRouter.get('/me', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
   res.json({ business: publicBusiness(row) });
 });
 
@@ -163,6 +165,7 @@ portalRouter.get('/devices', requirePortal, (req, res) => {
 portalRouter.get('/stream', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
+  if (typeof res.setTimeout === 'function') res.setTimeout(0);
   subscribe(row.id, req, res);
 });
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { usePortal } from '../../lib/PortalContext';
-import { api, openStream } from '../../lib/api';
+import { api } from '../../lib/api';
 import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
 import '../admin/admin.css';
@@ -14,7 +14,7 @@ function renewalKey(id) {
 }
 
 function LicenseRenewalPrompt({ business }) {
-  const { refresh, setBusiness } = usePortal();
+  const { setBusiness } = usePortal();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
@@ -23,25 +23,9 @@ function LicenseRenewalPrompt({ business }) {
 
   useEffect(() => {
     if (!business?.id) return undefined;
-    const source = openStream('/portal/stream');
-    const onPush = () => {
-      refresh();
-    };
-    if (source) source.addEventListener('sales', onPush);
-    const poll = setInterval(() => refresh(), 20000);
-    return () => {
-      if (source) {
-        source.removeEventListener('sales', onPush);
-        source.close();
-      }
-      clearInterval(poll);
-    };
-  }, [business?.id, refresh]);
-
-  useEffect(() => {
-    if (!business?.id) return undefined;
     if (adminNotice) {
       setOpen(true);
+      setError('');
       return undefined;
     }
     const expiry = parseLicenseExpiry(business.licenseExpiresAt);
@@ -49,19 +33,19 @@ function LicenseRenewalPrompt({ business }) {
       setOpen(false);
       return undefined;
     }
-    let last = 0;
-    try {
-      last = Number(window.localStorage.getItem(renewalKey(business.id))) || 0;
-    } catch {
-      last = 0;
-    }
     const tick = () => {
+      let last = 0;
+      try {
+        last = Number(window.localStorage.getItem(renewalKey(business.id))) || 0;
+      } catch {
+        last = 0;
+      }
       if (!last || Date.now() - last >= RENEWAL_HOUR_MS) setOpen(true);
     };
     tick();
-    const timer = setInterval(tick, 30000);
+    const timer = setInterval(tick, 15000);
     return () => clearInterval(timer);
-  }, [business?.id, business?.licenseExpiresAt, adminNotice]);
+  }, [business?.id, business?.licenseExpiresAt, business?.licenseNoticeAt, adminNotice]);
 
   const snooze = async () => {
     if (adminNotice) {
@@ -100,14 +84,14 @@ function LicenseRenewalPrompt({ business }) {
     }
   };
 
-  if (!open || !info) return null;
+  if (!open) return null;
 
-  const daysLeft = info.days < 0 ? 0 : info.days;
-  const message = info.days < 0
+  const daysLeft = info && info.days < 0 ? 0 : (info?.days ?? 0);
+  const message = !info || info.days < 0
     ? 'Licenca juaj ka skaduar. Dërgo kërkesën për vazhdim.'
     : info.days === 0
       ? 'Licenca juaj skadon sot. Dërgo kërkesën për vazhdim.'
-      : `Licenca juaj skadon edhe ${daysLeft} ${daysLeft === 1 ? 'ditë' : 'ditë'}. Dërgo kërkesën për vazhdim.`;
+      : `Licenca juaj skadon edhe ${daysLeft} ditë. Dërgo kërkesën për vazhdim.`;
 
   return (
     <div className="pt-modal-back" role="dialog" aria-modal="true" aria-labelledby="pt-renewal-title">

@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? '';
 async function request(path, options = {}) {
   const res = await fetch(`${API_URL}/api${path}`, {
     credentials: 'include',
+    cache: 'no-store',
     headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
     ...options
   });
@@ -79,7 +80,7 @@ export const api = {
 
   portalLogin: (email, password) => request('/portal/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   portalLogout: () => request('/portal/logout', { method: 'POST' }),
-  portalMe: () => request('/portal/me'),
+  portalMe: () => request(`/portal/me?t=${Date.now()}`),
   portalChangePassword: (currentPassword, newPassword) =>
     request('/portal/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
   portalSetGoal: (goal) => request('/portal/me/goal', { method: 'PATCH', body: JSON.stringify({ goal }) }),

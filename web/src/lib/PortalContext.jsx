@@ -1,20 +1,33 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
-import { api } from './api';
+import { api, openStream } from './api';
 
 const PortalContext = createContext(null);
 
 export function PortalProvider({ children }) {
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
+  const booted = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      const { business } = await api.portalMe();
-      setBusiness(business);
+      const data = await api.portalMe();
+      const next = data.business;
+      setBusiness((prev) => {
+        if (!next) return next;
+        // A request that left before admin clicked notify must not wipe the
+        // live flag the SSE just set — otherwise the popup flashes off.
+        if (prev?.licenseNoticeAt && !next.licenseNoticeAt) {
+          return { ...next, licenseNoticeAt: prev.licenseNoticeAt };
+        }
+        return next;
+      });
+      return next;
     } catch {
-      setBusiness(null);
+      if (!booted.current) setBusiness(null);
+      return null;
     } finally {
+      booted.current = true;
       setLoading(false);
     }
   }, []);
@@ -22,6 +35,43 @@ export function PortalProvider({ children }) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!business?.id) return undefined;
+
+    const source = openStream('/portal/stream');
+    const onPush = () => {
+      refresh();
+    };
+    const onRenewal = () => {
+      setBusiness((prev) => (prev ? { ...prev, licenseNoticeAt: prev.licenseNoticeAt || new Date().toISOString() } : prev));
+      refresh();
+    };
+    if (source) {
+      source.addEventListener('sales', onPush);
+      source.addEventListener('renewal', onRenewal);
+      source.onmessage = onPush;
+    }
+
+    const poll = setInterval(refresh, 2000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
+    return () => {
+      if (source) {
+        source.removeEventListener('sales', onPush);
+        source.removeEventListener('renewal', onRenewal);
+        source.onmessage = null;
+        source.close();
+      }
+      clearInterval(poll);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [business?.id, refresh]);
 
   const login = async (email, password) => {
     const { business } = await api.portalLogin(email, password);

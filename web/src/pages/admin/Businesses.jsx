@@ -483,7 +483,7 @@ export default function Businesses() {
           <div style={{ padding: 24, color: '#8FA0B2' }}>No businesses yet. Add one to issue its license key.</div>
         ) : (
           <div className="ad-table-wrap">
-            <table className="ad-table">
+            <table className="ad-table ad-biz-table">
               <thead>
                 <tr>
                   <th>Business</th>
