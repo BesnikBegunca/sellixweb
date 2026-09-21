@@ -169,9 +169,11 @@ export default function Landing() {
   const [form, setForm] = useState({ name: '', business: '', phone: '', category: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [setupReady, setSetupReady] = useState(false);
 
   useEffect(() => {
     api.getContent().then(({ content }) => setContent(content)).catch(() => setError('load'));
+    api.getSetup().then((s) => setSetupReady(Boolean(s?.available))).catch(() => setSetupReady(false));
   }, []);
 
   if (!content) {
@@ -186,6 +188,7 @@ export default function Landing() {
   const quotes = content.quotes[lang];
   const price = content.price;
   const isSq = lang === 'sq';
+  const setupHref = setupReady ? api.setupDownloadUrl() : '#kontakt';
 
   const langBtn = (on) => ({
     padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '.06em',
@@ -246,7 +249,7 @@ export default function Landing() {
             >
               {isSq ? 'Biznesi im' : 'My business'}
             </Link>
-            <a href="#shkarko" className="lp-btn-white" style={{ padding: '9px 18px', borderRadius: 999, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 13 }}>
+            <a href={setupHref} className="lp-btn-white" style={{ padding: '9px 18px', borderRadius: 999, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 13 }}>
               {isSq ? 'Shkarko' : 'Download'}
             </a>
           </div>
@@ -265,7 +268,7 @@ export default function Landing() {
             {isSq ? 'Për çdo sektor një zgjidhje e dedikuar — shkarkoje, instaloje, shit brenda ditës.' : 'A dedicated solution for every sector — download it, install it, sell the same day.'}
           </p>
           <div className="lp-cta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
-            <a href="#shkarko" className="lp-btn-primary" style={{ padding: '15px 26px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15 }}>
+            <a href={setupHref} className="lp-btn-primary" style={{ padding: '15px 26px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15 }}>
               {isSq ? 'Shkarko aplikacionin' : 'Download the app'}
             </a>
             <a href="#zgjidhjet" className="lp-btn-outline" style={{ padding: '15px 26px', borderRadius: 14, border: '1px solid rgba(255,255,255,.16)', color: '#F2F6FA', fontWeight: 600, fontSize: 15 }}>
@@ -340,7 +343,7 @@ export default function Landing() {
               ))}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-              <a href="#shkarko" className="lp-btn-white" style={{ padding: '13px 22px', borderRadius: 12, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 14 }}>{t.getModule}</a>
+              <a href={setupHref} className="lp-btn-white" style={{ padding: '13px 22px', borderRadius: 12, background: '#F2F6FA', color: '#06121A', fontWeight: 700, fontSize: 14 }}>{t.getModule}</a>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#61707F', letterSpacing: '.08em' }}>{t.included} {price} €</span>
             </div>
           </div>
@@ -393,13 +396,13 @@ export default function Landing() {
               ))}
             </div>
             <div className="lp-cta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <a href="#kontakt" className="lp-btn-primary" style={{ padding: '15px 24px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <a href={setupHref} className="lp-btn-primary" style={{ padding: '15px 24px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span>{t.winBtn}</span>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500, opacity: 0.75 }}>WINDOWS 10 / 11 · 64-BIT</span>
               </a>
               <a href="#kontakt" className="lp-btn-outline2" style={{ padding: '15px 24px', borderRadius: 14, border: '1px solid rgba(255,255,255,.18)', color: '#F2F6FA', fontWeight: 700, fontSize: 15, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span>{t.macBtn}</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500, color: '#7D8C9A' }}>MACOS 12+ · APPLE SILICON / INTEL</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 500, color: '#7D8C9A' }}>MACOS 12+ · {isSq ? 'Kërko demo' : 'Request demo'}</span>
               </a>
             </div>
           </div>
@@ -497,7 +500,7 @@ export default function Landing() {
           <span style={{ flex: 1 }}></span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, fontSize: 14, color: '#8FA0B2' }}>
             <a className="lp-navlink" href="#zgjidhjet">{isSq ? 'Zgjidhjet' : 'Solutions'}</a>
-            <a className="lp-navlink" href="#shkarko">{isSq ? 'Shkarko' : 'Download'}</a>
+            <a className="lp-navlink" href={setupHref}>{isSq ? 'Shkarko' : 'Download'}</a>
             <a className="lp-navlink" href="#kontakt">{isSq ? 'Kontakt' : 'Contact'}</a>
             <a className="lp-navlink" href="#shto">{isSq ? 'Shto në telefon' : 'Add to phone'}</a>
             <Link className="lp-navlink" to="/portal/login">{isSq ? 'Biznesi im' : 'My business'}</Link>

@@ -273,3 +273,15 @@ db.exec(`
   )
 `);
 db.exec('CREATE INDEX IF NOT EXISTS idx_login_sessions_account ON login_sessions (kind, account_id, revoked_at)');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS app_setup (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    file_name TEXT NOT NULL,
+    stored_name TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL DEFAULT 0,
+    download_count INTEGER NOT NULL DEFAULT 0,
+    uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+    uploaded_by TEXT NOT NULL DEFAULT ''
+  )
+`);

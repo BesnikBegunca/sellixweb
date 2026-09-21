@@ -11,6 +11,7 @@ import RecycleBin from './pages/admin/RecycleBin';
 import Licenses from './pages/admin/Licenses';
 import Content from './pages/admin/Content';
 import Users from './pages/admin/Users';
+import Setup from './pages/admin/Setup';
 import { PortalProvider } from './lib/PortalContext';
 import PortalLogin from './pages/portal/PortalLogin';
 import RequirePortal from './pages/portal/RequirePortal';
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="recycle-bin" element={<RecycleBin />} />
             <Route path="registrations" element={<Registrations />} />
             <Route path="content" element={<Content />} />
+            <Route path="setup" element={<Setup />} />
             <Route path="users" element={<Users />} />
           </Route>
           <Route path="/portal" element={<PortalProvider />}>

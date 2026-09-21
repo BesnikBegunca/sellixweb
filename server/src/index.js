@@ -15,13 +15,16 @@ import { registrationsRouter } from './routes/registrations.js';
 import { salesRouter } from './routes/sales.js';
 import { shiftsRouter } from './routes/shifts.js';
 import { portalRouter } from './routes/portal.js';
+import { setupRouter } from './routes/setup.js';
 import { seed } from './seed.js';
+import { trySeedSetupFromDisk } from './setupFile.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The schema is created on import of db.js; this tops it up with the default
 // site content and the first admin user. Both steps no-op once they have run.
 seed();
+trySeedSetupFromDisk();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -85,6 +88,7 @@ app.use('/api/registrations', registrationsRouter);
 app.use('/api/sales', salesRouter);
 app.use('/api/shifts', shiftsRouter);
 app.use('/api/portal', portalRouter);
+app.use('/api/setup', setupRouter);
 
 // In production the built frontend ships inside the same container, so one
 // service serves both the site and the API and the session cookie stays

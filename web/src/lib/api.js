@@ -138,5 +138,32 @@ export const api = {
   createBusinessReport: (id, kind, period) =>
     request(`/businesses/${id}/reports`, { method: 'POST', body: JSON.stringify({ kind, period }) }),
   downloadBusinessReport: (id, rid) => downloadPdf(`/businesses/${id}/reports/${rid}/file`),
-  deleteBusinessReport: (id, rid) => request(`/businesses/${id}/reports/${rid}`, { method: 'DELETE' })
+  deleteBusinessReport: (id, rid) => request(`/businesses/${id}/reports/${rid}`, { method: 'DELETE' }),
+
+  getSetup: () => request('/setup'),
+  getSetupAdmin: () => request('/setup/admin'),
+  setupDownloadUrl: () => `${API_URL}/api/setup/download`,
+  uploadSetup: (file, onProgress) =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_URL}/api/setup/upload`);
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        let data = null;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          data = null;
+        }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else reject(new Error(data?.error || `Upload failed (${xhr.status})`));
+      };
+      xhr.onerror = () => reject(new Error('Upload failed'));
+      const body = new FormData();
+      body.append('file', file);
+      xhr.send(body);
+    })
 };

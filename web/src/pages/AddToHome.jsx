@@ -124,8 +124,9 @@ export default function AddToHome({ lang = 'sq' }) {
   // "Instalo" in our confirm sheet is a fresh user gesture, so the native prompt/share can open from it.
   const onInstall = async () => {
     setConfirmOpen(false);
-    // iOS has no install API, and navigator.share() opens a generic sheet without
-    // "Add to Home Screen" — so point the user at the browser's own Share button.
+    // iOS/mac Safari: Apple does not expose an API to open the browser Share sheet
+    // that contains "Add to Home Screen". navigator.share() opens a different sheet
+    // without that action — so we only show the guided steps.
     if (platform === 'ios' || platform === 'mac-safari') {
       setGuideOpen(true);
       return;

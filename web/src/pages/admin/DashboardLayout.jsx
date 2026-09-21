@@ -87,6 +87,7 @@ export default function DashboardLayout() {
           <NavLink to="/admin/recycle-bin" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Recycle bin</NavLink>
           <NavLink to="/admin/registrations" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Registrations</NavLink>
           <NavLink to="/admin/content" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Site content</NavLink>
+          <NavLink to="/admin/setup" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Setup</NavLink>
           <NavLink to="/admin/users" className={({ isActive }) => `ad-nav-link${isActive ? ' active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Admin users</NavLink>
         </nav>
 
