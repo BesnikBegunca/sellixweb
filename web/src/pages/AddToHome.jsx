@@ -86,6 +86,7 @@ function guide(platform, sq) {
 
 export default function AddToHome({ lang = 'sq' }) {
   const [installed, setInstalled] = useState(isStandalone);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const sq = lang === 'sq';
@@ -100,7 +101,9 @@ export default function AddToHome({ lang = 'sq' }) {
     return () => window.removeEventListener('appinstalled', onInstalled);
   }, []);
 
-  const onClick = async () => {
+  // "Instalo" in our confirm sheet is a fresh user gesture, so the native prompt/share can open from it.
+  const onInstall = async () => {
+    setConfirmOpen(false);
     // iOS never fires beforeinstallprompt — open the native share sheet, which slides up
     // from the bottom; the user picks "Add to Home Screen" there.
     if (platform === 'ios' && navigator.share) {
@@ -137,7 +140,7 @@ export default function AddToHome({ lang = 'sq' }) {
 
   return (
     <>
-      <button type="button" className="lp-a2hs" onClick={onClick} disabled={busy || installed}>
+      <button type="button" className="lp-a2hs" onClick={platform === 'ios' ? onInstall : () => setConfirmOpen(true)}disabled={busy || installed}>
         <img src="/pwa-icon.png" alt="" width="56" height="56" className="lp-a2hs-icon" />
         <span className="lp-a2hs-copy">
           <span className="lp-a2hs-name">SelliX</span>
@@ -150,6 +153,32 @@ export default function AddToHome({ lang = 'sq' }) {
           </span>
         </span>
       </button>
+
+      {confirmOpen && (
+        <div className="lp-a2hs-back" role="dialog" aria-modal="true" onClick={() => setConfirmOpen(false)}>
+          <div className="lp-a2hs-sheet" onClick={(e) => e.stopPropagation()}>
+            <img src="/pwa-icon.png" alt="SelliX" width="72" height="72" className="lp-a2hs-preview" />
+            <div className="lp-a2hs-sheet-name">{sq ? 'Instalo SelliX?' : 'Install SelliX?'}</div>
+            <p>
+              {platform === 'ios'
+                ? (sq
+                  ? 'SelliX do të shtohet në ekranin kryesor. Pas "Instalo", zgjidh "Add to Home Screen" në menynë që hapet.'
+                  : 'SelliX will be added to your home screen. After "Install", choose "Add to Home Screen" in the menu that opens.')
+                : (sq
+                  ? 'SelliX do të shtohet në ekranin kryesor / desktop dhe hapet si aplikacion.'
+                  : 'SelliX will be added to your home screen / desktop and opens like an app.')}
+            </p>
+            <div className="lp-a2hs-actions">
+              <button type="button" className="lp-a2hs-cancel" onClick={() => setConfirmOpen(false)}>
+                {sq ? 'Anulo' : 'Cancel'}
+              </button>
+              <button type="button" className="lp-a2hs-close" onClick={onInstall}>
+                {sq ? 'Instalo' : 'Install'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {guideOpen && (
         <div className="lp-a2hs-back" role="dialog" aria-modal="true" onClick={() => setGuideOpen(false)}>

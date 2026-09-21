@@ -294,3 +294,24 @@
   vertical-align: -3px;
   color: oklch(0.86 0.12 195);
 }
+
+.lp-a2hs-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.lp-a2hs-actions .lp-a2hs-close {
+  flex: 1;
+}
+
+.lp-a2hs-cancel {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  background: transparent;
+  color: #D5DFE8;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
