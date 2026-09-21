@@ -172,7 +172,11 @@ export default function Landing() {
   const [setupReady, setSetupReady] = useState(false);
 
   useEffect(() => {
-    api.getContent().then(({ content }) => setContent(content)).catch(() => setError('load'));
+    api.getContent().then(({ content }) => {
+      setContent(content);
+      const cafe = content?.cats?.findIndex((c) => /kafen|caf[eé]/i.test(`${c?.sq?.n || ''} ${c?.en?.n || ''}`));
+      if (cafe >= 0) setCatIdx(cafe);
+    }).catch(() => setError('load'));
     api.getSetup().then((s) => setSetupReady(Boolean(s?.available))).catch(() => setSetupReady(false));
   }, []);
 
@@ -259,13 +263,15 @@ export default function Landing() {
       <section id="top" style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 24px 40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 48, alignItems: 'center', position: 'relative' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '.16em', color: ACCENT, marginBottom: 22 }}>
-            {isSq ? 'SOFTWARE POS · 8 SEKTORË' : 'POS SOFTWARE · 8 SECTORS'}
+            {isSq ? 'SOFTWARE POS · PËR KAFITERI' : 'POS SOFTWARE · BUILT FOR CAFÉS'}
           </div>
           <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 'clamp(42px,5.4vw,72px)', lineHeight: 1.02, letterSpacing: '-0.035em', margin: '0 0 24px' }}>
-            {isSq ? <>Një sistem.<br />Tetë biznese.</> : <>One system.<br />Eight businesses.</>}
+            {isSq ? <>Sistemi juaj ideal.<br />Për kafiterinë.</> : <>Your ideal system.<br />Built for cafés.</>}
           </h1>
           <p style={{ fontSize: 18, lineHeight: 1.55, color: '#8FA0B2', margin: '0 0 34px', maxWidth: 460 }}>
-            {isSq ? 'Për çdo sektor një zgjidhje e dedikuar — shkarkoje, instaloje, shit brenda ditës.' : 'A dedicated solution for every sector — download it, install it, sell the same day.'}
+            {isSq
+              ? 'POS i thjeshtë për arka — shkarkoje, instaloje dhe shit brenda ditës. Më vonë, edhe për biznese të tjera.'
+              : 'A simple till POS — download, install, and sell the same day. More business types coming later.'}
           </p>
           <div className="lp-cta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
             <a href={setupHref} className="lp-btn-primary" style={{ padding: '15px 26px', borderRadius: 14, background: ACCENT, color: '#04121A', fontWeight: 700, fontSize: 15 }}>
@@ -286,7 +292,7 @@ export default function Landing() {
       <section style={{ maxWidth: 1200, margin: '0 auto', padding: '26px 24px 80px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px,1fr))', gap: 1, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 18, overflow: 'hidden' }}>
           {[
-            ['8', isSq ? 'zgjidhje të dedikuara' : 'dedicated solutions'],
+            [isSq ? 'POS' : 'POS', isSq ? 'i bërë për kafiteri' : 'made for cafés'],
             [`${price} €`, isSq ? 'në muaj, një pako e vetme' : 'per month, one single plan'],
             ['99.9%', isSq ? 'kohë pune, edhe offline' : 'uptime, offline too'],
             ['24/7', isSq ? 'mbështetje në shqip' : 'support in Albanian']
@@ -304,11 +310,11 @@ export default function Landing() {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '.16em', color: ACCENT, marginBottom: 14 }}>01 — {isSq ? 'ZGJIDHJET' : 'SOLUTIONS'}</div>
             <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 'clamp(30px,3.4vw,44px)', letterSpacing: '-0.03em', margin: 0, lineHeight: 1.06 }}>
-              {isSq ? 'Një software për sektorin tënd' : 'One software built for your sector'}
+              {isSq ? 'Së pari për kafiterinë' : 'Cafés first'}
             </h2>
           </div>
           <p style={{ flex: 1, minWidth: 240, margin: 0, fontSize: 15, color: '#8FA0B2', lineHeight: 1.6, maxWidth: 380 }}>
-            {isSq ? 'Zgjidh biznesin — ekrani, moduli dhe raportet ndryshojnë bashkë me të.' : 'Pick the business — screens, modules and reports change with it.'}
+            {isSq ? 'Fokusi tani është kafiteria — module të tjera vijnë hap pas hapi.' : 'Focus is on cafés now — other modules come step by step.'}
           </p>
         </div>
 
