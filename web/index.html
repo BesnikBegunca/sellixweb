@@ -14,6 +14,18 @@
   <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <title>SelliX — POS Software</title>
+  <script>
+    // Capture the install prompt as early as possible — it can fire before React mounts.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__a2hsPrompt = e;
+      window.dispatchEvent(new Event('a2hs-ready'));
+    });
+    window.addEventListener('appinstalled', function () {
+      window.__a2hsPrompt = null;
+      window.__a2hsInstalled = true;
+    });
+  </script>
   <style>
     html,body,#root{background:#070D14;margin:0;min-height:100%;min-height:100dvh;min-height:-webkit-fill-available;}
     .lp-header{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);}
