@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { subscribe, publish } from '../events.js';
+import { sendLicenseNotice } from '../push.js';
 import { uniqueLicenseKey, nowSql, addMonths, publicBusiness, parseTickColor, DEFAULT_TICK_COLOR, isDeleted } from '../licenses.js';
 import { countActiveDevices, listActiveDevices, revokeAccountSessions } from '../sessions.js';
 import {
@@ -220,14 +221,16 @@ businessesRouter.post('/:id/license/extend', (req, res) => {
   res.json({ business: adminBusiness(getBusiness(row.id)) });
 });
 
-businessesRouter.post('/:id/license/notify', (req, res) => {
+businessesRouter.post('/:id/license/notify', async (req, res) => {
   const row = getBusiness(req.params.id);
   if (!row) return res.status(404).json({ error: 'Business not found' });
   db.prepare(
     "UPDATE businesses SET license_notice_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
   ).run(row.id);
   publish(row.id, { renewal: true });
-  res.json({ business: adminBusiness(getBusiness(row.id)) });
+  // The popup waits in the portal; the push reaches the owner's phone now.
+  const push = await sendLicenseNotice(row, req.user?.email).catch(() => ({ delivered: 0, failed: 0, devices: 0 }));
+  res.json({ business: adminBusiness(getBusiness(row.id)), push });
 });
 
 businessesRouter.post('/:id/license/revoke', (req, res) => {

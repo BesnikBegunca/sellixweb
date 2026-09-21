@@ -20,6 +20,7 @@ export default function Notifications() {
   const [query, setQuery] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     api.getNotifications().then(setData).catch((e) => setError(e.message));
@@ -59,6 +60,26 @@ export default function Notifications() {
     } finally {
       setSending(false);
     }
+  };
+
+  const remove = async (n) => {
+    if (!window.confirm(`Fshi njoftimin “${n.title}” nga historiku?`)) return;
+    setDeletingId(n.id);
+    setError('');
+    try {
+      const r = await api.deleteNotification(n.id);
+      setData((prev) => ({ ...prev, history: r.history }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const recipientLabel = (n) => {
+    if (n.target === 'all') return `Të gjithë (${n.businessesCount})`;
+    const who = n.names?.length ? n.names.join(', ') : `${n.businessesCount} biznese`;
+    return n.target === 'license' ? `Licenca · ${who}` : who;
   };
 
   return (
@@ -149,15 +170,20 @@ export default function Notifications() {
           <div className="ad-table-wrap">
             <table className="ad-table">
               <thead>
-                <tr><th>Data</th><th>Njoftimi</th><th>Kujt</th><th>Pajisje</th></tr>
+                <tr><th>Data</th><th>Njoftimi</th><th>Kujt</th><th>Pajisje</th><th /></tr>
               </thead>
               <tbody>
                 {data.history.map((n) => (
                   <tr key={n.id}>
                     <td data-label="Data" className="ad-hint" style={{ whiteSpace: 'nowrap' }}>{formatWhen(n.createdAt)}</td>
                     <td data-label="Njoftimi"><b>{n.title}</b><div className="ad-hint" style={{ marginTop: 2 }}>{n.body}</div></td>
-                    <td data-label="Kujt">{n.target === 'all' ? `Të gjithë (${n.businessesCount})` : `${n.businessesCount} biznese`}</td>
+                    <td data-label="Kujt">{recipientLabel(n)}</td>
                     <td data-label="Pajisje">{n.delivered}{n.failed ? <span className="ad-hint"> · {n.failed} dështuan</span> : ''}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button type="button" className="ad-btn-danger" onClick={() => remove(n)} disabled={deletingId === n.id}>
+                        {deletingId === n.id ? 'Duke fshirë…' : 'Delete'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

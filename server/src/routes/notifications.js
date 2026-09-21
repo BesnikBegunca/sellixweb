@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
-import { sendToBusinesses } from '../push.js';
+import { sendToBusinesses, logAdminNotification } from '../push.js';
 
 // Admin → business owners. The admin writes a title and a message and picks
 // every business or a hand-picked list; each device that turned notifications
@@ -23,21 +23,29 @@ function recipients() {
 }
 
 function history() {
+  const nameOf = db.prepare('SELECT name FROM businesses WHERE id = ?');
   return db
     .prepare('SELECT * FROM admin_notifications ORDER BY id DESC LIMIT 50')
     .all()
-    .map((n) => ({
-      id: n.id,
-      title: n.title,
-      body: n.body,
-      url: n.url,
-      target: n.target,
-      businessesCount: n.businesses_count,
-      delivered: n.delivered,
-      failed: n.failed,
-      createdBy: n.created_by,
-      createdAt: n.created_at
-    }));
+    .map((n) => {
+      let ids = [];
+      try { ids = JSON.parse(n.business_ids || '[]'); } catch { ids = []; }
+      // Short lists are named so the admin sees who got it without opening anything.
+      const names = n.target !== 'all' && ids.length <= 3 ? ids.map((id) => nameOf.get(id)?.name).filter(Boolean) : [];
+      return {
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        url: n.url,
+        target: n.target,
+        businessesCount: n.businesses_count,
+        delivered: n.delivered,
+        failed: n.failed,
+        createdBy: n.created_by,
+        createdAt: n.created_at,
+        names
+      };
+    });
 }
 
 notificationsRouter.get('/', (req, res) => {
@@ -67,10 +75,15 @@ notificationsRouter.post('/', async (req, res) => {
   }
 
   const result = await sendToBusinesses(ids, { title, body, url, tag: `admin-${Date.now()}` });
-  db.prepare(
-    `INSERT INTO admin_notifications (title, body, url, target, business_ids, businesses_count, delivered, failed, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(title, body, url, target, JSON.stringify(ids), ids.length, result.delivered, result.failed, req.user?.email || '');
+  logAdminNotification({ title, body, url, target, businessIds: ids, result, createdBy: req.user?.email });
 
   res.json({ ok: true, businesses: ids.length, ...result, history: history() });
+});
+
+notificationsRouter.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid id' });
+  const info = db.prepare('DELETE FROM admin_notifications WHERE id = ?').run(id);
+  if (!info.changes) return res.status(404).json({ error: 'Njoftimi nuk u gjet.' });
+  res.json({ ok: true, history: history() });
 });

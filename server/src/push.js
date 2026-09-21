@@ -171,3 +171,27 @@ export async function checkDailyGoal(business) {
     tag: `goal-${day}`,
   });
 }
+
+/** Keeps every admin-originated push in the Notifications history. */
+export function logAdminNotification({ title, body, url, target, businessIds, result, createdBy }) {
+  db.prepare(
+    `INSERT INTO admin_notifications (title, body, url, target, business_ids, businesses_count, delivered, failed, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(title, body, url || '/portal', target, JSON.stringify(businessIds), businessIds.length, result.delivered, result.failed, createdBy || '');
+}
+
+/** Push that accompanies the in-portal "license expiring" popup. */
+export async function sendLicenseNotice(business, createdBy) {
+  const expires = new Date(`${String(business.license_expires_at).replace(' ', 'T')}Z`);
+  const days = Math.ceil((expires.getTime() - Date.now()) / 86400000);
+  const date = Number.isNaN(expires.getTime())
+    ? ''
+    : `${String(expires.getUTCDate()).padStart(2, '0')}.${String(expires.getUTCMonth() + 1).padStart(2, '0')}.${expires.getUTCFullYear()}`;
+  const expired = days < 0;
+  const title = expired ? 'Licenca juaj ka skaduar' : 'Licenca juaj skadon së shpejti';
+  const when = expired ? `skadoi më ${date}` : days === 0 ? 'skadon sot' : `skadon edhe ${days} ditë${date ? ` (${date})` : ''}`;
+  const body = `Licenca e SelliX për ${business.name} ${when}. Hapni aplikacionin për të kërkuar vazhdimin.`;
+  const result = await sendToBusinesses([business.id], { title, body, url: '/portal', tag: `license-${business.id}` });
+  logAdminNotification({ title, body, url: '/portal', target: 'license', businessIds: [business.id], result, createdBy });
+  return { ...result, devices: subscriptionCount(business.id) };
+}

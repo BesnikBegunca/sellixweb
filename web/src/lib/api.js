@@ -134,6 +134,7 @@ export const api = {
 
   getNotifications: () => request('/notifications'),
   sendNotification: (data) => request('/notifications', { method: 'POST', body: JSON.stringify(data) }),
+  deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),

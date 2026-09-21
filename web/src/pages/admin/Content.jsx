@@ -85,37 +85,6 @@ function SectorEditor({ sector, onChange }) {
   );
 }
 
-function QuotesEditor({ quotes, onChange }) {
-  const [lang, setLang] = useState('sq');
-  const list = quotes[lang];
-
-  const update = (list) => onChange({ ...quotes, [lang]: list });
-  const updateItem = (i, field, value) => update(list.map((q, idx) => (idx === i ? { ...q, [field]: value } : q)));
-  const addItem = () => update([...list, { text: '', who: '' }]);
-  const removeItem = (i) => update(list.filter((_, idx) => idx !== i));
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {['sq', 'en'].map((l) => (
-          <button key={l} type="button" className="ad-btn-ghost" onClick={() => setLang(l)}
-            style={{ borderColor: lang === l ? '#5EC79A' : undefined, color: lang === l ? '#EAF7EF' : undefined }}>
-            {l.toUpperCase()}
-          </button>
-        ))}
-      </div>
-      {list.map((q, i) => (
-        <div key={i} className="ad-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <textarea className="ad-field" rows={2} placeholder="Quote" value={q.text} onChange={(e) => updateItem(i, 'text', e.target.value)} />
-          <input className="ad-field" placeholder="Attribution" value={q.who} onChange={(e) => updateItem(i, 'who', e.target.value)} />
-          <button type="button" className="ad-btn-danger" onClick={() => removeItem(i)} style={{ alignSelf: 'flex-start' }}>Remove</button>
-        </div>
-      ))}
-      <button type="button" className="ad-btn-ghost" onClick={addItem} style={{ alignSelf: 'flex-start' }}>+ Add testimonial</button>
-    </div>
-  );
-}
-
 function CompareEditor({ compare, onChange }) {
   const sq = compare.sq, en = compare.en;
   // Rows are paired by index across languages; edit "old way" (a) and "sellix" (b) per language.
@@ -254,14 +223,9 @@ export default function Content() {
         <CompareEditor compare={content.compare} onChange={(compare) => setContent({ ...content, compare })} />
       </div>
 
-      <div className="ad-card" style={{ padding: 20, marginBottom: 20 }}>
+      <div className="ad-card" style={{ padding: 20 }}>
         <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>Plan includes</h2>
         <IncludesEditor includes={content.includes} onChange={(includes) => setContent({ ...content, includes })} />
-      </div>
-
-      <div className="ad-card" style={{ padding: 20 }}>
-        <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>Testimonials</h2>
-        <QuotesEditor quotes={content.quotes} onChange={(quotes) => setContent({ ...content, quotes })} />
       </div>
     </div>
   );

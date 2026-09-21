@@ -1158,3 +1158,43 @@
   .pt-push-actions { width: 100%; }
   .pt-push-actions > * { flex: 1; min-height: 42px; }
 }
+
+/* First launch from the home screen: notification permission screen. */
+.pt-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  background: rgba(4, 9, 6, .72);
+  backdrop-filter: blur(10px);
+  animation: pt-welcome-fade .25s ease;
+}
+.pt-welcome-card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 30px 22px 18px;
+  border-radius: 26px;
+  border: 1px solid rgba(94, 199, 154, .3);
+  background: radial-gradient(ellipse at 50% 0%, rgba(94, 199, 154, .18), transparent 60%), linear-gradient(165deg, #13201A, #0B140F);
+  text-align: center;
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .8);
+  animation: pt-welcome-rise .35s cubic-bezier(.2, .8, .2, 1);
+}
+.pt-welcome-icon { width: 76px; height: 76px; border-radius: 18px; box-shadow: 0 14px 30px -12px rgba(94, 199, 154, .55); }
+.pt-welcome-bell {
+  position: absolute; left: 50%; top: 18px; margin-left: 22px;
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 17px;
+  background: #5EC79A; box-shadow: 0 0 0 4px #13201A;
+}
+.pt-welcome-card h2 { margin: 16px 0 8px; font-size: 24px; letter-spacing: -0.02em; }
+.pt-welcome-card p { margin: 0 0 14px; color: #A9BCB0; font-size: 14px; line-height: 1.5; }
+.pt-welcome-card ul { list-style: none; margin: 0 0 18px; padding: 12px 14px; display: grid; gap: 8px; text-align: left; font-size: 14px; border-radius: 14px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .07); }
+.pt-welcome-allow { width: 100%; min-height: 50px; font-size: 16px; border-radius: 14px; }
+.pt-welcome-later { width: 100%; min-height: 44px; margin-top: 6px; border: 0; background: none; color: #8DA396; font-size: 14px; font-weight: 600; cursor: pointer; }
+@keyframes pt-welcome-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pt-welcome-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pt-welcome, .pt-welcome-card { animation: none; } }

@@ -36,9 +36,10 @@ export default function Licenses() {
     setBusyId(b.id);
     setError('');
     try {
-      await api.notifyLicense(b.id);
-      setSentId(b.id);
-      setTimeout(() => setSentId((id) => (id === b.id ? null : id)), 2500);
+      const r = await api.notifyLicense(b.id);
+      const devices = r.push?.delivered || 0;
+      setSentId({ id: b.id, text: devices ? `✓ Njoftimi u dërgua · ${devices} pajisje` : '✓ U dërgua (pa pajisje me njoftime — shfaqet në portal)' });
+      setTimeout(() => setSentId((cur) => (cur?.id === b.id ? null : cur)), 4000);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -53,7 +54,7 @@ export default function Licenses() {
         <span className="ad-hint">{cards.length ? `${cards.length} biznese` : ''}</span>
       </div>
       <p className="ad-hint" style={{ marginTop: -8, marginBottom: 18, lineHeight: 1.5 }}>
-        Çdo kartë tregon sa i skadon licenca. “Dërgo njoftimin” ia hap biznesit popup-in në portal: sa ditë kanë mbetur dhe butonin për kërkesë vazhdimi.
+        Çdo kartë tregon sa i skadon licenca. “Dërgo njoftimin” i dërgon pronarit një njoftim në telefon (push) dhe ia hap popup-in në portal: sa ditë kanë mbetur dhe butonin për kërkesë vazhdimi. Çdo njoftim ruhet te Notifications.
       </p>
 
       {error && <div className="ad-error" style={{ marginBottom: 14 }}>{error}</div>}
@@ -97,7 +98,7 @@ export default function Licenses() {
                   disabled={busyId === b.id}
                   onClick={() => sendNotice(b)}
                 >
-                  {busyId === b.id ? 'Duke dërguar…' : sentId === b.id ? 'Njoftimi u dërgua' : 'Dërgo njoftimin për vazhdim licence'}
+                  {busyId === b.id ? 'Duke dërguar…' : sentId?.id === b.id ? sentId.text : 'Dërgo njoftimin për vazhdim licence'}
                 </button>
               </div>
             );

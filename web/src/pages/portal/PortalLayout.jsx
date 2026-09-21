@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
 import PushCard from './PushCard';
+import PushWelcome from './PushWelcome';
 import '../admin/admin.css';
 import './portal.css';
 
@@ -224,6 +225,7 @@ export default function PortalLayout() {
         <Link to="/" className="ad-hint" style={{ textDecoration: 'underline' }}>← Faqja e SelliX</Link>
       </div>
       <LicenseRenewalPrompt business={business} />
+      <PushWelcome />
     </div>
   );
 }
