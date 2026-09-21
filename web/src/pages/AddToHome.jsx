@@ -31,6 +31,19 @@ function waitForPrompt(ms) {
   });
 }
 
+// Where Safari/Chrome on iOS put their real Share button, so we can point an arrow at it.
+function iosLayout() {
+  const ua = window.navigator.userAgent || '';
+  const iPad = /iPad/i.test(ua) || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+  if (/CriOS/i.test(ua)) return { arrow: 'top-right', browser: 'chrome' };
+  if (/FxiOS|EdgiOS|OPiOS/i.test(ua)) return { arrow: null, browser: 'other' };
+  if (iPad) return { arrow: 'top-right', browser: 'safari' };
+  // Safari 26 moved Share behind the "•••" button at the bottom right.
+  const ver = parseInt((ua.match(/Version\/(\d+)/) || [])[1] || '0', 10);
+  if (ver >= 26) return { arrow: 'bottom-right', browser: 'safari26' };
+  return { arrow: 'bottom-center', browser: 'safari' };
+}
+
 const ShareIcon = () => (
   <svg className="lp-a2hs-ios-share" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
     <path fill="currentColor" d="M12 3.2 7.8 7.4l1.4 1.4 1.8-1.8V15h2V7l1.8 1.8 1.4-1.4zM6 10v10h12V10h2v12H4V10z" />
@@ -39,17 +52,24 @@ const ShareIcon = () => (
 
 function guide(platform, sq) {
   switch (platform) {
-    case 'ios':
+    case 'ios': {
+      const { browser } = iosLayout();
+      const first = browser === 'safari26'
+        ? <>{sq ? 'Shtyp ••• poshtë djathtas, pastaj Share' : 'Tap ••• at the bottom right, then Share'} <ShareIcon /></>
+        : browser === 'other'
+          ? <>{sq ? 'Hap menynë e shfletuesit dhe shtyp Share' : 'Open the browser menu and tap Share'} <ShareIcon /></>
+          : <>{sq ? 'Shtyp butonin Share' : 'Tap the Share button'} <ShareIcon /> {sq ? 'ku tregon shigjeta' : 'where the arrow points'}</>;
       return {
         text: sq
-          ? 'Apple nuk lejon shtimin automatik në iPhone/iPad. Bëje me 3 hapa — ikona dhe emri SelliX vendosen vetë.'
-          : 'Apple does not allow automatic install on iPhone/iPad. It takes 3 taps — the SelliX name and icon are set automatically.',
+          ? 'Shtoje SelliX në ekranin kryesor me 3 prekje — ikona dhe emri vendosen vetë.'
+          : 'Add SelliX to your home screen in 3 taps — the icon and name are set automatically.',
         steps: [
-          <>{sq ? 'Shtyp Share' : 'Tap Share'} <ShareIcon /> {sq ? '(poshtë ose lart në Safari)' : '(bottom or top bar in Safari)'}</>,
-          sq ? 'Zgjidh "Add to Home Screen" (Shto në ekranin bazë)' : 'Choose "Add to Home Screen"',
+          first,
+          sq ? 'Zgjidh "Add to Home Screen" (nëse s’e sheh, shtyp "View More")' : 'Choose "Add to Home Screen" (tap "View More" if you don’t see it)',
           sq ? 'Shtyp "Add" — gati!' : 'Tap "Add" — done!',
         ],
       };
+    }
     case 'android':
       return {
         text: sq
@@ -104,16 +124,8 @@ export default function AddToHome({ lang = 'sq' }) {
   // "Instalo" in our confirm sheet is a fresh user gesture, so the native prompt/share can open from it.
   const onInstall = async () => {
     setConfirmOpen(false);
-    // iOS never fires beforeinstallprompt — open the native share sheet, which slides up
-    // from the bottom; the user picks "Add to Home Screen" there.
-    if (platform === 'ios' && navigator.share) {
-      try {
-        await navigator.share({ title: 'SelliX', url: window.location.origin + '/' });
-      } catch (err) {
-        if (err?.name !== 'AbortError') setGuideOpen(true);
-      }
-      return;
-    }
+    // iOS has no install API, and navigator.share() opens a generic sheet without
+    // "Add to Home Screen" — so point the user at the browser's own Share button.
     if (platform === 'ios' || platform === 'mac-safari') {
       setGuideOpen(true);
       return;
@@ -137,6 +149,7 @@ export default function AddToHome({ lang = 'sq' }) {
   };
 
   const g = guide(platform, sq);
+  const arrow = platform === 'ios' ? iosLayout().arrow : null;
 
   return (
     <>
@@ -181,7 +194,19 @@ export default function AddToHome({ lang = 'sq' }) {
       )}
 
       {guideOpen && (
-        <div className="lp-a2hs-back" role="dialog" aria-modal="true" onClick={() => setGuideOpen(false)}>
+        <div
+          className={`lp-a2hs-back${arrow ? ` lp-a2hs-back--${arrow.startsWith('bottom') ? 'top' : 'bottom'}` : ''}`}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setGuideOpen(false)}
+        >
+          {arrow && (
+            <div className={`lp-a2hs-arrow lp-a2hs-arrow--${arrow}`} aria-hidden="true">
+              <svg width="44" height="44" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M11 3h2v13.2l4.6-4.6 1.4 1.4-7 7-7-7 1.4-1.4 4.6 4.6z" />
+              </svg>
+            </div>
+          )}
           <div className="lp-a2hs-sheet" onClick={(e) => e.stopPropagation()}>
             <img src="/pwa-icon.png" alt="SelliX" width="72" height="72" className="lp-a2hs-preview" />
             <div className="lp-a2hs-sheet-name">SelliX</div>
