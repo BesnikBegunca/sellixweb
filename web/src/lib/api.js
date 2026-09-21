@@ -142,6 +142,7 @@ export const api = {
 
   getSetup: () => request('/setup'),
   getSetupAdmin: () => request('/setup/admin'),
+  resetSetupDownloads: () => request('/setup/downloads/reset', { method: 'POST' }),
   setupDownloadUrl: () => `${API_URL}/api/setup/download`,
   uploadSetup: (file, onProgress) =>
     new Promise((resolve, reject) => {

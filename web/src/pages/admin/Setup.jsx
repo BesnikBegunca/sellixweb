@@ -15,6 +15,7 @@ export default function Setup() {
   const [ok, setOk] = useState('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [resetting, setResetting] = useState(false);
   const inputRef = useRef(null);
 
   const load = () => {
@@ -44,6 +45,22 @@ export default function Setup() {
     } finally {
       setUploading(false);
       setProgress(0);
+    }
+  };
+
+  const onResetDownloads = async () => {
+    if (!window.confirm('Të kthehen shkarkimet në 0?')) return;
+    setError('');
+    setOk('');
+    setResetting(true);
+    try {
+      const result = await api.resetSetupDownloads();
+      setInfo(result);
+      setOk('Shkarkimet u kthyen në 0');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -111,9 +128,18 @@ export default function Setup() {
               <div className="ad-heading" style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.03em' }}>
                 {info.downloadCount ?? 0}
               </div>
-              <div style={{ fontSize: 13, color: '#8FA0B2', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: '#8FA0B2', marginTop: 4, marginBottom: 14 }}>
                 Sa herë është shkarkuar setup-i nga klientët
               </div>
+              <button
+                className="ad-btn-ghost"
+                type="button"
+                onClick={onResetDownloads}
+                disabled={resetting || uploading || !(info.downloadCount > 0)}
+                style={{ width: '100%' }}
+              >
+                {resetting ? 'Duke resetuar…' : 'Reset shkarkimet'}
+              </button>
             </div>
           </>
         )}

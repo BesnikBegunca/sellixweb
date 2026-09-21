@@ -7,6 +7,7 @@ import {
   getSetupMeta,
   incrementDownloadCount,
   publicSetupInfo,
+  resetDownloadCount,
   sanitizeFileName,
   saveSetupFromPath,
   setupsDir,
@@ -23,6 +24,10 @@ setupRouter.get('/', (_req, res) => {
 
 setupRouter.get('/admin', requireAuth, (_req, res) => {
   res.json(adminSetupInfo());
+});
+
+setupRouter.post('/downloads/reset', requireAuth, (_req, res) => {
+  res.json(resetDownloadCount());
 });
 
 setupRouter.get('/download', (req, res) => {

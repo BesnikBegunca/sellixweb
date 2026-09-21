@@ -91,6 +91,19 @@ export function incrementDownloadCount() {
   db.prepare(`UPDATE app_setup SET download_count = download_count + 1 WHERE id = 1`).run();
 }
 
+export function resetDownloadCount() {
+  const meta = getSetupMeta();
+  if (!meta) {
+    db.prepare(
+      `INSERT INTO app_setup (id, file_name, stored_name, size_bytes, download_count, uploaded_by)
+       VALUES (1, '', '', 0, 0, '')`
+    ).run();
+  } else {
+    db.prepare(`UPDATE app_setup SET download_count = 0 WHERE id = 1`).run();
+  }
+  return adminSetupInfo();
+}
+
 export function trySeedSetupFromDisk(log = console.log) {
   if (setupAvailable()) {
     log('App setup already present — skipping seed.');
