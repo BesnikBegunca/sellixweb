@@ -505,9 +505,9 @@ function localStamp(value) {
 }
 
 export function GjendjaTable({ data }) {
-  const [openId, setOpenId] = useState(null);
+  const [openDay, setOpenDay] = useState(null);
   const shifts = data?.shifts || [];
-  const rows = useMemo(() => {
+  const days = useMemo(() => {
     const byDay = new Map();
     for (const shift of shifts) {
       const closed = localStamp(shift.closedAt);
@@ -516,18 +516,18 @@ export function GjendjaTable({ data }) {
       list.push(shift);
       byDay.set(closed.dayKey, list);
     }
-    const dayKeys = [...byDay.keys()].sort((a, b) => b.localeCompare(a));
-    const out = [];
-    for (const key of dayKeys) {
-      const dayShifts = byDay.get(key).slice().sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
-      let dayTotal = 0;
-      for (const shift of dayShifts) {
-        out.push({ type: 'shift', shift });
-        if (shift.kind !== 'printed') dayTotal += Number(shift.total) || 0;
-      }
-      out.push({ type: 'day', dayKey: key, date: localStamp(`${key} 00:00:00`).date, total: dayTotal });
-    }
-    return out;
+    return [...byDay.keys()]
+      .sort((a, b) => b.localeCompare(a))
+      .map((key) => {
+        const dayShifts = byDay.get(key).slice().sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
+        const total = dayShifts.reduce((sum, s) => sum + (s.kind === 'printed' ? 0 : Number(s.total) || 0), 0);
+        return {
+          dayKey: key,
+          date: localStamp(`${key} 00:00:00`).date,
+          total,
+          shifts: dayShifts
+        };
+      });
   }, [shifts]);
 
   if (!shifts.length) {
@@ -554,60 +554,56 @@ export function GjendjaTable({ data }) {
       </div>
       <h2 className="ad-heading pt-h">Shitjet sipas mbylljes së gjendjes</h2>
       <p className="ad-hint" style={{ margin: '-8px 0 14px', lineHeight: 1.45 }}>
-        Data · ora e mbylljes · intervali · totali për atë gjendje
+        Kliko datën për orën, intervalin, totalin dhe kamarierët.
       </p>
       <div className="pt-gj">
-        <div className="pt-gj-head" aria-hidden="true">
-          <span>Data</span>
-          <span>Ora e mbylljes</span>
-          <span>Periudha</span>
-          <span>Totali</span>
-        </div>
-        {rows.map((row) => {
-          if (row.type === 'day') {
-            return (
-              <div key={`day-${row.dayKey}`} className="pt-gj-day">
-                <span className="pt-gj-day-label">Totali ditor · {row.date}</span>
-                <span className="pt-gj-day-total">{formatEuro(row.total)}</span>
-              </div>
-            );
-          }
-          const shift = row.shift;
-          const opened = localStamp(shift.openedAt);
-          const closed = localStamp(shift.closedAt);
-          const open = openId === shift.uid;
-          const waiters = shift.waiters || [];
-          const printed = shift.kind === 'printed';
+        {days.map((day) => {
+          const open = openDay === day.dayKey;
           return (
-            <div key={shift.uid} className={`pt-gj-block${open ? ' open' : ''}`}>
+            <div key={day.dayKey} className={`pt-gj-day-card${open ? ' open' : ''}`}>
               <button
                 type="button"
-                className="pt-gj-row"
-                onClick={() => setOpenId(open ? null : shift.uid)}
+                className="pt-gj-day-toggle"
+                onClick={() => setOpenDay(open ? null : day.dayKey)}
                 aria-expanded={open}
               >
-                <span className="pt-gj-date" data-label="Data">{closed.date}</span>
-                <span className="pt-gj-close" data-label={printed ? 'Ora e shtypjes' : 'Ora e mbylljes'}>
-                  {closed.time}
-                  <span className={`pt-gj-kind${printed ? ' printed' : ''}`}>{printed ? 'Shtypur' : 'Mbyllur'}</span>
-                </span>
-                <span className="pt-gj-period" data-label="Periudha">{opened.time} – {closed.time}</span>
-                <span className="pt-gj-total" data-label="Totali">{formatEuro(shift.total)}</span>
+                <span className="pt-gj-day-date">{day.date}</span>
+                <span className="pt-gj-day-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
               </button>
               {open && (
-                <div className="pt-gj-waiters">
-                  {waiters.length === 0 ? (
-                    <div className="pt-empty">Nuk ka ndarje sipas kamarierëve për këtë gjendje.</div>
-                  ) : (
-                    <ul className="pt-list">
-                      {waiters.map((w) => (
-                        <li key={`${shift.uid}-${w.name}`}>
-                          <span>{w.name}</span>
-                          <span className="pt-list-meta">{formatEuro(w.total)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                <div className="pt-gj-day-body">
+                  {day.shifts.map((shift) => {
+                    const opened = localStamp(shift.openedAt);
+                    const closed = localStamp(shift.closedAt);
+                    const waiters = shift.waiters || [];
+                    const printed = shift.kind === 'printed';
+                    return (
+                      <div key={shift.uid} className="pt-gj-detail">
+                        <div className="pt-gj-row">
+                          <span className="pt-gj-close" data-label={printed ? 'Ora e shtypjes' : 'Ora e mbylljes'}>
+                            {closed.time}
+                            <span className={`pt-gj-kind${printed ? ' printed' : ''}`}>{printed ? 'Shtypur' : 'Mbyllur'}</span>
+                          </span>
+                          <span className="pt-gj-period" data-label="Periudha">{opened.time} – {closed.time}</span>
+                          <span className="pt-gj-total" data-label="Totali">{formatEuro(shift.total)}</span>
+                        </div>
+                        {waiters.length > 0 && (
+                          <ul className="pt-list">
+                            {waiters.map((w) => (
+                              <li key={`${shift.uid}-${w.name}`}>
+                                <span>{w.name}</span>
+                                <span className="pt-list-meta">{formatEuro(w.total)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="pt-gj-day-sum">
+                    <span>Totali ditor</span>
+                    <span>{formatEuro(day.total)}</span>
+                  </div>
                 </div>
               )}
             </div>
