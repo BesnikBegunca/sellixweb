@@ -125,6 +125,15 @@ export const api = {
     request('/portal/reports', { method: 'POST', body: JSON.stringify({ kind, period }) }),
   portalDownloadReport: (id) => downloadPdf(`/portal/reports/${id}/file`),
   portalDeleteReport: (id) => request(`/portal/reports/${id}`, { method: 'DELETE' }),
+  portalPushKey: () => request('/portal/push/key'),
+  portalPushSubscribe: (subscription) =>
+    request('/portal/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription }) }),
+  portalPushUnsubscribe: (endpoint) =>
+    request('/portal/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+  portalPushTest: () => request('/portal/push/test', { method: 'POST' }),
+
+  getNotifications: () => request('/notifications'),
+  sendNotification: (data) => request('/notifications', { method: 'POST', body: JSON.stringify(data) }),
 
   getBusinessSalesOverview: (id, date) => request(`/businesses/${id}/sales/overview?date=${encodeURIComponent(date)}`),
   getBusinessSalesBreakdown: (id, query) => request(`/businesses/${id}/sales/breakdown?${query}`),

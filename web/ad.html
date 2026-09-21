@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <title>SelliX — Video 30s</title>
+  <script>
+    // The ad renders one frame per timestamp (window.__seek). Freeze the clock
+    // so every screen shows the same time of day, advancing with the timeline.
+    (function () {
+      var RealDate = Date;
+      var base = new RealDate(2026, 8, 21, 13, 40, 0).getTime();
+      function now() { return base + (window.__adT || 0) * 1000; }
+      function FakeDate() {
+        var args = Array.prototype.slice.call(arguments);
+        if (!args.length) return new RealDate(now());
+        return new (Function.prototype.bind.apply(RealDate, [null].concat(args)))();
+      }
+      FakeDate.prototype = RealDate.prototype;
+      FakeDate.now = now;
+      FakeDate.parse = RealDate.parse;
+      FakeDate.UTC = RealDate.UTC;
+      window.Date = FakeDate;
+    })();
+  </script>
+  <style>html, body { margin: 0; background: #050806; overflow: hidden; }</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/ad/main.jsx"></script>
+</body>
+</html>

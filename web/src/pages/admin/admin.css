@@ -757,3 +757,49 @@
 .ad-lic-card.expired .ad-lic-days {
   color: #F87171;
 }
+
+/* --- Notifications ------------------------------------------------------ */
+.ad-notify-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.ad-notify-form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.ad-notify-label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: #CFDDD4; }
+.ad-notify-label .ad-hint { font-weight: 500; margin-left: 6px; }
+.ad-notify-label textarea { resize: vertical; min-height: 96px; font-family: inherit; }
+.ad-notify-targets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: -6px; }
+.ad-notify-targets button {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12); background: transparent; color: #CFDDD4; font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.ad-notify-targets button span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); }
+.ad-notify-targets button.active { border-color: #5EC79A; background: rgba(94, 199, 154, .12); color: #EAF7EF; }
+.ad-notify-targets button.active span { background: #5EC79A; color: #07140E; }
+.ad-notify-picker { display: flex; flex-direction: column; gap: 8px; }
+.ad-notify-list { max-height: 280px; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 6px; }
+.ad-notify-row { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; }
+.ad-notify-row:hover { background: rgba(255,255,255,.04); }
+.ad-notify-row.on { background: rgba(94, 199, 154, .1); }
+.ad-notify-row input { width: 18px; height: 18px; accent-color: #5EC79A; flex: none; }
+.ad-notify-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14px; }
+.ad-notify-devices { font-size: 12px; font-weight: 700; color: #5EC79A; white-space: nowrap; }
+.ad-notify-devices.none { color: #5E7267; font-weight: 500; }
+.ad-notify-summary { font-size: 13px; color: #8DA396; }
+.ad-notify-summary b { color: #ECF3EE; }
+.ad-notify-ok { color: #8FD8B8; font-size: 13px; }
+
+.ad-notify-preview { position: sticky; top: 20px; }
+.ad-notify-phone {
+  border-radius: 36px; padding: 70px 14px 200px; border: 8px solid #1F2723;
+  background: radial-gradient(ellipse at 30% 0%, #2B5A43, transparent 60%), linear-gradient(160deg, #173226, #0B110E);
+}
+.ad-notify-banner {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 18px;
+  background: rgba(40, 52, 46, .82); backdrop-filter: blur(16px); color: #F2F6F4; font-size: 13px; line-height: 1.35;
+}
+.ad-notify-banner img { width: 38px; height: 38px; border-radius: 9px; flex: none; }
+.ad-notify-banner > div { min-width: 0; display: flex; flex-direction: column; }
+.ad-notify-banner > div > span { color: #CDD8D1; overflow-wrap: anywhere; }
+.ad-notify-top { display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #A6B5AC; }
+
+@media (max-width: 900px) {
+  .ad-notify-grid { grid-template-columns: 1fr; }
+  .ad-notify-preview { position: static; }
+}

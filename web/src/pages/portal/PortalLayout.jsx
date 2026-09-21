@@ -4,6 +4,7 @@ import { usePortal } from '../../lib/PortalContext';
 import { api } from '../../lib/api';
 import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
+import PushCard from './PushCard';
 import '../admin/admin.css';
 import './portal.css';
 
@@ -215,6 +216,7 @@ export default function PortalLayout() {
       </nav>
 
       <main className="pt-main">
+        <PushCard compact />
         <Outlet />
       </main>
 

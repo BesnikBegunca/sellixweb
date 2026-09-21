@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,300..800&family=JetBrains+Mono:wght@500&display=swap');
+
+.ad-root {
+  position: relative;
+  overflow: hidden;
+  transform-origin: top left;
+  background: #0B110E;
+  color: #ECF3EE;
+  font-family: Manrope, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.ad-root *, .ad-root *::before, .ad-root *::after { box-sizing: border-box; }
+/* Motion comes only from the timeline; CSS animations would run on the wall
+   clock and drift while frames are captured. */
+.ad-root *, .ad-root *::before, .ad-root *::after { animation: none !important; transition: none !important; }
+
+.ad-bg { position: absolute; inset: 0; }
+.ad-blob { position: absolute; width: 900px; height: 900px; border-radius: 50%; filter: blur(20px); }
+.ad-grid {
+  position: absolute; inset: 0; opacity: .5;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 20%, transparent 75%);
+}
+.ad-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.55)); }
+.ad-fadein { position: absolute; inset: 0; background: #050806; pointer-events: none; }
+
+.ad-scene { position: absolute; inset: 0; }
+.ad-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+.ad-word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; }
+.ad-wordmark { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 150px; letter-spacing: -0.045em; line-height: 1; }
+.ad-rule { height: 3px; margin: 34px 0 26px; border-radius: 3px; background: linear-gradient(90deg, transparent, #5EC79A, transparent); }
+.ad-tagline { font-size: 36px; font-weight: 500; color: #B4C4BA; letter-spacing: -0.01em; }
+
+.ad-kicker { font-family: 'JetBrains Mono', monospace; font-size: 22px; letter-spacing: .2em; color: #5EC79A; margin-bottom: 26px; }
+.ad-h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 104px; letter-spacing: -0.04em; line-height: 1.04; }
+.ad-h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; letter-spacing: -0.04em; line-height: 1.02; margin: 0 0 26px; }
+.ad-muted { color: #82988B; }
+.ad-accent { color: #5EC79A; }
+.ad-sub { font-size: 30px; line-height: 1.45; color: #B4C4BA; margin: 0; }
+.ad-caption { position: absolute; }
+.ad-strike { position: absolute; left: 0; height: 8px; border-radius: 6px; background: #FF6B7A; box-shadow: 0 0 24px rgba(255,107,122,.6); }
+
+.ad-cursor { position: absolute; margin: -6px 0 0 -8px; transform-origin: 8px 6px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); z-index: 60; }
+.ad-ripple { position: absolute; width: 90px; height: 90px; border-radius: 50%; border: 4px solid #5EC79A; background: rgba(94,199,154,.18); z-index: 59; }
+
+.ad-checks { position: absolute; display: grid; grid-template-columns: auto auto; gap: 18px 40px; }
+.ad-check { display: flex; align-items: center; gap: 14px; white-space: nowrap; font-size: 28px; font-weight: 600; color: #ECF3EE; }
+.ad-check span { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: rgba(94,199,154,.16); color: #5EC79A; font-size: 22px; }
+.ad-pill { position: absolute; padding: 14px 24px; border-radius: 999px; background: #5EC79A; color: #0A1811; font-weight: 700; font-size: 24px; box-shadow: 0 16px 40px -12px rgba(94,199,154,.7); }
+
+.ad-price { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 280px; letter-spacing: -0.06em; line-height: .9; background: linear-gradient(180deg, #ECF3EE, #8FD8B8); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
+.ad-per { font-size: 56px; font-weight: 600; color: #82988B; padding-bottom: 34px; }
+.ad-chip { padding: 16px 26px; border-radius: 999px; border: 1.5px solid rgba(94,199,154,.4); background: rgba(94,199,154,.08); font-size: 24px; font-weight: 600; color: #CFEDDF; }
+
+.ad-icon { width: 200px; height: 200px; border-radius: 46px; }
+.ad-url { margin-top: 40px; padding: 20px 44px; border-radius: 20px; background: #5EC79A; color: #07140E; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 46px; letter-spacing: -0.02em; }

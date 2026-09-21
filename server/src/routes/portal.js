@@ -20,6 +20,7 @@ import {
   isRestaurantSector
 } from '../reports.js';
 import { subscribe } from '../events.js';
+import { vapidPublicKey, saveSubscription, removeSubscription, subscriptionCount, sendToBusinesses } from '../push.js';
 import {
   parseReportKind,
   parseReportPeriod,
@@ -285,4 +286,50 @@ portalRouter.post('/notice/ack', requirePortal, (req, res) => {
     "UPDATE businesses SET license_notice_at = NULL, updated_at = datetime('now') WHERE id = ?"
   ).run(row.id);
   res.json({ ok: true });
+});
+
+// --- Push notifications ----------------------------------------------------
+// The portal asks the browser for a push subscription and stores it here; the
+// server then notifies that device when the daily goal is reached or when an
+// admin sends a message.
+
+const pushLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Shumë kërkesa. Provoni përsëri më vonë.' }
+});
+
+portalRouter.get('/push/key', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  res.json({ publicKey: vapidPublicKey, devices: subscriptionCount(row.id) });
+});
+
+portalRouter.post('/push/subscribe', requirePortal, pushLimiter, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  if (!saveSubscription(row.id, req.body?.subscription, req.get('user-agent'))) {
+    return res.status(400).json({ error: 'Abonimi për njoftime nuk është valid.' });
+  }
+  res.json({ ok: true, devices: subscriptionCount(row.id) });
+});
+
+portalRouter.post('/push/unsubscribe', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  removeSubscription(row.id, req.body?.endpoint);
+  res.json({ ok: true, devices: subscriptionCount(row.id) });
+});
+
+portalRouter.post('/push/test', requirePortal, pushLimiter, async (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const result = await sendToBusinesses([row.id], {
+    title: 'SelliX',
+    body: 'Njoftimet janë aktive. Do të njoftoheni kur të arrini objektivin ditor.',
+    url: '/portal'
+  });
+  res.json({ ok: true, ...result });
 });

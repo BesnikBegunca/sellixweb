@@ -3,6 +3,7 @@ import { api } from '../../lib/api';
 import { usePortal } from '../../lib/PortalContext';
 import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
+import PushCard from './PushCard';
 import './portal.css';
 
 function Row({ label, value }) {
@@ -102,6 +103,8 @@ export default function PortalAccount() {
           </form>
         </div>
       </div>
+
+      <PushCard />
     </div>
   );
 }
