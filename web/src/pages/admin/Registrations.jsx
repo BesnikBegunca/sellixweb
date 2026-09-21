@@ -93,9 +93,9 @@ export default function Registrations() {
       {error && <div className="ad-error" style={{ marginBottom: 14 }}>{error}</div>}
 
       {registrations === null ? (
-        <div className="ad-card" style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
+        <div className="ad-card" style={{ padding: 24, color: '#8DA396' }}>Loading…</div>
       ) : registrations.length === 0 ? (
-        <div className="ad-card" style={{ padding: 24, color: '#8FA0B2' }}>
+        <div className="ad-card" style={{ padding: 24, color: '#8DA396' }}>
           No registration requests yet.
         </div>
       ) : (

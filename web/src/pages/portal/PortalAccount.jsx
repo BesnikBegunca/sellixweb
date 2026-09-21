@@ -95,7 +95,7 @@ export default function PortalAccount() {
             <input className="ad-field" type="password" required autoComplete="new-password" placeholder="Fjalëkalimi i ri" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             <input className="ad-field" type="password" required autoComplete="new-password" placeholder="Përsërit fjalëkalimin e ri" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             {error && <div className="ad-error">{error}</div>}
-            {done && <div style={{ color: 'oklch(0.86 0.12 195)', fontSize: 13 }}>{done}</div>}
+            {done && <div style={{ color: '#8FD8B8', fontSize: 13 }}>{done}</div>}
             <button className="ad-btn" type="submit" disabled={submitting}>
               {submitting ? 'Duke ruajtur…' : 'Ruaj'}
             </button>

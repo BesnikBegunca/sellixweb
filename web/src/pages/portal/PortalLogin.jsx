@@ -36,22 +36,22 @@ export default function PortalLogin() {
     <div className="ad pt-login">
       <div style={{ width: '100%', maxWidth: 400 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 34, justifyContent: 'center' }}>
-          <span style={{ display: 'block', width: 30, height: 21, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#F2F6FA' }}></span>
+          <span style={{ display: 'block', width: 30, height: 21, border: '2px solid #ECF3EE', borderRadius: 5, position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#ECF3EE' }}></span>
           </span>
           <span className="ad-heading" style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>SelliX</span>
         </Link>
 
         <div className="ad-card" style={{ padding: 28 }}>
-          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>BIZNESI IM</div>
+          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: '#5EC79A', marginBottom: 8 }}>BIZNESI IM</div>
           <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Hyni në llogarinë tuaj</h1>
-          <p style={{ fontSize: 14, color: '#8FA0B2', margin: '0 0 22px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14, color: '#8DA396', margin: '0 0 22px', lineHeight: 1.5 }}>
             Shikoni shitjet e biznesit tuaj — ditore, javore, mujore dhe vjetore.
           </p>
 
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label htmlFor="pt-email" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Email</label>
+              <label htmlFor="pt-email" style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>Email</label>
               <input
                 id="pt-email"
                 className="ad-field"
@@ -64,7 +64,7 @@ export default function PortalLogin() {
               />
             </div>
             <div>
-              <label htmlFor="pt-password" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Fjalëkalimi</label>
+              <label htmlFor="pt-password" style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>Fjalëkalimi</label>
               <input
                 id="pt-password"
                 className="ad-field"

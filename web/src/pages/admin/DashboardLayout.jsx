@@ -30,9 +30,9 @@ function ForcedPasswordChange() {
   return (
     <div className="ad ad-login">
       <div className="ad-card" style={{ padding: 28, width: '100%', maxWidth: 400 }}>
-        <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>SETUP REQUIRED</div>
+        <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: '#5EC79A', marginBottom: 8 }}>SETUP REQUIRED</div>
         <h1 className="ad-heading" style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px', letterSpacing: '-0.02em' }}>Set a new password</h1>
-        <p style={{ fontSize: 14, color: '#8FA0B2', margin: '0 0 20px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 14, color: '#8DA396', margin: '0 0 20px', lineHeight: 1.5 }}>
           This account is using a temporary password. Choose a new one to continue to the dashboard.
         </p>
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -72,8 +72,8 @@ export default function DashboardLayout() {
       <aside className="ad-sidebar" style={{ width: 220, flexShrink: 0, borderRight: '1px solid rgba(255,255,255,.07)', padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: 24, minHeight: '100vh' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0 6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ display: 'block', width: 28, height: 20, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#F2F6FA' }}></span>
+            <span style={{ display: 'block', width: 28, height: 20, border: '2px solid #ECF3EE', borderRadius: 5, position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#ECF3EE' }}></span>
             </span>
             <span className="ad-heading" style={{ fontWeight: 700, fontSize: 17 }}>SelliX</span>
           </div>
@@ -94,8 +94,8 @@ export default function DashboardLayout() {
         <div style={{ flex: 1 }} />
 
         <div style={{ padding: '0 6px' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#D5DFE8', marginBottom: 2 }}>{user?.name || user?.email}</div>
-          <div style={{ fontSize: 12, color: '#61707F', marginBottom: 12, wordBreak: 'break-all' }}>{user?.email}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#CFDDD4', marginBottom: 2 }}>{user?.name || user?.email}</div>
+          <div style={{ fontSize: 12, color: '#5E7267', marginBottom: 12, wordBreak: 'break-all' }}>{user?.email}</div>
           <button className="ad-btn-ghost" onClick={() => window.location.reload()} style={{ width: '100%', marginBottom: 8 }}>Reload</button>
           <button className="ad-btn-ghost" onClick={onLogout} style={{ width: '100%' }}>Log out</button>
         </div>

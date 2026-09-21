@@ -8,8 +8,8 @@
 html, body, #root {
   min-height: 100%;
   min-height: 100dvh;
-  background: #070D14;
-  color: #F2F6FA;
+  background: #0B110E;
+  color: #ECF3EE;
 }
 html {
   height: 100%;

@@ -138,9 +138,9 @@ function ForcedPasswordChange() {
   return (
     <div className="ad pt-login">
       <div className="ad-card" style={{ padding: 28, width: '100%', maxWidth: 400 }}>
-        <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>KËRKOHET</div>
+        <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: '#5EC79A', marginBottom: 8 }}>KËRKOHET</div>
         <h1 className="ad-heading" style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px', letterSpacing: '-0.02em' }}>Vendos fjalëkalim të ri</h1>
-        <p style={{ fontSize: 14, color: '#8FA0B2', margin: '0 0 20px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 14, color: '#8DA396', margin: '0 0 20px', lineHeight: 1.5 }}>
           Kjo llogari po përdor fjalëkalimin e përkohshëm. Zgjidh një të ri për të vazhduar te portali.
         </p>
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

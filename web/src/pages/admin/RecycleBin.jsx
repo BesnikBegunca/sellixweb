@@ -62,9 +62,9 @@ export default function RecycleBin() {
 
       <div className="ad-card" style={{ overflow: 'hidden' }}>
         {businesses === null ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>Loading…</div>
         ) : businesses.length === 0 ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>Recycle bin is empty.</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>Recycle bin is empty.</div>
         ) : (
           <div className="ad-table-wrap">
             <table className="ad-table">

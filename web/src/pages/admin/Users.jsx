@@ -131,7 +131,7 @@ export default function Users() {
 
       {error && <div className="ad-error" style={{ marginBottom: 14 }}>{error}</div>}
       {tempCred && (
-        <div className="ad-card" style={{ padding: 16, marginBottom: 20, borderColor: 'oklch(0.82 0.12 195 / 0.4)' }}>
+        <div className="ad-card" style={{ padding: 16, marginBottom: 20, borderColor: 'rgba(94, 199, 154, 0.4)' }}>
           <div style={{ fontSize: 13, marginBottom: 6 }}>
             Temporary password for <strong>{tempCred.email}</strong> — share it securely:
           </div>
@@ -153,11 +153,11 @@ export default function Users() {
         <h2 className="ad-heading" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 14px' }}>Invite admin</h2>
         <form onSubmit={onCreate} className="ad-inline-form">
           <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Email</label>
+            <label style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>Email</label>
             <input className="ad-field" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div style={{ flex: '1 1 160px' }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Name</label>
+            <label style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>Name</label>
             <input className="ad-field" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <button className="ad-btn" type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create account'}</button>
@@ -166,7 +166,7 @@ export default function Users() {
 
       <div className="ad-card" style={{ overflow: 'hidden' }}>
         {users === null ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>Loading…</div>
         ) : (
           <div className="ad-table-wrap">
             <table className="ad-table">

@@ -72,34 +72,34 @@ export default function Setup() {
       </div>
 
       {error && <div className="ad-error" style={{ marginBottom: 14 }}>{error}</div>}
-      {ok && <div style={{ marginBottom: 14, color: 'oklch(0.82 0.12 195)', fontSize: 14 }}>{ok}</div>}
+      {ok && <div style={{ marginBottom: 14, color: '#5EC79A', fontSize: 14 }}>{ok}</div>}
 
       <div className="ad-card" style={{ padding: 22, maxWidth: 560 }}>
-        <div style={{ fontSize: 13, color: '#8FA0B2', marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13, color: '#8DA396', marginBottom: 16, lineHeight: 1.5 }}>
           Ngarko një setup të ri (.exe / .msi / .zip…). Klientët do të shkarkojnë gjithmonë versionin e fundit.
         </div>
 
         {info === null ? (
-          <div style={{ color: '#8FA0B2' }}>Loading…</div>
+          <div style={{ color: '#8DA396' }}>Loading…</div>
         ) : (
           <>
             <div style={{ display: 'grid', gap: 10, marginBottom: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14 }}>
-                <span style={{ color: '#8FA0B2' }}>Status</span>
+                <span style={{ color: '#8DA396' }}>Status</span>
                 <span style={{ fontWeight: 600 }}>{info.available ? 'Aktiv' : 'Nuk ka setup'}</span>
               </div>
               {info.available && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14 }}>
-                    <span style={{ color: '#8FA0B2' }}>Emri</span>
+                    <span style={{ color: '#8DA396' }}>Emri</span>
                     <span style={{ fontWeight: 600, wordBreak: 'break-all', textAlign: 'right' }}>{info.fileName}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14 }}>
-                    <span style={{ color: '#8FA0B2' }}>Madhësia</span>
+                    <span style={{ color: '#8DA396' }}>Madhësia</span>
                     <span style={{ fontWeight: 600 }}>{formatBytes(info.sizeBytes)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14 }}>
-                    <span style={{ color: '#8FA0B2' }}>Ngarkuar</span>
+                    <span style={{ color: '#8DA396' }}>Ngarkuar</span>
                     <span style={{ fontWeight: 600 }}>{info.uploadedAt || '—'}</span>
                   </div>
                 </>
@@ -117,18 +117,18 @@ export default function Setup() {
 
             {uploading && (
               <div style={{ marginTop: 12, height: 6, borderRadius: 4, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
-                <div style={{ width: `${progress}%`, height: '100%', background: 'oklch(0.82 0.12 195)', transition: 'width .2s' }} />
+                <div style={{ width: `${progress}%`, height: '100%', background: '#5EC79A', transition: 'width .2s' }} />
               </div>
             )}
 
             <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,.08)' }}>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '.12em', color: '#6D7E8E', marginBottom: 6 }}>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '.12em', color: '#6E8378', marginBottom: 6 }}>
                 SHKARKIME
               </div>
               <div className="ad-heading" style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.03em' }}>
                 {info.downloadCount ?? 0}
               </div>
-              <div style={{ fontSize: 13, color: '#8FA0B2', marginTop: 4, marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: '#8DA396', marginTop: 4, marginBottom: 14 }}>
                 Sa herë është shkarkuar setup-i nga klientët
               </div>
               <button

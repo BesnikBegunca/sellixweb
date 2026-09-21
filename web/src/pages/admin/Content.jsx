@@ -13,7 +13,7 @@ function linesToArray(text) {
 function LabeledField({ label, children }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
@@ -44,7 +44,7 @@ function SectorEditor({ sector, onChange }) {
             type="button"
             className="ad-btn-ghost"
             onClick={() => setLang(l)}
-            style={{ borderColor: lang === l ? 'oklch(0.82 0.12 195)' : undefined, color: lang === l ? '#EAF7FA' : undefined }}
+            style={{ borderColor: lang === l ? '#5EC79A' : undefined, color: lang === l ? '#EAF7EF' : undefined }}
           >
             {l.toUpperCase()}
           </button>
@@ -99,7 +99,7 @@ function QuotesEditor({ quotes, onChange }) {
       <div style={{ display: 'flex', gap: 6 }}>
         {['sq', 'en'].map((l) => (
           <button key={l} type="button" className="ad-btn-ghost" onClick={() => setLang(l)}
-            style={{ borderColor: lang === l ? 'oklch(0.82 0.12 195)' : undefined, color: lang === l ? '#EAF7FA' : undefined }}>
+            style={{ borderColor: lang === l ? '#5EC79A' : undefined, color: lang === l ? '#EAF7EF' : undefined }}>
             {l.toUpperCase()}
           </button>
         ))}
@@ -158,7 +158,7 @@ function IncludesEditor({ includes, onChange }) {
       <div style={{ display: 'flex', gap: 6 }}>
         {['sq', 'en'].map((l) => (
           <button key={l} type="button" className="ad-btn-ghost" onClick={() => setLang(l)}
-            style={{ borderColor: lang === l ? 'oklch(0.82 0.12 195)' : undefined, color: lang === l ? '#EAF7FA' : undefined }}>
+            style={{ borderColor: lang === l ? '#5EC79A' : undefined, color: lang === l ? '#EAF7EF' : undefined }}>
             {l.toUpperCase()}
           </button>
         ))}
@@ -186,7 +186,7 @@ export default function Content() {
   }, []);
 
   if (error) return <div className="ad-error">{error}</div>;
-  if (!content) return <div style={{ color: '#8FA0B2' }}>Loading…</div>;
+  if (!content) return <div style={{ color: '#8DA396' }}>Loading…</div>;
 
   const save = async () => {
     setSaving(true);
@@ -208,7 +208,7 @@ export default function Content() {
       <div className="ad-page-head">
         <h1 className="ad-heading">Site content</h1>
         <div className="ad-page-tools">
-          {status && <span className="ad-hint" style={{ color: 'oklch(0.86 0.12 195)' }}>{status}</span>}
+          {status && <span className="ad-hint" style={{ color: '#8FD8B8' }}>{status}</span>}
           <button className="ad-btn" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function Content() {
               type="button"
               className="ad-btn-ghost"
               onClick={() => setActiveSector(i)}
-              style={{ borderColor: activeSector === i ? 'oklch(0.82 0.12 195)' : undefined, color: activeSector === i ? '#EAF7FA' : undefined }}
+              style={{ borderColor: activeSector === i ? '#5EC79A' : undefined, color: activeSector === i ? '#EAF7EF' : undefined }}
             >
               {c.sq.n}
             </button>

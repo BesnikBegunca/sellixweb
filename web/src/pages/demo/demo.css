@@ -696,3 +696,13 @@ select.sx-input { appearance: none; background-image: linear-gradient(45deg, tra
 @media (prefers-reduced-motion: reduce) {
   .sx-demo *, .sx-demo *::before { animation: none !important; transition: none !important; }
 }
+
+/* ───────────── Hero still ───────────── */
+
+.sx-hero-preview { position: relative; display: block; width: 100%; cursor: pointer; }
+.sx-hero-stage { position: absolute; left: 0; top: 0; transform-origin: top left; pointer-events: none; font-family: 'DM Sans', system-ui, sans-serif; }
+.sx-hero-window { position: absolute; left: 0; top: 30px; width: 1202px; transition: transform .4s cubic-bezier(.2, .8, .2, 1); }
+.sx-hero-window .sx-app { transform: none; }
+.sx-hero-phone { position: absolute; right: 0; bottom: 0; filter: drop-shadow(0 40px 60px rgba(0, 0, 0, .35)); transition: transform .4s cubic-bezier(.2, .8, .2, 1); }
+.sx-hero-preview:hover .sx-hero-window { transform: translateY(-8px); }
+.sx-hero-preview:hover .sx-hero-phone { transform: translateY(-16px) rotate(-1.5deg); }

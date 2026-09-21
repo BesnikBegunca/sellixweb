@@ -35,23 +35,23 @@ export default function Login() {
     <div className="ad ad-login">
       <div style={{ width: '100%', maxWidth: 380 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 34, justifyContent: 'center' }}>
-          <span style={{ display: 'block', width: 30, height: 21, border: '2px solid #F2F6FA', borderRadius: 5, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#F2F6FA' }}></span>
+          <span style={{ display: 'block', width: 30, height: 21, border: '2px solid #ECF3EE', borderRadius: 5, position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 2, right: 2, top: 3, height: 2, background: '#ECF3EE' }}></span>
           </span>
           <span className="ad-heading" style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>SelliX</span>
         </Link>
 
         <div className="ad-card" style={{ padding: 28 }}>
-          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>ADMIN</div>
+          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: '#5EC79A', marginBottom: 8 }}>ADMIN</div>
           <h1 className="ad-heading" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 22px', letterSpacing: '-0.02em' }}>Sign in to your dashboard</h1>
 
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label htmlFor="email" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Email</label>
+              <label htmlFor="email" style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>Email</label>
               <input id="email" className="ad-field" type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="password" style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>Password</label>
+              <label htmlFor="password" style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>Password</label>
               <input id="password" className="ad-field" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             {error && <div className="ad-error">{error}</div>}

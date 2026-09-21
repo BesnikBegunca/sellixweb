@@ -7,7 +7,7 @@ export default function RequirePortal({ children }) {
 
   if (loading) {
     return (
-      <div className="ad" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8FA0B2' }}>
+      <div className="ad" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8DA396' }}>
         Duke ngarkuar…
       </div>
     );

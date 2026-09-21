@@ -31,7 +31,7 @@ function StatusBadge({ status }) {
 function Field({ label, children, span = 1 }) {
   return (
     <div className={span > 1 ? 'ad-span-2' : undefined}>
-      <label style={{ display: 'block', fontSize: 12, color: '#8FA0B2', marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 12, color: '#8DA396', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
@@ -148,9 +148,9 @@ function DevicesPanel({ business, onClose, onChanged }) {
       </div>
       {error && <div className="ad-error" style={{ marginBottom: 10 }}>{error}</div>}
       {devices === null ? (
-        <div style={{ color: '#8FA0B2' }}>Loading…</div>
+        <div style={{ color: '#8DA396' }}>Loading…</div>
       ) : devices.length === 0 ? (
-        <div style={{ color: '#8FA0B2', fontSize: 14 }}>
+        <div style={{ color: '#8DA396', fontSize: 14 }}>
           No device has activated this license yet. The desktop app binds a device the first time it calls the
           activation endpoint with this key.
         </div>
@@ -247,7 +247,7 @@ function SalesPanel({ business, onClose }) {
       </div>
       {error && <div className="ad-error" style={{ marginBottom: 10 }}>{error}</div>}
       {loading && !overview ? (
-        <div style={{ color: '#8FA0B2' }}>Loading…</div>
+        <div style={{ color: '#8DA396' }}>Loading…</div>
       ) : (
         <>
           <div className="pt-page-head" style={{ marginBottom: 14 }}>
@@ -514,11 +514,11 @@ export default function Businesses() {
       )}
 
       {portalCredential && (
-        <div className="ad-card" style={{ padding: 20, marginBottom: 16, borderColor: 'oklch(0.82 0.12 195 / 0.45)' }}>
-          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'oklch(0.82 0.12 195)', marginBottom: 8 }}>
+        <div className="ad-card" style={{ padding: 20, marginBottom: 16, borderColor: 'rgba(94, 199, 154, 0.45)' }}>
+          <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: '#5EC79A', marginBottom: 8 }}>
             PORTAL ACCOUNT CREATED
           </div>
-          <p style={{ fontSize: 14, color: '#D5DFE8', margin: '0 0 14px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14, color: '#CFDDD4', margin: '0 0 14px', lineHeight: 1.5 }}>
             Jepia <strong>{portalCredential.name}</strong>. Fjalëkalimi i përkohshëm shfaqet vetëm tani — duhet ta ndryshojnë në hyrjen e parë te <code>/portal/login</code>.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 16 }}>
@@ -528,7 +528,7 @@ export default function Businesses() {
             </div>
             <div>
               <div className="ad-hint" style={{ marginBottom: 4 }}>Temporary password</div>
-              <div className="ad-mono" style={{ fontSize: 14, color: 'oklch(0.86 0.12 195)' }}>{portalCredential.tempPassword}</div>
+              <div className="ad-mono" style={{ fontSize: 14, color: '#8FD8B8' }}>{portalCredential.tempPassword}</div>
             </div>
           </div>
           <button className="ad-btn-ghost" onClick={() => setPortalCredential(null)}>Done</button>
@@ -537,9 +537,9 @@ export default function Businesses() {
 
       <div className="ad-card" style={{ overflow: 'hidden' }}>
         {businesses === null ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>Loading…</div>
         ) : businesses.length === 0 ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>No businesses yet. Add one to issue its license key.</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>No businesses yet. Add one to issue its license key.</div>
         ) : (
           <div className="ad-table-wrap">
             <table className="ad-table ad-biz-table">

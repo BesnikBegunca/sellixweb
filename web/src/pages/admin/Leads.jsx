@@ -38,9 +38,9 @@ export default function Leads() {
 
       <div className="ad-card" style={{ overflow: 'hidden' }}>
         {leads === null ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>Loading…</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>Loading…</div>
         ) : leads.length === 0 ? (
-          <div style={{ padding: 24, color: '#8FA0B2' }}>No submissions yet.</div>
+          <div style={{ padding: 24, color: '#8DA396' }}>No submissions yet.</div>
         ) : (
           <div className="ad-table-wrap">
             <table className="ad-table">
