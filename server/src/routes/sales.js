@@ -147,19 +147,55 @@ const updateSale = db.prepare(`
   WHERE id = @id
 `);
 
-const closeOpenOnTable = db.prepare(`
-  UPDATE sales
-  SET status = 'paid', synced_at = datetime('now')
+const deleteOpenOnTable = db.prepare(`
+  DELETE FROM sales
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
 `);
 const findSale = db.prepare('SELECT * FROM sales WHERE business_id = ? AND sale_uid = ?');
+const findOpenOnTable = db.prepare(`
+  SELECT * FROM sales
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+  ORDER BY
+    CASE WHEN TRIM(COALESCE(staff_name, '')) = TRIM(?) THEN 0 ELSE 1 END,
+    id DESC
+  LIMIT 1
+`);
+const deleteFloorOpenOnTable = db.prepare(`
+  DELETE FROM sales
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
+    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+    AND sale_uid LIKE 'floor:%'
+`);
 const deleteItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
 const insertItem = db.prepare(`
   INSERT INTO sale_items (sale_id, name, quantity, unit_price_cents, total_cents, category)
   VALUES (@sale_id, @name, @quantity, @unit_price_cents, @total_cents, @category)
 `);
+
+function shopNowLocal(timeZone = 'Europe/Belgrade') {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date());
+  const get = (type) => parts.find((p) => p.type === type)?.value || '00';
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+}
+
+function floorSaleUid(tableName, staffName) {
+  return `floor:${tableName}:${staffName || ''}`.slice(0, 200);
+}
 
 function upsertSale(businessId, deviceId, sale) {
   const existing = findSale.get(businessId, sale.sale_uid);
@@ -220,17 +256,73 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     }
     parsed.push(sale);
   }
-  // Close prior open visits before upserting this batch so a new open print
-  // on the same table (next visit after Paguaj) is not immediately closed.
+  // Remove prior open visits before upserting paid so Printo→Paguaj stays one
+  // invoice in totals (no double count, bar does not drop).
   for (const tableName of paidTables) {
-    closeOpenOnTable.run(businessId, tableName);
+    deleteOpenOnTable.run(businessId, tableName);
   }
   for (const sale of parsed) {
     upsertSale(businessId, deviceId, sale);
     accepted += 1;
   }
-  return { accepted, rejected };
+  return { accepted, rejected, paidTables: [...paidTables] };
 });
+
+/**
+ * Mirror occupied floor tables into open sales so Shitjet + bar see prints even
+ * when the till only pushed the table snapshot (common on older POS builds).
+ * Free tables drop only floor:* placeholders; real open invoices wait for Paguaj.
+ * Tables paid in the same sync must not be re-opened from a stale floor snapshot.
+ */
+function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = []) {
+  const paid = new Set(
+    (Array.isArray(paidTables) ? paidTables : []).map((t) => String(t || '').trim().toLowerCase())
+  );
+  const now = shopNowLocal();
+  for (const table of tables) {
+    const tableName = table.table_name;
+    const staffName = table.staff_name || '';
+    if (paid.has(String(tableName || '').trim().toLowerCase())) {
+      deleteFloorOpenOnTable.run(businessId, tableName, staffName);
+      continue;
+    }
+    if (!table.occupied || table.total_cents <= 0) {
+      deleteFloorOpenOnTable.run(businessId, tableName, staffName);
+      continue;
+    }
+    const existing = findOpenOnTable.get(businessId, tableName, staffName);
+    if (existing) {
+      updateSale.run({
+        id: existing.id,
+        device_id: deviceId || existing.device_id,
+        sold_at: existing.sold_at || now,
+        total_cents: table.total_cents,
+        tax_cents: existing.tax_cents ?? 0,
+        discount_cents: existing.discount_cents ?? 0,
+        payment_method: existing.payment_method || 'cash',
+        table_name: tableName,
+        receipt_no: existing.receipt_no || '',
+        staff_name: staffName || existing.staff_name || '',
+        status: 'open'
+      });
+      continue;
+    }
+    insertSale.run({
+      business_id: businessId,
+      device_id: deviceId || '',
+      sale_uid: floorSaleUid(tableName, staffName),
+      sold_at: now,
+      total_cents: table.total_cents,
+      tax_cents: 0,
+      discount_cents: 0,
+      payment_method: 'cash',
+      table_name: tableName,
+      receipt_no: '',
+      staff_name: staffName,
+      status: 'open'
+    });
+  }
+}
 
 const insertFloor = db.prepare(`
   INSERT INTO restaurant_tables (
@@ -261,7 +353,7 @@ function parseFloorTable(raw) {
   };
 }
 
-const replaceFloor = db.transaction((businessId, rawTables) => {
+const replaceFloor = db.transaction((businessId, deviceId, rawTables, paidTables) => {
   const byKey = new Map();
   for (const raw of Array.isArray(rawTables) ? rawTables : []) {
     const table = parseFloorTable(raw);
@@ -273,6 +365,7 @@ const replaceFloor = db.transaction((businessId, rawTables) => {
   for (const table of parsed) {
     insertFloor.run({ business_id: businessId, ...table });
   }
+  syncOpenSalesFromFloor(businessId, deviceId, parsed, paidTables);
   return parsed.length;
 });
 
@@ -294,7 +387,9 @@ salesRouter.post('/sync', (req, res) => {
   const deviceId = asString(pick(req.body, 'deviceId', 'device_id'), 200);
   const result = syncBatch(row.id, deviceId, sales);
   let tables = 0;
-  if (Array.isArray(floor)) tables = replaceFloor(row.id, floor);
+  if (Array.isArray(floor)) {
+    tables = replaceFloor(row.id, deviceId, floor, result.paidTables || []);
+  }
   // Tell every open portal and admin tab for this business to refetch. A sync
   // that accepted nothing changed nothing, so it stays quiet.
   if (result.accepted > 0 || Array.isArray(floor)) {

@@ -298,18 +298,6 @@ function sumSales(businessId, period, asOf) {
   return { total: fromCents(row.total_cents), count: row.count };
 }
 
-function openSalesSum(businessId) {
-  const row = db
-    .prepare(
-      `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
-       FROM sales
-       WHERE business_id = ?
-         AND LOWER(COALESCE(status, 'paid')) = 'open'`
-    )
-    .get(businessId);
-  return { total: fromCents(row.total_cents), count: row.count };
-}
-
 export function periodTotals(businessId, asOf) {
   return {
     today: sumSales(businessId, 'today', asOf),
@@ -407,11 +395,9 @@ export function liveTables(businessId, asOf = shopToday()) {
 
   const tables = sortTables([...byKey.values()]);
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
+  // After floor→open sales mirror, printed today (open+paid) is the waiter bar:
+  // Printo raises it, Paguaj keeps it (same invoice), next visit adds again.
   const printed = sumSales(businessId, 'today', asOf);
-  const openInSales = openSalesSum(businessId);
-  // Replace open-sales slice with live open display (floor may lead sales sync).
-  const barTotal = printed.total - openInSales.total + openTotal;
-  const barCount = printed.count - openInSales.count + tables.length;
 
   return {
     occupied: tables.length,
@@ -419,8 +405,8 @@ export function liveTables(businessId, asOf = shopToday()) {
     openTotal,
     asOf,
     bar: {
-      total: Math.max(0, Number(barTotal.toFixed(2))),
-      count: Math.max(0, barCount)
+      total: printed.total,
+      count: printed.count
     },
     tables
   };
