@@ -24,8 +24,13 @@ function formatDate(sqlDate) {
 }
 
 function StatusBadge({ status }) {
-  const cls = status === 'active' ? 'ad-badge-new' : status === 'revoked' ? 'ad-badge-danger' : 'ad-badge-contacted';
-  return <span className={`ad-badge ${cls}`}>{status}</span>;
+  const map = {
+    active: { cls: 'ad-badge-new', label: 'Aktiv' },
+    revoked: { cls: 'ad-badge-danger', label: 'Revoked' },
+    expired: { cls: 'ad-badge-contacted', label: 'Expired' }
+  };
+  const item = map[status] || { cls: 'ad-badge-contacted', label: status };
+  return <span className={`ad-badge ad-badge-sm ${item.cls}`}>{item.label}</span>;
 }
 
 function Field({ label, children, span = 1 }) {
@@ -577,43 +582,56 @@ export default function Businesses() {
                           <td colSpan={4} onClick={(e) => e.stopPropagation()}>
                             <div className="ad-biz-detail-panel">
                               <div className="ad-biz-detail-grid">
-                                <div><span className="ad-biz-k">Kontakti</span><span>{b.contactPerson || '—'}</span></div>
-                                <div><span className="ad-biz-k">Email</span><span>{b.email || '—'}</span></div>
-                                <div><span className="ad-biz-k">Qyteti</span><span>{b.city || '—'}</span></div>
-                                <div><span className="ad-biz-k">Adresa</span><span>{b.address || '—'}</span></div>
-                                <div><span className="ad-biz-k">Sektori</span><span>{b.sector || '—'}</span></div>
-                                <div><span className="ad-biz-k">Skadon</span><span>{formatDate(b.licenseExpiresAt)}</span></div>
+                                <div><span className="ad-biz-k">Kontakti</span><span className="ad-biz-v">{b.contactPerson || '—'}</span></div>
+                                <div><span className="ad-biz-k">Email biznesi</span><span className="ad-biz-v">{b.email || '—'}</span></div>
+                                <div><span className="ad-biz-k">Qyteti</span><span className="ad-biz-v">{b.city || '—'}</span></div>
+                                <div><span className="ad-biz-k">Adresa</span><span className="ad-biz-v">{b.address || '—'}</span></div>
+                                <div><span className="ad-biz-k">Sektori</span><span className="ad-biz-v">{b.sector || '—'}</span></div>
+                                <div><span className="ad-biz-k">Skadon</span><span className="ad-biz-v">{formatDate(b.licenseExpiresAt)}</span></div>
+                                <div>
+                                  <span className="ad-biz-k">POS</span>
+                                  <button type="button" className="ad-biz-chip" onClick={() => setDevicesFor(b)}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h16v11H4zm2 13h4v2H6zm6 0h6v2h-6z"/></svg>
+                                    {b.devicesUsed}/{b.seats}
+                                  </button>
+                                </div>
                                 <div className="ad-biz-detail-span">
                                   <span className="ad-biz-k">License key</span>
                                   <button
-                                    className="ad-btn-ghost ad-mono ad-key-btn"
+                                    type="button"
+                                    className="ad-biz-cred ad-mono"
                                     title="Copy license key"
                                     onClick={() => copyKey(b.licenseKey)}
                                   >
                                     {copied === b.licenseKey ? 'Copied!' : b.licenseKey}
                                   </button>
                                 </div>
-                                <div>
-                                  <span className="ad-biz-k">Devices</span>
-                                  <button className="ad-btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => setDevicesFor(b)}>
-                                    {b.devicesUsed} / {b.seats}
-                                  </button>
-                                </div>
                                 <div className="ad-biz-detail-span">
                                   <span className="ad-biz-k">Portal</span>
                                   {b.portalEnabled ? (
-                                    <div className="ad-cell-stack">
-                                      <span className="ad-badge ad-badge-new">Active</span>
-                                      <span className="ad-hint" style={{ wordBreak: 'break-all' }}>{b.portalEmail}</span>
-                                      {b.portalPassword ? (
-                                        <code className="ad-mono" style={{ fontSize: 12, wordBreak: 'break-all' }}>{b.portalPassword}</code>
-                                      ) : (
-                                        <span className="ad-hint">Fjalëkalim i panjohur — Reset</span>
-                                      )}
-                                      <span className="ad-hint">{b.portalLoginDevices || 0} pajisje</span>
+                                    <div className="ad-biz-portal">
+                                      <div className="ad-biz-portal-top">
+                                        <span className="ad-badge ad-badge-sm ad-badge-new">ON</span>
+                                        <button type="button" className="ad-biz-chip" onClick={() => openPortalLogins(b)}>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-5 21a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zM17 18H7V4h10z"/></svg>
+                                          {b.portalLoginDevices || 0}
+                                        </button>
+                                      </div>
+                                      <div className="ad-biz-cred-row">
+                                        <span className="ad-biz-cred-label">Email</span>
+                                        <code className="ad-biz-cred">{b.portalEmail || '—'}</code>
+                                      </div>
+                                      <div className="ad-biz-cred-row">
+                                        <span className="ad-biz-cred-label">Password</span>
+                                        {b.portalPassword ? (
+                                          <code className="ad-biz-cred ad-mono">{b.portalPassword}</code>
+                                        ) : (
+                                          <span className="ad-biz-cred ad-biz-cred-muted">I panjohur — Reset</span>
+                                        )}
+                                      </div>
                                     </div>
                                   ) : (
-                                    <span className="ad-hint">Pa akses</span>
+                                    <span className="ad-biz-cred ad-biz-cred-muted">Pa akses</span>
                                   )}
                                 </div>
                               </div>
@@ -672,7 +690,7 @@ export default function Businesses() {
                                 {b.portalEnabled ? (
                                   <>
                                     <button type="button" className="ad-btn-ghost" onClick={() => openPortalLogins(b)}>
-                                      {b.portalLoginDevices || 0} pajisje portal
+                                      Portal sessions
                                     </button>
                                     <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => createPortalAccount(b)}>
                                       Reset portal

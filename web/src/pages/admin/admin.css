@@ -670,14 +670,14 @@
 }
 .ad-biz-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px 16px;
   margin-bottom: 16px;
 }
 .ad-biz-detail-grid > div {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
   font-size: 14px;
 }
@@ -690,6 +690,87 @@
   letter-spacing: .08em;
   color: #6E8378;
   text-transform: uppercase;
+}
+.ad-biz-v {
+  color: #E8F0EC;
+  font-size: 14px;
+  font-weight: 500;
+  word-break: break-word;
+}
+.ad-badge-sm {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.3;
+  border-radius: 6px;
+  width: fit-content;
+}
+.ad-biz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: #D5DFE8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ad-biz-chip:hover {
+  border-color: rgba(255,255,255,.28);
+  background: rgba(255,255,255,.07);
+}
+.ad-biz-portal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+}
+.ad-biz-portal-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ad-biz-cred-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.ad-biz-cred-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7A8F84;
+}
+.ad-biz-cred {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(0,0,0,.28);
+  color: #EAF2EE;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-all;
+  text-align: left;
+  cursor: pointer;
+}
+button.ad-biz-cred {
+  font-family: 'JetBrains Mono', monospace;
+}
+.ad-biz-cred-muted {
+  color: #7A8F84;
+  cursor: default;
+  font-family: Manrope, Helvetica, sans-serif;
 }
 .ad-biz-details-label {
   font-family: 'JetBrains Mono', monospace;
