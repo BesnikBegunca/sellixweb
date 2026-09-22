@@ -798,32 +798,67 @@ button.ad-biz-cred {
   .ad-biz-table thead {
     display: none;
   }
+  .ad-biz-col-desk {
+    display: none !important;
+  }
   .ad-biz-table,
-  .ad-biz-table tbody,
-  .ad-biz-table tr.ad-biz-row,
-  .ad-biz-table tr.ad-biz-row td {
+  .ad-biz-table tbody {
     display: block;
     width: 100%;
   }
   .ad-biz-table tbody tr.ad-biz-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
     padding: 12px 14px;
     border-bottom: 1px solid rgba(255,255,255,.08);
   }
   .ad-biz-table tbody tr.ad-biz-row td {
-    display: grid;
-    grid-template-columns: 88px 1fr;
-    gap: 8px;
-    padding: 4px 0;
+    display: block;
+    width: auto;
+    padding: 0;
     border: none;
   }
   .ad-biz-table tbody tr.ad-biz-row td::before {
-    content: attr(data-label);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: .08em;
-    color: #6E8378;
-    text-transform: uppercase;
-    padding-top: 3px;
+    content: none;
+  }
+  .ad-biz-table tbody tr.ad-biz-row td[data-label="Emri"] {
+    flex: 1;
+    min-width: 0;
+  }
+  .ad-biz-table tbody tr.ad-biz-row td[data-label="Status"] {
+    flex: none;
+  }
+  .ad-biz-table tbody tr.ad-biz-row .ad-name-row {
+    min-width: 0;
+  }
+  .ad-biz-table tbody tr.ad-biz-row .ad-name-row > span:nth-child(2) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ad-biz-detail-row {
+    display: block;
+    width: 100%;
+  }
+  .ad-biz-detail-row td {
+    display: block !important;
+    width: 100% !important;
+  }
+  .ad-biz-detail-panel {
+    padding: 14px 12px 16px;
+  }
+  .ad-biz-detail-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+  }
+  .ad-biz-detail-span {
+    grid-column: 1 / -1;
+  }
+  .ad-biz-cred-row {
+    grid-template-columns: 64px minmax(0, 1fr);
   }
   .ad-biz-table .ad-actions {
     display: grid;

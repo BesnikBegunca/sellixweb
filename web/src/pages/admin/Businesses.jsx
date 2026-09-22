@@ -552,8 +552,8 @@ export default function Businesses() {
               <thead>
                 <tr>
                   <th>Emri</th>
-                  <th>NUI</th>
-                  <th>Telefon</th>
+                  <th className="ad-biz-col-desk">NUI</th>
+                  <th className="ad-biz-col-desk">Telefon</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -573,8 +573,8 @@ export default function Businesses() {
                             {b.verified && <VerifiedBadge color={colorFor(b)} />}
                           </div>
                         </td>
-                        <td data-label="NUI" className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
-                        <td data-label="Telefon">{b.phone || '—'}</td>
+                        <td data-label="NUI" className="ad-mono ad-biz-col-desk" style={{ fontSize: 12 }}>{b.nui}</td>
+                        <td data-label="Telefon" className="ad-biz-col-desk">{b.phone || '—'}</td>
                         <td data-label="Status"><StatusBadge status={b.licenseStatus} /></td>
                       </tr>
                       {open && (
@@ -582,6 +582,8 @@ export default function Businesses() {
                           <td colSpan={4} onClick={(e) => e.stopPropagation()}>
                             <div className="ad-biz-detail-panel">
                               <div className="ad-biz-detail-grid">
+                                <div><span className="ad-biz-k">NUI</span><span className="ad-biz-v ad-mono">{b.nui}</span></div>
+                                <div><span className="ad-biz-k">Telefon</span><span className="ad-biz-v">{b.phone || '—'}</span></div>
                                 <div><span className="ad-biz-k">Kontakti</span><span className="ad-biz-v">{b.contactPerson || '—'}</span></div>
                                 <div><span className="ad-biz-k">Email biznesi</span><span className="ad-biz-v">{b.email || '—'}</span></div>
                                 <div><span className="ad-biz-k">Qyteti</span><span className="ad-biz-v">{b.city || '—'}</span></div>
