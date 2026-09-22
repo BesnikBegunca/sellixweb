@@ -353,8 +353,26 @@ function sortTables(tables) {
   );
 }
 
-/** Live floor from the till snapshot; falls back to open printed sales. */
+/**
+ * Live bar / tavolina e hapura.
+ *
+ * Open printed sales are the source of truth (works with existing POS builds).
+ * The till floor snapshot only fills gaps — it must never hide open sales when
+ * the snapshot has free rows (that made the bar stuck at 0).
+ */
 export function liveTables(businessId) {
+  const byKey = new Map();
+
+  for (const row of openTableRows(businessId)) {
+    const number = tableNumber(row.name);
+    const name = number ? `Tavolina ${number}` : row.name;
+    const staffName = String(row.staff_name || '').trim();
+    byKey.set(
+      `${name}\0${staffName}`,
+      mapTableRow({ ...row, name, staff_name: staffName })
+    );
+  }
+
   const snapshot = db
     .prepare(
       `SELECT table_name AS name, occupied, total_cents, staff_name
@@ -364,22 +382,17 @@ export function liveTables(businessId) {
     )
     .all(businessId);
 
-  let tables;
-  if (snapshot.length > 0) {
-    tables = sortTables(
-      snapshot
-        .map((row) => mapTableRow(row, Number(row.occupied) === 1))
-        .filter((t) => t.occupied)
-    );
-  } else {
-    const occupied = [];
-    for (const row of openTableRows(businessId)) {
-      const number = tableNumber(row.name);
-      occupied.push(mapTableRow({ ...row, name: number ? `Tavolina ${number}` : row.name }));
-    }
-    tables = sortTables(occupied);
+  for (const row of snapshot) {
+    if (Number(row.occupied) !== 1) continue;
+    const number = tableNumber(row.name);
+    const name = number ? `Tavolina ${number}` : row.name;
+    const staffName = String(row.staff_name || '').trim();
+    const key = `${name}\0${staffName}`;
+    if (byKey.has(key)) continue;
+    byKey.set(key, mapTableRow({ ...row, name, staff_name: staffName }, true));
   }
 
+  const tables = sortTables([...byKey.values()]);
   return {
     occupied: tables.length,
     free: 0,
