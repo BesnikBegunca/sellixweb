@@ -172,6 +172,20 @@ const deleteFloorOpenOnTable = db.prepare(`
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid LIKE 'floor:%'
 `);
+const deleteAllFloorOpensOnTable = db.prepare(`
+  DELETE FROM sales
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+    AND sale_uid LIKE 'floor:%'
+`);
+const deleteOtherOpensOnTable = db.prepare(`
+  DELETE FROM sales
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+    AND id != ?
+`);
 const deleteItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
 const insertItem = db.prepare(`
   INSERT INTO sale_items (sale_id, name, quantity, unit_price_cents, total_cents, category)
@@ -263,17 +277,24 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   }
   for (const sale of parsed) {
     upsertSale(businessId, deviceId, sale);
+    // POS open invoice wins — drop floor:* duplicates so table totals don't double.
+    if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
+      deleteAllFloorOpensOnTable.run(businessId, sale.table_name);
+      const kept = findOpenOnTable.get(
+        businessId,
+        sale.table_name,
+        sale.staff_name || ''
+      );
+      if (kept) deleteOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
+    }
     accepted += 1;
   }
   return { accepted, rejected, paidTables: [...paidTables] };
 });
 
 /**
- * Mirror occupied floor tables into open sales so Shitjet + bar see prints even
- * when the till only pushed the table snapshot (common on older POS builds).
- *
- * After Paguaj the next Printo must add a NEW open invoice (not reopen the paid
- * one). Each new visit gets a fresh floor:* sale_uid so the bar keeps growing.
+ * Mirror occupied floor into at most one open sale per table.
+ * Prefer an existing POS open; only mint floor:* when none exists.
  */
 function syncOpenSalesFromFloor(businessId, deviceId, tables, _paidTables = []) {
   const now = shopNowLocal();
@@ -288,7 +309,6 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, _paidTables = []) 
 
     const existingOpen = findOpenOnTable.get(businessId, tableName, staffName);
     if (existingOpen) {
-      // Same visit — more prints before pay.
       updateSale.run({
         id: existingOpen.id,
         device_id: deviceId || existingOpen.device_id,
@@ -302,10 +322,15 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, _paidTables = []) 
         staff_name: staffName || existingOpen.staff_name || '',
         status: 'open'
       });
+      const uid = String(existingOpen.sale_uid || '');
+      if (!uid.startsWith('floor:')) {
+        deleteAllFloorOpensOnTable.run(businessId, tableName);
+      }
+      deleteOtherOpensOnTable.run(businessId, tableName, existingOpen.id);
       continue;
     }
 
-    // New visit (first print, or print again after Paguaj).
+    deleteAllFloorOpensOnTable.run(businessId, tableName);
     insertSale.run({
       business_id: businessId,
       device_id: deviceId || '',

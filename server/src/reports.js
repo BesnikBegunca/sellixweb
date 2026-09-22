@@ -292,23 +292,62 @@ function sumSales(businessId, period, asOf) {
     .prepare(
       `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
        FROM sales
-       WHERE business_id = ?${filter.sql}`
+       WHERE business_id = ?
+         AND LOWER(COALESCE(status, 'paid')) != 'open'${filter.sql}`
     )
     .get(businessId, ...filter.params);
   return { total: fromCents(row.total_cents), count: row.count };
 }
 
-export function periodTotals(businessId, asOf) {
+function openSalesLatestSum(businessId) {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(s.total_cents), 0) AS total_cents, COUNT(*) AS count
+       FROM sales s
+       INNER JOIN (
+         SELECT TRIM(table_name) AS tn,
+                TRIM(COALESCE(staff_name, '')) AS sn,
+                MAX(id) AS max_id
+         FROM sales
+         WHERE business_id = ?
+           AND TRIM(table_name) != ''
+           AND LOWER(COALESCE(status, 'paid')) = 'open'
+         GROUP BY TRIM(table_name), TRIM(COALESCE(staff_name, ''))
+       ) latest ON latest.max_id = s.id`
+    )
+    .get(businessId);
+  // Takeaway / counter opens without a table name — include once each.
+  const loose = db
+    .prepare(
+      `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?
+         AND TRIM(table_name) = ''
+         AND LOWER(COALESCE(status, 'paid')) = 'open'`
+    )
+    .get(businessId);
   return {
-    today: sumSales(businessId, 'today', asOf),
+    total: fromCents(row.total_cents) + fromCents(loose.total_cents),
+    count: (row.count || 0) + (loose.count || 0)
+  };
+}
+
+export function periodTotals(businessId, asOf) {
+  const openNow = openSalesLatestSum(businessId);
+  const addOpen = (base) => ({
+    total: Number((base.total + openNow.total).toFixed(2)),
+    count: base.count + openNow.count
+  });
+  return {
+    today: addOpen(sumSales(businessId, 'today', asOf)),
     yesterday: sumSales(businessId, 'yesterday', asOf),
-    week: sumSales(businessId, 'week', asOf),
-    month: sumSales(businessId, 'month', asOf),
-    month3: sumSales(businessId, 'month3', asOf),
-    month6: sumSales(businessId, 'month6', asOf),
-    month9: sumSales(businessId, 'month9', asOf),
-    year: sumSales(businessId, 'year', asOf),
-    all: sumSales(businessId, 'all', asOf)
+    week: addOpen(sumSales(businessId, 'week', asOf)),
+    month: addOpen(sumSales(businessId, 'month', asOf)),
+    month3: addOpen(sumSales(businessId, 'month3', asOf)),
+    month6: addOpen(sumSales(businessId, 'month6', asOf)),
+    month9: addOpen(sumSales(businessId, 'month9', asOf)),
+    year: addOpen(sumSales(businessId, 'year', asOf)),
+    all: addOpen(sumSales(businessId, 'all', asOf))
   };
 }
 
@@ -320,17 +359,25 @@ function tableNumber(name) {
 }
 
 function openTableRows(businessId) {
+  // One open invoice per table+staff (latest). Never SUM — duplicates from
+  // floor:* + POS open used to show 30€ when the till had 20€.
   return db
     .prepare(
-      `SELECT table_name AS name,
-              COALESCE(SUM(total_cents), 0) AS total_cents,
-              COUNT(*) AS count,
-              TRIM(COALESCE(staff_name, '')) AS staff_name
-       FROM sales
-       WHERE business_id = ?
-         AND TRIM(table_name) != ''
-         AND LOWER(COALESCE(status, 'paid')) = 'open'
-       GROUP BY table_name, TRIM(COALESCE(staff_name, ''))`
+      `SELECT s.table_name AS name,
+              s.total_cents AS total_cents,
+              1 AS count,
+              TRIM(COALESCE(s.staff_name, '')) AS staff_name
+       FROM sales s
+       INNER JOIN (
+         SELECT TRIM(table_name) AS tn,
+                TRIM(COALESCE(staff_name, '')) AS sn,
+                MAX(id) AS max_id
+         FROM sales
+         WHERE business_id = ?
+           AND TRIM(table_name) != ''
+           AND LOWER(COALESCE(status, 'paid')) = 'open'
+         GROUP BY TRIM(table_name), TRIM(COALESCE(staff_name, ''))
+       ) latest ON latest.max_id = s.id`
     )
     .all(businessId);
 }
@@ -395,9 +442,8 @@ export function liveTables(businessId, asOf = shopToday()) {
 
   const tables = sortTables([...byKey.values()]);
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
-  // After floor→open sales mirror, printed today (open+paid) is the waiter bar:
-  // Printo raises it, Paguaj keeps it (same invoice), next visit adds again.
-  const printed = sumSales(businessId, 'today', asOf);
+  const paidToday = sumSales(businessId, 'today', asOf);
+  const openNow = openSalesLatestSum(businessId);
 
   return {
     occupied: tables.length,
@@ -405,8 +451,8 @@ export function liveTables(businessId, asOf = shopToday()) {
     openTotal,
     asOf,
     bar: {
-      total: printed.total,
-      count: printed.count
+      total: Number((paidToday.total + openNow.total).toFixed(2)),
+      count: paidToday.count + openNow.count
     },
     tables
   };
