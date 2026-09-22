@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, Fragment } from 'react';
 import { api } from '../../lib/api';
 import { localDate, periodQuery } from '../../lib/sales';
 import { useLiveRefresh } from '../../lib/useLiveRefresh';
@@ -546,193 +546,174 @@ export default function Businesses() {
             <table className="ad-table ad-biz-table">
               <thead>
                 <tr>
-                  <th>Business</th>
+                  <th>Emri</th>
                   <th>NUI</th>
-                  <th>Location</th>
-                  <th>Sector</th>
-                  <th>License key</th>
+                  <th>Telefon</th>
                   <th>Status</th>
-                  <th>Expires</th>
-                  <th>Devices</th>
-                  <th>Portal</th>
                 </tr>
               </thead>
               <tbody>
                 {businesses.map((b) => {
                   const open = openId === b.id;
                   return (
-                  <tr
-                    key={b.id}
-                    className={`ad-biz-row${open ? ' ad-biz-row-open' : ''}`}
-                    onClick={() => setOpenId(open ? null : b.id)}
-                  >
-                    <td data-label="Business">
-                      <div className="ad-cell-stack">
-                        <div className="ad-name-row">
-                          <span className="ad-biz-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
-                          <span style={{ fontWeight: 600 }}>{b.name}</span>
-                          {b.verified && <VerifiedBadge color={colorFor(b)} />}
-                        </div>
-                        {b.contactPerson && <div className="ad-hint">{b.contactPerson}</div>}
-                        <div className="ad-hint ad-biz-tap">{open ? 'Fshih detajet' : 'Kliko për detaje'}</div>
-                      </div>
-                    </td>
-                    <td data-label="NUI" className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
-                    <td data-label="Location">
-                      <div className="ad-cell-stack">
-                        <div>{b.city || '—'}</div>
-                        <div className="ad-hint">{[b.zipCode, b.country].filter(Boolean).join(' · ')}</div>
-                      </div>
-                    </td>
-                    <td data-label="Sector">{b.sector || '—'}</td>
-                    <td data-label="License key">
-                      <button
-                        className="ad-btn-ghost ad-mono ad-key-btn"
-                        title="Copy license key"
-                        onClick={(e) => { e.stopPropagation(); copyKey(b.licenseKey); }}
+                    <Fragment key={b.id}>
+                      <tr
+                        className={`ad-biz-row${open ? ' ad-biz-row-open' : ''}`}
+                        onClick={() => setOpenId(open ? null : b.id)}
                       >
-                        {copied === b.licenseKey ? 'Copied!' : b.licenseKey}
-                      </button>
-                    </td>
-                    <td data-label="Status"><StatusBadge status={b.licenseStatus} /></td>
-                    <td data-label="Expires" className="ad-hint">{formatDate(b.licenseExpiresAt)}</td>
-                    <td data-label="Devices">
-                      <button
-                        className="ad-btn-ghost"
-                        style={{ padding: '6px 10px', fontSize: 12 }}
-                        onClick={(e) => { e.stopPropagation(); setDevicesFor(b); }}
-                      >
-                        {b.devicesUsed} / {b.seats}
-                      </button>
-                    </td>
-                    <td data-label="Portal">
-                      {b.portalEnabled ? (
-                        <div className="ad-cell-stack">
-                          <span className="ad-badge ad-badge-new">Active</span>
-                          <span className="ad-hint" style={{ wordBreak: 'break-all' }}>{b.portalEmail}</span>
-                          {b.portalPassword ? (
-                            <code className="ad-mono" style={{ fontSize: 12, wordBreak: 'break-all' }}>{b.portalPassword}</code>
-                          ) : (
-                            <span className="ad-hint">Fjalëkalim i panjohur — Reset</span>
-                          )}
-                          <span className="ad-hint">{b.portalLoginDevices || 0} pajisje</span>
-                        </div>
-                      ) : (
-                        <span className="ad-hint">Pa akses</span>
+                        <td data-label="Emri">
+                          <div className="ad-name-row">
+                            <span className="ad-biz-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                            <span style={{ fontWeight: 600 }}>{b.name}</span>
+                            {b.verified && <VerifiedBadge color={colorFor(b)} />}
+                          </div>
+                        </td>
+                        <td data-label="NUI" className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
+                        <td data-label="Telefon">{b.phone || '—'}</td>
+                        <td data-label="Status"><StatusBadge status={b.licenseStatus} /></td>
+                      </tr>
+                      {open && (
+                        <tr className="ad-biz-detail-row">
+                          <td colSpan={4} onClick={(e) => e.stopPropagation()}>
+                            <div className="ad-biz-detail-panel">
+                              <div className="ad-biz-detail-grid">
+                                <div><span className="ad-biz-k">Kontakti</span><span>{b.contactPerson || '—'}</span></div>
+                                <div><span className="ad-biz-k">Email</span><span>{b.email || '—'}</span></div>
+                                <div><span className="ad-biz-k">Qyteti</span><span>{b.city || '—'}</span></div>
+                                <div><span className="ad-biz-k">Adresa</span><span>{b.address || '—'}</span></div>
+                                <div><span className="ad-biz-k">Sektori</span><span>{b.sector || '—'}</span></div>
+                                <div><span className="ad-biz-k">Skadon</span><span>{formatDate(b.licenseExpiresAt)}</span></div>
+                                <div className="ad-biz-detail-span">
+                                  <span className="ad-biz-k">License key</span>
+                                  <button
+                                    className="ad-btn-ghost ad-mono ad-key-btn"
+                                    title="Copy license key"
+                                    onClick={() => copyKey(b.licenseKey)}
+                                  >
+                                    {copied === b.licenseKey ? 'Copied!' : b.licenseKey}
+                                  </button>
+                                </div>
+                                <div>
+                                  <span className="ad-biz-k">Devices</span>
+                                  <button className="ad-btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => setDevicesFor(b)}>
+                                    {b.devicesUsed} / {b.seats}
+                                  </button>
+                                </div>
+                                <div className="ad-biz-detail-span">
+                                  <span className="ad-biz-k">Portal</span>
+                                  {b.portalEnabled ? (
+                                    <div className="ad-cell-stack">
+                                      <span className="ad-badge ad-badge-new">Active</span>
+                                      <span className="ad-hint" style={{ wordBreak: 'break-all' }}>{b.portalEmail}</span>
+                                      {b.portalPassword ? (
+                                        <code className="ad-mono" style={{ fontSize: 12, wordBreak: 'break-all' }}>{b.portalPassword}</code>
+                                      ) : (
+                                        <span className="ad-hint">Fjalëkalim i panjohur — Reset</span>
+                                      )}
+                                      <span className="ad-hint">{b.portalLoginDevices || 0} pajisje</span>
+                                    </div>
+                                  ) : (
+                                    <span className="ad-hint">Pa akses</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="ad-biz-details-label">Veprime</div>
+                              <div className="ad-actions">
+                                <div className="ad-extend">
+                                  <select
+                                    className="ad-field"
+                                    aria-label="Extend months"
+                                    value={extendMonths[b.id] || 1}
+                                    onChange={(e) => setExtendMonths({ ...extendMonths, [b.id]: Number(e.target.value) })}
+                                  >
+                                    {[1, 3, 6, 12, 24].map((m) => (
+                                      <option key={m} value={m}>{m} mo</option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    className="ad-btn"
+                                    disabled={busyId === b.id}
+                                    onClick={() => runAction(b.id, () => api.extendLicense(b.id, extendMonths[b.id] || 1))}
+                                  >
+                                    Extend
+                                  </button>
+                                </div>
+                                <div className="ad-verify">
+                                  <input
+                                    type="color"
+                                    className="ad-color"
+                                    aria-label="Ngjyra e tick-ut"
+                                    value={colorFor(b).toLowerCase()}
+                                    disabled={busyId === b.id}
+                                    onChange={(e) => onTickColor(b, e.target.value)}
+                                  />
+                                  {b.verified ? (
+                                    <button
+                                      className="ad-btn-ghost"
+                                      disabled={busyId === b.id}
+                                      onClick={() => runAction(b.id, () => api.unverifyBusiness(b.id))}
+                                    >
+                                      Hiq tick
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="ad-btn"
+                                      disabled={busyId === b.id}
+                                      onClick={() => runAction(b.id, () => api.verifyBusiness(b.id, colorFor(b)))}
+                                    >
+                                      Verifiko
+                                    </button>
+                                  )}
+                                </div>
+                                <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>
+                                  Shitjet
+                                </button>
+                                {b.portalEnabled ? (
+                                  <>
+                                    <button type="button" className="ad-btn-ghost" onClick={() => openPortalLogins(b)}>
+                                      {b.portalLoginDevices || 0} pajisje portal
+                                    </button>
+                                    <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => createPortalAccount(b)}>
+                                      Reset portal
+                                    </button>
+                                    <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => removePortalAccount(b)}>
+                                      Remove portal
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => createPortalAccount(b)}>
+                                    Give portal access
+                                  </button>
+                                )}
+                                {b.licenseStatus === 'revoked' ? (
+                                  <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.reactivateLicense(b.id))}>
+                                    Reactivate
+                                  </button>
+                                ) : (
+                                  <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.revokeLicense(b.id))}>
+                                    Revoke
+                                  </button>
+                                )}
+                                <button
+                                  className="ad-btn-ghost"
+                                  disabled={busyId === b.id}
+                                  onClick={() => {
+                                    if (confirm('Issue a new key? The current key stops working and every device must activate again.')) {
+                                      runAction(b.id, () => api.regenerateLicense(b.id));
+                                    }
+                                  }}
+                                >
+                                  New key
+                                </button>
+                                <button className="ad-btn-ghost" onClick={() => setEditing({ ...b })}>Edit</button>
+                                <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => onDelete(b)}>Delete</button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    {open && (
-                    <td className="ad-actions-cell" onClick={(e) => e.stopPropagation()}>
-                      <div className="ad-biz-details-label">Detaje</div>
-                      <div className="ad-actions">
-                        <div className="ad-extend">
-                          <select
-                            className="ad-field"
-                            aria-label="Extend months"
-                            value={extendMonths[b.id] || 1}
-                            onChange={(e) => setExtendMonths({ ...extendMonths, [b.id]: Number(e.target.value) })}
-                          >
-                            {[1, 3, 6, 12, 24].map((m) => (
-                              <option key={m} value={m}>{m} mo</option>
-                            ))}
-                          </select>
-                          <button
-                            className="ad-btn"
-                            disabled={busyId === b.id}
-                            onClick={() => runAction(b.id, () => api.extendLicense(b.id, extendMonths[b.id] || 1))}
-                          >
-                            Extend
-                          </button>
-                        </div>
-                        <div className="ad-verify">
-                          <input
-                            type="color"
-                            className="ad-color"
-                            aria-label="Ngjyra e tick-ut"
-                            value={colorFor(b).toLowerCase()}
-                            disabled={busyId === b.id}
-                            onChange={(e) => onTickColor(b, e.target.value)}
-                          />
-                          {b.verified ? (
-                            <button
-                              className="ad-btn-ghost"
-                              disabled={busyId === b.id}
-                              onClick={() => runAction(b.id, () => api.unverifyBusiness(b.id))}
-                            >
-                              Hiq tick
-                            </button>
-                          ) : (
-                            <button
-                              className="ad-btn"
-                              disabled={busyId === b.id}
-                              onClick={() => runAction(b.id, () => api.verifyBusiness(b.id, colorFor(b)))}
-                            >
-                              Verifiko
-                            </button>
-                          )}
-                        </div>
-                        <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>
-                          Shitjet
-                        </button>
-                        {b.portalEnabled ? (
-                          <>
-                            <button
-                              type="button"
-                              className="ad-btn-ghost"
-                              onClick={() => openPortalLogins(b)}
-                            >
-                              {b.portalLoginDevices || 0} pajisje portal
-                            </button>
-                            <button
-                              className="ad-btn-ghost"
-                              disabled={busyId === b.id}
-                              onClick={() => createPortalAccount(b)}
-                            >
-                              Reset portal
-                            </button>
-                            <button
-                              className="ad-btn-danger"
-                              disabled={busyId === b.id}
-                              onClick={() => removePortalAccount(b)}
-                            >
-                              Remove portal
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            className="ad-btn-ghost"
-                            disabled={busyId === b.id}
-                            onClick={() => createPortalAccount(b)}
-                          >
-                            Give portal access
-                          </button>
-                        )}
-                        {b.licenseStatus === 'revoked' ? (
-                          <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.reactivateLicense(b.id))}>
-                            Reactivate
-                          </button>
-                        ) : (
-                          <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.revokeLicense(b.id))}>
-                            Revoke
-                          </button>
-                        )}
-                        <button
-                          className="ad-btn-ghost"
-                          disabled={busyId === b.id}
-                          onClick={() => {
-                            if (confirm('Issue a new key? The current key stops working and every device must activate again.')) {
-                              runAction(b.id, () => api.regenerateLicense(b.id));
-                            }
-                          }}
-                        >
-                          New key
-                        </button>
-                        <button className="ad-btn-ghost" onClick={() => setEditing({ ...b })}>Edit</button>
-                        <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => onDelete(b)}>Delete</button>
-                      </div>
-                    </td>
-                    )}
-                  </tr>
+                    </Fragment>
                   );
                 })}
               </tbody>
