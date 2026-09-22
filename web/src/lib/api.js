@@ -113,7 +113,12 @@ export const api = {
   portalSetGoal: (goal) => request('/portal/me/goal', { method: 'PATCH', body: JSON.stringify({ goal }) }),
   portalOverview: (date) => request(`/portal/overview?date=${encodeURIComponent(date)}`),
   portalBreakdown: (query) => request(`/portal/breakdown?${query}`),
-  portalTables: () => request('/portal/tables'),
+  portalTables: (date) =>
+    request(
+      date
+        ? `/portal/tables?date=${encodeURIComponent(date)}`
+        : '/portal/tables'
+    ),
   portalDevices: (query) => request(`/portal/devices?${query}`),
   portalSales: (query) => request(`/portal/sales?${query}`),
   portalShifts: () => request('/portal/shifts'),

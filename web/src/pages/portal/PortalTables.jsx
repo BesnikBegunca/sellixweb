@@ -21,13 +21,12 @@ export default function PortalTables() {
     const id = ++requestId.current;
     try {
       const [data, ov] = await Promise.all([
-        api.portalTables(),
+        api.portalTables(date),
         api.portalOverview(date)
       ]);
       if (id !== requestId.current) return;
       setFloor(data);
       setOverview(ov);
-      setError('');
     } catch (e) {
       if (id === requestId.current) setError(e.message);
       throw e;
@@ -45,16 +44,9 @@ export default function PortalTables() {
   if (error && !floor) return <div className="ad-error">{error}</div>;
   if (loading && !floor) return <div className="ad-hint">Duke ngarkuar tavolinat…</div>;
 
-  const paidToday = overview?.totals?.today || { total: 0, count: 0 };
-  const openTotal = Number(floor?.openTotal) || 0;
-  const openCount = Number(floor?.occupied) || 0;
-  // Ring = paid today + live open tables (floor/open sales). Tables can show
-  // amounts from the till snapshot while sales rows are still catching up.
+  // Waiter print total today: open + paid, one amount per invoice (no drop on Paguaj).
   const ringTotals = {
-    today: {
-      total: Number(paidToday.total || 0) + openTotal,
-      count: Number(paidToday.count || 0) + openCount
-    }
+    today: floor?.bar || { total: 0, count: 0 }
   };
 
   return (
@@ -66,7 +58,7 @@ export default function PortalTables() {
         </div>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Totalet sipas tavolinës, nga të njëjtat faturë që arka dërgoi, të përditësuara vetvetiu sapo mbyllet një tavolinë.
+        Bari është totali i printimeve sot (tavolina të hapura + të paguara), pa numëruar dy herë Printo→Paguaj.
         Takeaway dhe banaku hyjnë te Shitjet, jo këtu.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}

@@ -285,16 +285,28 @@ export function reportSnapshot(business, kind, periodKey, asOf = shopToday()) {
   };
 }
 
+/** Paid + open — one row per invoice (Printo then Paguaj upserts, never doubles). */
 function sumSales(businessId, period, asOf) {
   const filter = periodFilter(period, asOf);
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
        FROM sales
-       WHERE business_id = ?
-         AND LOWER(COALESCE(status, 'paid')) != 'open'${filter.sql}`
+       WHERE business_id = ?${filter.sql}`
     )
     .get(businessId, ...filter.params);
+  return { total: fromCents(row.total_cents), count: row.count };
+}
+
+function openSalesSum(businessId) {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?
+         AND LOWER(COALESCE(status, 'paid')) = 'open'`
+    )
+    .get(businessId);
   return { total: fromCents(row.total_cents), count: row.count };
 }
 
@@ -355,13 +367,13 @@ function sortTables(tables) {
 }
 
 /**
- * Live bar / tavolina e hapura.
+ * Live tavolina + waiter print bar for today.
  *
- * Open printed sales are the source of truth (works with existing POS builds).
- * The till floor snapshot only fills gaps — it must never hide open sales when
- * the snapshot has free rows (that made the bar stuck at 0).
+ * Bar = total of waiter printing (open + paid invoices today). Printo→Paguaj is
+ * one invoice so it is not counted twice and the bar does not drop on pay.
+ * Floor snapshot fills open amounts that are not yet in sales rows.
  */
-export function liveTables(businessId) {
+export function liveTables(businessId, asOf = shopToday()) {
   const byKey = new Map();
 
   for (const row of openTableRows(businessId)) {
@@ -394,10 +406,22 @@ export function liveTables(businessId) {
   }
 
   const tables = sortTables([...byKey.values()]);
+  const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
+  const printed = sumSales(businessId, 'today', asOf);
+  const openInSales = openSalesSum(businessId);
+  // Replace open-sales slice with live open display (floor may lead sales sync).
+  const barTotal = printed.total - openInSales.total + openTotal;
+  const barCount = printed.count - openInSales.count + tables.length;
+
   return {
     occupied: tables.length,
     free: 0,
-    openTotal: tables.reduce((sum, t) => sum + t.total, 0),
+    openTotal,
+    asOf,
+    bar: {
+      total: Math.max(0, Number(barTotal.toFixed(2))),
+      count: Math.max(0, barCount)
+    },
     tables
   };
 }

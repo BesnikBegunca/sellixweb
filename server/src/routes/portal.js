@@ -153,7 +153,7 @@ portalRouter.get('/breakdown', requirePortal, (req, res) => {
 portalRouter.get('/tables', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
-  res.json(liveTables(row.id));
+  res.json(liveTables(row.id, readAsOf(req)));
 });
 
 // Held open by the browser. It carries no data — it only tells the page that
