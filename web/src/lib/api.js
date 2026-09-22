@@ -73,6 +73,7 @@ export const api = {
   createBusiness: (data) => request('/businesses', { method: 'POST', body: JSON.stringify(data) }),
   updateBusiness: (id, data) => request(`/businesses/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteBusiness: (id) => request(`/businesses/${id}`, { method: 'DELETE' }),
+  resetBusinessWebData: (id) => request(`/businesses/${id}/web-data/reset`, { method: 'POST' }),
   getTrash: () => request('/businesses/trash'),
   restoreBusiness: (id) => request(`/businesses/${id}/restore`, { method: 'POST' }),
   purgeBusiness: (id) => request(`/businesses/${id}/purge`, { method: 'DELETE' }),

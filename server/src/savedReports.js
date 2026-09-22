@@ -144,6 +144,22 @@ export function deleteSavedReport(businessId, reportId) {
   return true;
 }
 
+/** Wipe all saved PDF reports for a business (files + DB rows). */
+export function deleteAllSavedReports(businessId) {
+  const rows = db
+    .prepare('SELECT id, file_name FROM saved_reports WHERE business_id = ?')
+    .all(Number(businessId));
+  for (const row of rows) {
+    try {
+      fs.unlinkSync(filePath(businessId, row.file_name));
+    } catch {
+      /* ignore */
+    }
+  }
+  const info = db.prepare('DELETE FROM saved_reports WHERE business_id = ?').run(Number(businessId));
+  return { reports: info.changes, files: rows.length };
+}
+
 export function sendPdf(res, buffer, fileName) {
   const safe = String(fileName || 'raport.pdf').replace(/[^\w.\-]+/g, '_');
   res.setHeader('Content-Type', 'application/pdf');

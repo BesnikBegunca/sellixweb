@@ -25,6 +25,7 @@ import {
   createSavedReport,
   readSavedReport,
   deleteSavedReport,
+  deleteAllSavedReports,
   sendPdf
 } from '../savedReports.js';
 
@@ -331,6 +332,29 @@ businessesRouter.delete('/:id/portal-account', (req, res) => {
   ).run(row.id);
   revokeAccountSessions('portal', row.id);
   res.json({ business: adminBusiness(getBusiness(row.id)) });
+});
+
+// Wipe synced till/portal numbers for this business only (sales, floor, shifts,
+// saved reports). Does not touch the business account, license, or POS devices.
+businessesRouter.post('/:id/web-data/reset', (req, res) => {
+  const row = getBusiness(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Business not found' });
+  const id = row.id;
+  const counts = db.transaction(() => {
+    const reports = deleteAllSavedReports(id);
+    const sales = db.prepare('DELETE FROM sales WHERE business_id = ?').run(id).changes;
+    const tables = db.prepare('DELETE FROM restaurant_tables WHERE business_id = ?').run(id).changes;
+    const shifts = db.prepare('DELETE FROM shift_closes WHERE business_id = ?').run(id).changes;
+    let goals = 0;
+    try {
+      goals = db.prepare('DELETE FROM goal_pushes WHERE business_id = ?').run(id).changes;
+    } catch {
+      /* table may not exist on very old volumes */
+    }
+    return { sales, tables, shifts, goals, ...reports };
+  })();
+  publish(id, { reset: true });
+  res.json({ ok: true, deleted: counts, business: adminBusiness(getBusiness(id)) });
 });
 
 // Same sales rows the till posted to POST /api/sales/sync — filtered by this

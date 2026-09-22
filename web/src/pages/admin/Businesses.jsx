@@ -384,6 +384,22 @@ export default function Businesses() {
     }
   };
 
+  const onResetWebData = async (b) => {
+    if (!confirm(
+      `Reset web data për "${b.name}"?\n\nFshihet çdo shitje / tavolinë / gjendje / raport i numeruar në web. Llogaria, licenca dhe POS-i nuk preken.\n\nKy veprim nuk kthehet mbrapa.`
+    )) return;
+    setBusyId(b.id);
+    setError('');
+    try {
+      await api.resetBusinessWebData(b.id);
+      if (salesFor?.id === b.id) setSalesFor(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const colorFor = (b) => tickColors[b.id] || b.verifiedColor || DEFAULT_TICK;
 
   const onTickColor = async (b, color) => {
@@ -727,6 +743,13 @@ export default function Businesses() {
                                   New key
                                 </button>
                                 <button className="ad-btn-ghost" onClick={() => setEditing({ ...b })}>Edit</button>
+                                <button
+                                  className="ad-btn-danger ad-span-2"
+                                  disabled={busyId === b.id}
+                                  onClick={() => onResetWebData(b)}
+                                >
+                                  Reset web data
+                                </button>
                                 <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => onDelete(b)}>Delete</button>
                               </div>
                             </div>
