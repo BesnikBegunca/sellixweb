@@ -321,6 +321,7 @@ export default function Businesses() {
   const [extendMonths, setExtendMonths] = useState({});
   const [tickColors, setTickColors] = useState({});
   const [portalCredential, setPortalCredential] = useState(null);
+  const [openId, setOpenId] = useState(null);
 
   const load = () => {
     api.getBusinesses().then(({ businesses }) => setBusinesses(businesses)).catch((e) => setError(e.message));
@@ -554,19 +555,26 @@ export default function Businesses() {
                   <th>Expires</th>
                   <th>Devices</th>
                   <th>Portal</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {businesses.map((b) => (
-                  <tr key={b.id}>
+                {businesses.map((b) => {
+                  const open = openId === b.id;
+                  return (
+                  <tr
+                    key={b.id}
+                    className={`ad-biz-row${open ? ' ad-biz-row-open' : ''}`}
+                    onClick={() => setOpenId(open ? null : b.id)}
+                  >
                     <td data-label="Business">
                       <div className="ad-cell-stack">
                         <div className="ad-name-row">
+                          <span className="ad-biz-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
                           <span style={{ fontWeight: 600 }}>{b.name}</span>
                           {b.verified && <VerifiedBadge color={colorFor(b)} />}
                         </div>
                         {b.contactPerson && <div className="ad-hint">{b.contactPerson}</div>}
+                        <div className="ad-hint ad-biz-tap">{open ? 'Fshih detajet' : 'Kliko për detaje'}</div>
                       </div>
                     </td>
                     <td data-label="NUI" className="ad-mono" style={{ fontSize: 12 }}>{b.nui}</td>
@@ -581,7 +589,7 @@ export default function Businesses() {
                       <button
                         className="ad-btn-ghost ad-mono ad-key-btn"
                         title="Copy license key"
-                        onClick={() => copyKey(b.licenseKey)}
+                        onClick={(e) => { e.stopPropagation(); copyKey(b.licenseKey); }}
                       >
                         {copied === b.licenseKey ? 'Copied!' : b.licenseKey}
                       </button>
@@ -589,7 +597,11 @@ export default function Businesses() {
                     <td data-label="Status"><StatusBadge status={b.licenseStatus} /></td>
                     <td data-label="Expires" className="ad-hint">{formatDate(b.licenseExpiresAt)}</td>
                     <td data-label="Devices">
-                      <button className="ad-btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => setDevicesFor(b)}>
+                      <button
+                        className="ad-btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: 12 }}
+                        onClick={(e) => { e.stopPropagation(); setDevicesFor(b); }}
+                      >
                         {b.devicesUsed} / {b.seats}
                       </button>
                     </td>
@@ -603,42 +615,15 @@ export default function Businesses() {
                           ) : (
                             <span className="ad-hint">Fjalëkalim i panjohur — Reset</span>
                           )}
-                          <button
-                            type="button"
-                            className="ad-btn-ghost"
-                            style={{ padding: '6px 10px', fontSize: 12 }}
-                            onClick={() => openPortalLogins(b)}
-                          >
-                            {b.portalLoginDevices || 0} pajisje
-                          </button>
-                          <div className="ad-mini-actions">
-                            <button
-                              className="ad-btn-ghost"
-                              disabled={busyId === b.id}
-                              onClick={() => createPortalAccount(b)}
-                            >
-                              Reset
-                            </button>
-                            <button
-                              className="ad-btn-danger"
-                              disabled={busyId === b.id}
-                              onClick={() => removePortalAccount(b)}
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          <span className="ad-hint">{b.portalLoginDevices || 0} pajisje</span>
                         </div>
                       ) : (
-                        <button
-                          className="ad-btn-ghost"
-                          disabled={busyId === b.id}
-                          onClick={() => createPortalAccount(b)}
-                        >
-                          Give access
-                        </button>
+                        <span className="ad-hint">Pa akses</span>
                       )}
                     </td>
-                    <td data-label="Actions" className="ad-actions-cell">
+                    {open && (
+                    <td className="ad-actions-cell" onClick={(e) => e.stopPropagation()}>
+                      <div className="ad-biz-details-label">Detaje</div>
                       <div className="ad-actions">
                         <div className="ad-extend">
                           <select
@@ -686,11 +671,42 @@ export default function Businesses() {
                             </button>
                           )}
                         </div>
-                        {/* Every business has sales to look at: a restaurant
-                            splits them by table, a market by till. */}
                         <button className="ad-btn-ghost ad-span-2" onClick={() => setSalesFor(b)}>
                           Shitjet
                         </button>
+                        {b.portalEnabled ? (
+                          <>
+                            <button
+                              type="button"
+                              className="ad-btn-ghost"
+                              onClick={() => openPortalLogins(b)}
+                            >
+                              {b.portalLoginDevices || 0} pajisje portal
+                            </button>
+                            <button
+                              className="ad-btn-ghost"
+                              disabled={busyId === b.id}
+                              onClick={() => createPortalAccount(b)}
+                            >
+                              Reset portal
+                            </button>
+                            <button
+                              className="ad-btn-danger"
+                              disabled={busyId === b.id}
+                              onClick={() => removePortalAccount(b)}
+                            >
+                              Remove portal
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="ad-btn-ghost"
+                            disabled={busyId === b.id}
+                            onClick={() => createPortalAccount(b)}
+                          >
+                            Give portal access
+                          </button>
+                        )}
                         {b.licenseStatus === 'revoked' ? (
                           <button className="ad-btn-ghost" disabled={busyId === b.id} onClick={() => runAction(b.id, () => api.reactivateLicense(b.id))}>
                             Reactivate
@@ -715,8 +731,10 @@ export default function Businesses() {
                         <button className="ad-btn-danger" disabled={busyId === b.id} onClick={() => onDelete(b)}>Delete</button>
                       </div>
                     </td>
+                    )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

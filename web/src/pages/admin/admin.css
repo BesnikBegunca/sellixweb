@@ -632,6 +632,34 @@
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 14px;
   background: rgba(255,255,255,.02);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.ad-biz-table tbody tr:hover {
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.035);
+}
+.ad-biz-table tbody tr.ad-biz-row-open {
+  border-color: oklch(0.82 0.12 195 / 0.35);
+  background: rgba(255,255,255,.04);
+}
+.ad-biz-chevron {
+  display: inline-block;
+  width: 1em;
+  color: #8FA0B2;
+  font-size: 12px;
+}
+.ad-biz-tap {
+  margin-top: 2px;
+  font-size: 11px !important;
+}
+.ad-biz-details-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: #6E8378;
+  text-transform: uppercase;
+  margin-bottom: 2px;
 }
 .ad-biz-table td {
   display: grid;
