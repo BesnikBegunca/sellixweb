@@ -271,46 +271,45 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
 /**
  * Mirror occupied floor tables into open sales so Shitjet + bar see prints even
  * when the till only pushed the table snapshot (common on older POS builds).
- * Free tables drop only floor:* placeholders; real open invoices wait for Paguaj.
- * Tables paid in the same sync must not be re-opened from a stale floor snapshot.
+ *
+ * After Paguaj the next Printo must add a NEW open invoice (not reopen the paid
+ * one). Each new visit gets a fresh floor:* sale_uid so the bar keeps growing.
  */
-function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = []) {
-  const paid = new Set(
-    (Array.isArray(paidTables) ? paidTables : []).map((t) => String(t || '').trim().toLowerCase())
-  );
+function syncOpenSalesFromFloor(businessId, deviceId, tables, _paidTables = []) {
   const now = shopNowLocal();
   for (const table of tables) {
     const tableName = table.table_name;
     const staffName = table.staff_name || '';
-    if (paid.has(String(tableName || '').trim().toLowerCase())) {
-      deleteFloorOpenOnTable.run(businessId, tableName, staffName);
-      continue;
-    }
+
     if (!table.occupied || table.total_cents <= 0) {
       deleteFloorOpenOnTable.run(businessId, tableName, staffName);
       continue;
     }
-    const existing = findOpenOnTable.get(businessId, tableName, staffName);
-    if (existing) {
+
+    const existingOpen = findOpenOnTable.get(businessId, tableName, staffName);
+    if (existingOpen) {
+      // Same visit — more prints before pay.
       updateSale.run({
-        id: existing.id,
-        device_id: deviceId || existing.device_id,
-        sold_at: existing.sold_at || now,
+        id: existingOpen.id,
+        device_id: deviceId || existingOpen.device_id,
+        sold_at: existingOpen.sold_at || now,
         total_cents: table.total_cents,
-        tax_cents: existing.tax_cents ?? 0,
-        discount_cents: existing.discount_cents ?? 0,
-        payment_method: existing.payment_method || 'cash',
+        tax_cents: existingOpen.tax_cents ?? 0,
+        discount_cents: existingOpen.discount_cents ?? 0,
+        payment_method: existingOpen.payment_method || 'cash',
         table_name: tableName,
-        receipt_no: existing.receipt_no || '',
-        staff_name: staffName || existing.staff_name || '',
+        receipt_no: existingOpen.receipt_no || '',
+        staff_name: staffName || existingOpen.staff_name || '',
         status: 'open'
       });
       continue;
     }
+
+    // New visit (first print, or print again after Paguaj).
     insertSale.run({
       business_id: businessId,
       device_id: deviceId || '',
-      sale_uid: floorSaleUid(tableName, staffName),
+      sale_uid: `${floorSaleUid(tableName, staffName)}:${Date.now()}`.slice(0, 200),
       sold_at: now,
       total_cents: table.total_cents,
       tax_cents: 0,
