@@ -208,20 +208,26 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
   const paidTables = new Set();
+  const parsed = [];
   for (const raw of rawSales) {
     const sale = parseSale(raw);
     if (!sale) {
       rejected += 1;
       continue;
     }
-    upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
       paidTables.add(sale.table_name);
     }
-    accepted += 1;
+    parsed.push(sale);
   }
+  // Close prior open visits before upserting this batch so a new open print
+  // on the same table (next visit after Paguaj) is not immediately closed.
   for (const tableName of paidTables) {
     closeOpenOnTable.run(businessId, tableName);
+  }
+  for (const sale of parsed) {
+    upsertSale(businessId, deviceId, sale);
+    accepted += 1;
   }
   return { accepted, rejected };
 });
