@@ -45,6 +45,18 @@ export default function PortalTables() {
   if (error && !floor) return <div className="ad-error">{error}</div>;
   if (loading && !floor) return <div className="ad-hint">Duke ngarkuar tavolinat…</div>;
 
+  const paidToday = overview?.totals?.today || { total: 0, count: 0 };
+  const openTotal = Number(floor?.openTotal) || 0;
+  const openCount = Number(floor?.occupied) || 0;
+  // Ring = paid today + live open tables (floor/open sales). Tables can show
+  // amounts from the till snapshot while sales rows are still catching up.
+  const ringTotals = {
+    today: {
+      total: Number(paidToday.total || 0) + openTotal,
+      count: Number(paidToday.count || 0) + openCount
+    }
+  };
+
   return (
     <div className="pt-page">
       <div className="pt-page-head">
@@ -59,7 +71,7 @@ export default function PortalTables() {
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
       <TodayRing
-        totals={overview?.totals}
+        totals={ringTotals}
         goal={overview?.goal}
         onSaveGoal={async (value) => {
           const { goal } = await api.portalSetGoal(value);

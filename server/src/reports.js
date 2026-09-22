@@ -291,7 +291,8 @@ function sumSales(businessId, period, asOf) {
     .prepare(
       `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
        FROM sales
-       WHERE business_id = ?${filter.sql}`
+       WHERE business_id = ?
+         AND LOWER(COALESCE(status, 'paid')) != 'open'${filter.sql}`
     )
     .get(businessId, ...filter.params);
   return { total: fromCents(row.total_cents), count: row.count };
