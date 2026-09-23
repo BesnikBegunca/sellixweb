@@ -139,7 +139,7 @@ portalRouter.patch('/me/goal', requirePortal, (req, res) => {
 });
 
 function notifySettingsPayload(row) {
-  const mode = String(row.notify_mode || 'customize').toLowerCase();
+  const mode = String(row.notify_mode || 'always').toLowerCase();
   const thresholdCents =
     row.notify_threshold_cents > 0
       ? row.notify_threshold_cents
@@ -147,7 +147,7 @@ function notifySettingsPayload(row) {
         ? row.daily_goal_cents
         : 10000;
   return {
-    mode: mode === 'always' || mode === 'off' || mode === 'customize' ? mode : 'customize',
+    mode: mode === 'always' || mode === 'off' || mode === 'customize' ? mode : 'always',
     threshold: thresholdCents / 100
   };
 }
@@ -177,6 +177,8 @@ portalRouter.patch('/me/notify-settings', requirePortal, (req, res) => {
   db.prepare(
     `UPDATE businesses SET notify_mode = ?, notify_threshold_cents = ?, updated_at = datetime('now') WHERE id = ?`
   ).run(mode, thresholdCents, row.id);
+  // Let the next Shtyp/Mbyll fire a fresh notify under the new rules.
+  db.prepare('DELETE FROM notify_state WHERE business_id = ?').run(row.id);
   const updated = db.prepare('SELECT * FROM businesses WHERE id = ?').get(row.id);
   res.json(notifySettingsPayload(updated));
 });
@@ -370,9 +372,10 @@ portalRouter.post('/push/test', requirePortal, pushLimiter, async (req, res) => 
   const row = requireActivePortal(req, res);
   if (!row) return;
   const result = await sendToBusinesses([row.id], {
-    title: 'SelliX',
-    body: 'Njoftimet janë aktive. Do të njoftoheni kur të arrini objektivin ditor.',
-    url: '/portal'
+    title: row.name || 'SelliX',
+    body: 'PRINTUAR 0 EURO\nTOTALI : njoftimet jane aktive',
+    url: '/portal',
+    tag: `test-${Date.now()}`
   });
-  res.json({ ok: true, ...result });
+  res.json({ ok: true, devices: subscriptionCount(row.id), ...result });
 });

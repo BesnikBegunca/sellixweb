@@ -158,7 +158,7 @@ function todayNotifyCents(businessId) {
 }
 
 function readNotifyPrefs(business) {
-  const mode = String(business.notify_mode || 'customize').toLowerCase();
+  const mode = String(business.notify_mode || 'always').toLowerCase();
   const threshold =
     business.notify_threshold_cents > 0
       ? business.notify_threshold_cents
@@ -168,7 +168,7 @@ function readNotifyPrefs(business) {
   if (mode === 'always' || mode === 'off' || mode === 'customize') {
     return { mode, thresholdCents: threshold };
   }
-  return { mode: 'customize', thresholdCents: threshold };
+  return { mode: 'always', thresholdCents: threshold };
 }
 
 function getNotifyState(businessId, day) {
@@ -206,43 +206,68 @@ function notifyPayload(business, printedCents, totalCents, tag) {
 }
 
 /**
- * After till sync (sales or gjendja). Sends push based on portal notify settings:
- * - always: every time today's total goes up
+ * After Shtyp/Mbyll gjendjen sync. Sends push based on portal notify settings:
+ * - always: every time today's gjendja total goes up
  * - customize: when total crosses the user threshold (100€, 200€, …)
  * - off: no automatic total pushes
  */
 export async function checkSalesNotify(business) {
-  const prefs = readNotifyPrefs(business);
-  if (prefs.mode === 'off') return;
+  const row =
+    business?.id != null
+      ? db.prepare('SELECT * FROM businesses WHERE id = ?').get(business.id) || business
+      : business;
+  const prefs = readNotifyPrefs(row);
+  if (prefs.mode === 'off') return { ok: false, reason: 'off' };
 
   const day = shopToday();
-  const total = todayNotifyCents(business.id);
-  if (total <= 0) return;
+  const total = todayNotifyCents(row.id);
+  if (total <= 0) return { ok: false, reason: 'no_total' };
 
-  const state = getNotifyState(business.id, day);
+  let state = getNotifyState(row.id, day);
+
+  // After switching the bar to gjendja-only, older notify_state rows can hold a
+  // higher sales-based total and permanently block pushes. Realign quietly.
+  if ((state.last_total_cents || 0) > total) {
+    upsertNotifyState(row.id, day, 0, 0);
+    state = { last_total_cents: 0, last_milestone: 0 };
+  }
+
   const printed = Math.max(0, total - (state.last_total_cents || 0));
 
   if (prefs.mode === 'always') {
-    if (total <= state.last_total_cents) return;
-    upsertNotifyState(business.id, day, total, state.last_milestone);
-    await sendToBusinesses(
-      [business.id],
-      notifyPayload(business, printed, total, `total-${day}-${total}`)
+    if (total <= state.last_total_cents) return { ok: false, reason: 'unchanged' };
+    const result = await sendToBusinesses(
+      [row.id],
+      notifyPayload(row, printed || total, total, `total-${day}-${total}`)
     );
-    return;
+    // Only lock the day-state after a real delivery — otherwise a missing
+    // subscription permanently swallows the notify.
+    if (result.delivered > 0) {
+      upsertNotifyState(row.id, day, total, state.last_milestone);
+    } else {
+      console.warn('notify always: undelivered', row.id, result);
+    }
+    return { ok: true, ...result };
   }
 
   // customize — milestone every N euros (e.g. 100, 200, 300…)
   const step = prefs.thresholdCents;
-  if (step <= 0) return;
+  if (step <= 0) return { ok: false, reason: 'bad_step' };
   const milestone = Math.floor(total / step);
-  if (milestone < 1 || milestone <= state.last_milestone) return;
+  if (milestone < 1 || milestone <= state.last_milestone) {
+    return { ok: false, reason: 'below_threshold', total, step, milestone, last: state.last_milestone };
+  }
 
-  upsertNotifyState(business.id, day, total, milestone);
-  await sendToBusinesses(
-    [business.id],
-    notifyPayload(business, printed || step, total, `threshold-${day}-${milestone}`)
+  const result = await sendToBusinesses(
+    [row.id],
+    notifyPayload(row, printed || step, total, `threshold-${day}-${milestone}`)
   );
+  if (result.delivered > 0) {
+    upsertNotifyState(row.id, day, total, milestone);
+  } else {
+    console.warn('notify customize: undelivered', row.id, result);
+  }
+  return { ok: true, ...result };
 }
 
 /** @deprecated use checkSalesNotify — kept so older call sites still work */

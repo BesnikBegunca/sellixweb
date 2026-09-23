@@ -156,7 +156,7 @@ const BUSINESS_MIGRATIONS = [
   ['daily_goal_cents', 'ALTER TABLE businesses ADD COLUMN daily_goal_cents INTEGER NOT NULL DEFAULT 0'],
   ['license_notice_at', 'ALTER TABLE businesses ADD COLUMN license_notice_at TEXT'],
   ['portal_password_plain', "ALTER TABLE businesses ADD COLUMN portal_password_plain TEXT NOT NULL DEFAULT ''"],
-  ["notify_mode", "ALTER TABLE businesses ADD COLUMN notify_mode TEXT NOT NULL DEFAULT 'customize'"],
+  ["notify_mode", "ALTER TABLE businesses ADD COLUMN notify_mode TEXT NOT NULL DEFAULT 'always'"],
   ['notify_threshold_cents', 'ALTER TABLE businesses ADD COLUMN notify_threshold_cents INTEGER NOT NULL DEFAULT 10000']
 ];
 for (const [column, sql] of BUSINESS_MIGRATIONS) {

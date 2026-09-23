@@ -103,7 +103,7 @@ function AccountTab({ business }) {
 }
 
 function NotificationsTab() {
-  const [mode, setMode] = useState('customize');
+  const [mode, setMode] = useState('always');
   const [threshold, setThreshold] = useState('100');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -115,7 +115,7 @@ function NotificationsTab() {
     api.portalNotifySettings()
       .then((s) => {
         if (!alive) return;
-        setMode(s.mode || 'customize');
+        setMode(s.mode || 'always');
         setThreshold(String(s.threshold || 100));
       })
       .catch((e) => alive && setError(e.message))

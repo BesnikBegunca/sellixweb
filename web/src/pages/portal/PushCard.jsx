@@ -112,7 +112,7 @@ export default function PushCard({ compact = false }) {
     <div className="ad-card pt-panel">
       <h2 className="ad-heading pt-h">Njoftimet</h2>
       <p className="ad-hint" style={{ margin: '0 0 14px', lineHeight: 1.5 }}>
-        Njoftim në telefon kur arrini objektivin ditor dhe kur SelliX ju dërgon një mesazh.
+        Aktivizo njoftimet në këtë pajisje. Pastaj te cilësimet lart zgjidh Always ose Customize.
       </p>
       {support === 'needs-install' && (
         <ol className="pt-push-steps">

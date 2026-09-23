@@ -143,7 +143,14 @@ shiftsRouter.post('/sync', (req, res) => {
   const result = syncBatch(row.id, deviceId, shifts);
   if (result.accepted > 0) {
     publish(row.id, { shifts: result.accepted });
-    setImmediate(() => checkSalesNotify(row).catch((err) => console.warn('notify push', err?.message)));
+    setImmediate(() => {
+      checkSalesNotify(row)
+        .then((r) => {
+          if (r && r.ok === false) console.warn('notify skip', row.id, r.reason || r);
+          else if (r && !r.delivered) console.warn('notify no delivery', row.id, r);
+        })
+        .catch((err) => console.warn('notify push', err?.message));
+    });
   }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected });
 });

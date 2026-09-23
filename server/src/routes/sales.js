@@ -4,7 +4,6 @@ import { db } from '../db.js';
 import { effectiveStatus, findLiveByLicenseKey } from '../licenses.js';
 import { toCents } from '../reports.js';
 import { publish } from '../events.js';
-import { checkSalesNotify } from '../push.js';
 
 export const salesRouter = Router();
 
@@ -415,10 +414,6 @@ salesRouter.post('/sync', (req, res) => {
   // that accepted nothing changed nothing, so it stays quiet.
   if (result.accepted > 0 || Array.isArray(floor)) {
     publish(row.id, { accepted: result.accepted, tables });
-  }
-  // Runs after the response so a slow push service never delays the till.
-  if (result.accepted > 0) {
-    setImmediate(() => checkSalesNotify(row).catch((err) => console.warn('notify push', err?.message)));
   }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, tables });
 });
