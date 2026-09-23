@@ -602,9 +602,9 @@
 }
 
 .pt-table-card.has-staff {
-  border-color: color-mix(in srgb, var(--staff-color, rgba(255,255,255,.09)) 55%, rgba(255,255,255,.09));
-  border-left: 4px solid var(--staff-color, #5EC79A);
-  background: color-mix(in srgb, var(--staff-color, transparent) 8%, rgba(255,255,255,.03));
+  border-color: color-mix(in srgb, var(--staff-color, #22C55E) 45%, rgba(255,255,255,.1));
+  border-left: 5px solid var(--staff-color, #22C55E);
+  background: color-mix(in srgb, var(--staff-color, transparent) 12%, rgba(255,255,255,.03));
 }
 
 .pt-table-top {
@@ -615,9 +615,14 @@
   margin-bottom: 8px;
 }
 
+.pt-table-card.has-staff .pt-table-name.ad-heading,
 .pt-table-card.has-staff .pt-table-name {
-  color: var(--staff-color, #ECF3EE);
+  color: var(--staff-color, #ECF3EE) !important;
   margin-bottom: 0;
+}
+
+.pt-table-card.has-staff .pt-table-total {
+  color: var(--staff-color, #ECF3EE);
 }
 
 .pt-table-waiter-chip {

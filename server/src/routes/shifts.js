@@ -112,10 +112,32 @@ const upsertShift = db.prepare(`
     synced_at = datetime('now')
 `);
 
+/** Same as desktop Mbyll gjendjen: free every table and close open tabs on the portal. */
+const clearFloorOnClose = db.prepare('DELETE FROM restaurant_tables WHERE business_id = ?');
+const settleOpenSalesOnClose = db.prepare(`
+  UPDATE sales
+  SET status = 'paid', synced_at = datetime('now')
+  WHERE business_id = ?
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+`);
+
+function closeTablesLikeDesktop(businessId) {
+  const opened = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM sales
+       WHERE business_id = ? AND LOWER(COALESCE(status, 'paid')) = 'open'`
+    )
+    .get(businessId)?.n || 0;
+  clearFloorOnClose.run(businessId);
+  settleOpenSalesOnClose.run(businessId);
+  return { clearedFloor: true, settledOpens: opened };
+}
+
 const syncBatch = db.transaction((businessId, deviceId, rawShifts) => {
   let accepted = 0;
   let rejected = 0;
   const events = [];
+  let closed = false;
   for (const raw of rawShifts) {
     const shift = parseShift(raw);
     if (!shift) {
@@ -128,9 +150,14 @@ const syncBatch = db.transaction((businessId, deviceId, rawShifts) => {
       totalCents: shift.total_cents,
       eventUid: shift.event_uid
     });
+    if (shift.kind === 'closed') closed = true;
     accepted += 1;
   }
-  return { accepted, rejected, events };
+  let floor = null;
+  if (closed && accepted > 0) {
+    floor = closeTablesLikeDesktop(businessId);
+  }
+  return { accepted, rejected, events, closed, floor };
 });
 
 shiftsRouter.post('/sync', (req, res) => {
@@ -148,7 +175,11 @@ shiftsRouter.post('/sync', (req, res) => {
   const deviceId = asString(pick(req.body, 'deviceId', 'device_id'), 200);
   const result = syncBatch(row.id, deviceId, shifts);
   if (result.accepted > 0) {
-    publish(row.id, { shifts: result.accepted });
+    publish(row.id, {
+      shifts: result.accepted,
+      closed: !!result.closed,
+      tables: result.closed ? 0 : undefined
+    });
     setImmediate(() => {
       notifyGjendjaEvents(row, result.events || [])
         .then((r) => {
@@ -158,5 +189,5 @@ shiftsRouter.post('/sync', (req, res) => {
         .catch((err) => console.warn('gjendja notify', err?.message));
     });
   }
-  res.json({ ok: true, accepted: result.accepted, rejected: result.rejected });
+  res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, closed: !!result.closed });
 });

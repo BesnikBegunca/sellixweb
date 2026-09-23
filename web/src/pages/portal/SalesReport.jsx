@@ -2,7 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { PERIODS, formatEuro, formatQty, paymentLabel, dayLabel, monthLabel, registerLabel, DEFAULT_DAILY_GOAL, periodGoal, periodLabel } from '../../lib/sales';
 import { liveClock } from '../../lib/useLiveRefresh';
 
-const STAFF_COLORS = ['#5EEAD4', '#38BDF8', '#86EFAC', '#FBBF24', '#FB7185', '#67E8F9', '#FDBA74', '#A3E635'];
+const STAFF_COLORS = [
+  '#F43F5E', // rose
+  '#22C55E', // green
+  '#F59E0B', // amber
+  '#A855F7', // purple
+  '#EF4444', // red
+  '#EC4899', // pink
+  '#84CC16', // lime
+  '#14B8A6'  // teal
+];
 const STAFF_UNNAMED = 'Pa kamarjer';
 
 export function staffLabel(name) {
@@ -10,8 +19,21 @@ export function staffLabel(name) {
   return trimmed || STAFF_UNNAMED;
 }
 
-export function staffColor(name) {
+/** Stable distinct colors by waiter order — not hash (hash often looked the same / blue). */
+export function staffColorMap(names) {
+  const sorted = [...new Set((names || []).map(staffLabel))].sort((a, b) =>
+    a.localeCompare(b, 'sq', { sensitivity: 'base' })
+  );
+  const map = new Map();
+  sorted.forEach((name, i) => {
+    map.set(name, STAFF_COLORS[i % STAFF_COLORS.length]);
+  });
+  return map;
+}
+
+export function staffColor(name, map) {
   const key = staffLabel(name);
+  if (map?.has(key)) return map.get(key);
   let hash = 0;
   for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
   return STAFF_COLORS[hash % STAFF_COLORS.length];
@@ -278,15 +300,7 @@ export function TablesGrid({ tables }) {
     const names = [...new Set(rows.map((t) => staffLabel(t.staffName)))];
     return names.sort((a, b) => a.localeCompare(b, 'sq', { sensitivity: 'base' }));
   }, [rows]);
-
-  const sameTableShared = useMemo(() => {
-    const counts = new Map();
-    for (const t of rows) {
-      const n = String(t.name || '').trim().toLowerCase();
-      counts.set(n, (counts.get(n) || 0) + 1);
-    }
-    return [...counts.values()].some((c) => c > 1);
-  }, [rows]);
+  const colors = useMemo(() => staffColorMap(staffNames), [staffNames]);
 
   useEffect(() => {
     if (staffFilter && !staffNames.includes(staffFilter)) setStaffFilter('');
@@ -297,14 +311,12 @@ export function TablesGrid({ tables }) {
   }
 
   const visible = staffFilter ? rows.filter((t) => staffLabel(t.staffName) === staffFilter) : rows;
-  const showStaffChrome =
-    staffNames.length > 1 ||
-    sameTableShared ||
-    (staffNames.length === 1 && staffNames[0] !== STAFF_UNNAMED);
+  // Always color by waiter — even a single named waiter gets their own color.
+  const showStaffChrome = true;
 
   return (
     <div>
-      {showStaffChrome && (
+      {staffNames.length > 0 && (
         <div className="pt-pills pt-staff-pills" role="tablist" aria-label="Kamarjerët">
           <button
             type="button"
@@ -318,7 +330,7 @@ export function TablesGrid({ tables }) {
               key={name}
               type="button"
               className={`pt-pill pt-staff-pill${staffFilter === name ? ' active' : ''}`}
-              style={{ '--staff-color': staffColor(name) }}
+              style={{ '--staff-color': staffColor(name, colors) }}
               onClick={() => setStaffFilter(name)}
             >
               <span className="pt-staff-dot" />
@@ -333,23 +345,21 @@ export function TablesGrid({ tables }) {
         <div className="pt-tables">
           {visible.map((t) => {
             const waiter = staffLabel(t.staffName);
-            const color = staffColor(t.staffName);
+            const color = staffColor(waiter, colors);
             return (
               <div
                 key={`${t.name}::${t.staffName || ''}`}
                 className={`ad-card pt-table-card${showStaffChrome ? ' has-staff' : ''}`}
-                style={showStaffChrome ? { '--staff-color': color } : undefined}
+                style={{ '--staff-color': color }}
               >
                 <div className="pt-table-top">
                   <div className="ad-heading pt-table-name">{t.name}</div>
-                  {showStaffChrome && (
-                    <span className="pt-table-waiter-chip" style={{ '--staff-color': color }}>
-                      <span className="pt-staff-dot" />
-                      {waiter}
-                    </span>
-                  )}
+                  <span className="pt-table-waiter-chip" style={{ '--staff-color': color }}>
+                    <span className="pt-staff-dot" />
+                    {waiter}
+                  </span>
                 </div>
-                <div className="pt-table-total">{formatEuro(t.total)}</div>
+                <div className="pt-table-total" style={{ color }}>{formatEuro(t.total)}</div>
                 <div className="ad-hint">{t.count} {t.count === 1 ? 'porosi' : 'porosi'}</div>
               </div>
             );
