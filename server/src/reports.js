@@ -404,23 +404,10 @@ function sortTables(tables) {
 /**
  * Live tavolina + waiter print bar for today.
  *
- * Bar = total of waiter printing (open + paid invoices today). Printo→Paguaj is
- * one invoice so it is not counted twice and the bar does not drop on pay.
- * Floor snapshot fills open amounts that are not yet in sales rows.
+ * Bar = paid today + open tabs (deduped). Paguaj moves open→paid so the bar
+ * never drops — only the table leaves the grid when the till marks it free.
  */
 export function liveTables(businessId, asOf = shopToday()) {
-  const byKey = new Map();
-
-  for (const row of openTableRows(businessId)) {
-    const number = tableNumber(row.name);
-    const name = number ? `Tavolina ${number}` : row.name;
-    const staffName = String(row.staff_name || '').trim();
-    byKey.set(
-      `${name}\0${staffName}`,
-      mapTableRow({ ...row, name, staff_name: staffName })
-    );
-  }
-
   const snapshot = db
     .prepare(
       `SELECT table_name AS name, occupied, total_cents, staff_name
@@ -429,6 +416,29 @@ export function liveTables(businessId, asOf = shopToday()) {
        ORDER BY table_name COLLATE NOCASE ASC, staff_name COLLATE NOCASE ASC`
     )
     .all(businessId);
+
+  const freeTableNames = new Set();
+  const hasFloor = snapshot.length > 0;
+  for (const row of snapshot) {
+    if (Number(row.occupied) === 1) continue;
+    const number = tableNumber(row.name);
+    const name = number ? `Tavolina ${number}` : row.name;
+    freeTableNames.add(name.trim().toLowerCase());
+  }
+
+  const byKey = new Map();
+  for (const row of openTableRows(businessId)) {
+    const number = tableNumber(row.name);
+    const name = number ? `Tavolina ${number}` : row.name;
+    // Till already freed the table — hide it from the grid, but openSalesLatestSum
+    // still counts the invoice until Paguaj lands (bar must not drop).
+    if (hasFloor && freeTableNames.has(name.trim().toLowerCase())) continue;
+    const staffName = String(row.staff_name || '').trim();
+    byKey.set(
+      `${name}\0${staffName}`,
+      mapTableRow({ ...row, name, staff_name: staffName })
+    );
+  }
 
   for (const row of snapshot) {
     if (Number(row.occupied) !== 1) continue;

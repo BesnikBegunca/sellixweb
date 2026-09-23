@@ -147,12 +147,6 @@ const updateSale = db.prepare(`
   WHERE id = @id
 `);
 
-const deleteOpenOnTable = db.prepare(`
-  DELETE FROM sales
-  WHERE business_id = ?
-    AND TRIM(table_name) = TRIM(?)
-    AND LOWER(COALESCE(status, 'paid')) = 'open'
-`);
 const findSale = db.prepare('SELECT * FROM sales WHERE business_id = ? AND sale_uid = ?');
 const findOpenOnTable = db.prepare(`
   SELECT * FROM sales
@@ -171,18 +165,12 @@ const deleteAllFloorOpensOnTable = db.prepare(`
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid LIKE 'floor:%'
 `);
-// A table the floor reports as free was paid (the till only clears a table
-// after Paguaj), so its leftover open invoice is settled rather than deleted:
-// the money must never drop off the bar. Paguaj later resends the same
-// sale_uid, which updates this very row instead of adding a second one.
-// Scoped to the till that sent the snapshot so another till's live visit stays.
-const settleStaleOpensOnTable = db.prepare(`
-  UPDATE sales SET status = 'paid', synced_at = datetime('now')
+const deleteOpensOnTableExceptUid = db.prepare(`
+  DELETE FROM sales
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
-    AND sale_uid NOT LIKE 'floor:%'
-    AND (device_id = ? OR TRIM(COALESCE(device_id, '')) = '')
+    AND sale_uid != ?
 `);
 const deleteOtherOpensOnTable = db.prepare(`
   DELETE FROM sales
@@ -279,14 +267,13 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     }
     parsed.push(sale);
   }
-  // Remove prior open visits before upserting paid so Printo→Paguaj stays one
-  // invoice in totals (no double count, bar does not drop).
-  for (const tableName of paidTables) {
-    deleteOpenOnTable.run(businessId, tableName);
-  }
   for (const sale of parsed) {
     upsertSale(businessId, deviceId, sale);
-    // POS open invoice wins — drop floor:* duplicates so table totals don't double.
+    if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
+      // Close the visit: keep the paid row (same uid updates open→paid), drop
+      // any other open ghosts on that table. Bar total stays (open moves to paid).
+      deleteOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
+    }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       deleteAllFloorOpensOnTable.run(businessId, sale.table_name);
       const kept = findOpenOnTable.get(
@@ -304,29 +291,22 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
 /**
  * Mirror occupied floor into at most one open sale per table.
  * Prefer an existing POS open; only mint floor:* when none exists.
+ *
+ * Free / just-paid floor must NOT delete or settle opens — that races ahead of
+ * Paguaj and drops the bar. Only a paid sale closes invoices.
  */
 function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], openTables = []) {
   const now = shopNowLocal();
   const normalize = (value) => String(value || '').trim().toLowerCase();
   const paid = new Set(paidTables.map(normalize));
-  const opened = new Set(openTables.map(normalize));
 
   for (const table of tables) {
     const tableName = table.table_name;
     const staffName = table.staff_name || '';
-    // Paguaj syncs before the till clears the table, so the snapshot in that
-    // same request still says "occupied". Treat a table paid in this batch as
-    // free, otherwise the mirror mints a ghost open and the total double-counts.
     const justPaid = paid.has(normalize(tableName));
 
+    // Freed on till, or paid in this same batch — do not touch sales rows.
     if (!table.occupied || table.total_cents <= 0 || justPaid) {
-      // Mirror ghosts stand for no real invoice, so they go.
-      deleteAllFloorOpensOnTable.run(businessId, tableName);
-      // Unless the same batch also brought a fresh open for this table (a new
-      // visit started right after paying), settle what is left over.
-      if (!opened.has(normalize(tableName))) {
-        settleStaleOpensOnTable.run(businessId, tableName, deviceId || '');
-      }
       continue;
     }
 
