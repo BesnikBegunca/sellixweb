@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { effectiveStatus, findLiveByLicenseKey } from '../licenses.js';
 import { toCents } from '../reports.js';
 import { publish } from '../events.js';
+import { checkSalesNotify } from '../push.js';
 
 export const salesRouter = Router();
 
@@ -414,6 +415,17 @@ salesRouter.post('/sync', (req, res) => {
   // that accepted nothing changed nothing, so it stays quiet.
   if (result.accepted > 0 || Array.isArray(floor)) {
     publish(row.id, { accepted: result.accepted, tables });
+  }
+  // Live bar moves with invoices — notify after accepted sales too.
+  if (result.accepted > 0) {
+    setImmediate(() => {
+      checkSalesNotify(row)
+        .then((r) => {
+          if (r && r.ok === false) console.warn('notify skip', row.id, r.reason || r);
+          else if (r && !r.delivered) console.warn('notify no delivery', row.id, r);
+        })
+        .catch((err) => console.warn('notify push', err?.message));
+    });
   }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, tables });
 });

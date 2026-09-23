@@ -322,8 +322,7 @@ export function periodTotals(businessId, asOf) {
 }
 
 /**
- * Bar = totali i gjendjes (Shtyp / Mbyll). Latest event per shift for the day.
- * Paguaj never touches this — only a new Shtyp/Mbyll changes it.
+ * Bar from Shtyp/Mbyll — latest event per shift for the day.
  */
 export function shiftDayBar(businessId, asOf) {
   const rows = db
@@ -347,9 +346,16 @@ export function shiftDayBar(businessId, asOf) {
   return { total: fromCents(cents), count: rows.length };
 }
 
-/** Same figure as Gjendja "Totali ditor" for that day — never from live sales. */
+/**
+ * Live day bar: follows gjendja live (open + paid invoices) as the till syncs.
+ * Printo / floor sync raises it immediately; Paguaj only flips open→paid so the
+ * amount stays. Shtyp/Mbyll is used when it is higher (or before any invoice).
+ */
 export function dayBarTotal(businessId, asOf) {
-  return shiftDayBar(businessId, asOf);
+  const live = dayOrdersTotal(businessId, asOf);
+  const printed = shiftDayBar(businessId, asOf);
+  if (live.total >= printed.total) return live;
+  return printed;
 }
 
 /** Day's active orders (open + paid). Drops only when the till voids an order. */
