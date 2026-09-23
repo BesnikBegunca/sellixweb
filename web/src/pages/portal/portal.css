@@ -871,6 +871,42 @@
   margin-bottom: 18px;
 }
 
+.pt-gj-stats-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 720px) {
+  .pt-gj-stats-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pt-gj-day-money {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.pt-gj-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #A9BCB0;
+}
+
+.pt-gj-segments b {
+  color: #E8F2EC;
+  font-weight: 700;
+}
+
 .pt-gj-stat {
   padding: 14px 16px;
   border: 1px solid rgba(255,255,255,.08);

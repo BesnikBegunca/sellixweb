@@ -118,8 +118,15 @@ function parseTableStatus(raw) {
   const value = asString(pick(raw, 'status', 'tableStatus', 'state'), 20).toLowerCase();
   if (value === 'open' || value === 'printed' || value === 'occupied') return 'open';
   if (value === 'paid' || value === 'closed' || value === 'completed') return 'paid';
-  // Admin / manager deleted or cancelled the order on the till — drops the bar.
-  if (value === 'void' || value === 'deleted' || value === 'cancelled' || value === 'canceled') {
+  // Admin / manager deleted, cancelled, or refunded the order on the till.
+  if (
+    value === 'void' ||
+    value === 'deleted' ||
+    value === 'cancelled' ||
+    value === 'canceled' ||
+    value === 'refund' ||
+    value === 'refunded'
+  ) {
     return 'void';
   }
   return undefined;
@@ -184,6 +191,12 @@ const voidOtherOpensOnTable = db.prepare(`
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND id != ?
+`);
+const freeFloorOnTable = db.prepare(`
+  UPDATE restaurant_tables
+  SET occupied = 0, total_cents = 0, updated_at = datetime('now')
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
 `);
 const deleteItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
 const insertItem = db.prepare(`
@@ -253,8 +266,11 @@ function upsertSale(businessId, deviceId, sale) {
 const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
+  let lastInvoiceCents = 0;
+  let refundCents = 0;
   const paidTables = new Set();
   const openTables = new Set();
+  const voidTables = new Set();
   const parsed = [];
   for (const raw of rawSales) {
     const sale = parseSale(raw);
@@ -268,14 +284,19 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       openTables.add(sale.table_name);
     }
+    if ((sale.status ?? 'paid') === 'void' && sale.table_name) {
+      voidTables.add(sale.table_name);
+    }
     parsed.push(sale);
   }
   for (const sale of parsed) {
+    const before = findSale.get(businessId, sale.sale_uid);
     upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
       // Printo→Paguaj: same uid becomes paid; void only duplicate opens (floor:*).
       // Amounts stay in the bar — void rows are excluded, paid row keeps the total.
       voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
+      lastInvoiceCents = sale.total_cents || lastInvoiceCents;
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       voidAllFloorOpensOnTable.run(businessId, sale.table_name);
@@ -285,13 +306,26 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
         sale.staff_name || ''
       );
       if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
+      lastInvoiceCents = sale.total_cents || lastInvoiceCents;
     }
-    // A void needs nothing else: upsertSale already flipped that one invoice,
-    // and reports leave void rows out, so the bar drops by exactly its amount.
-    // Other invoices on the same table belong to other orders and stay.
+    if ((sale.status ?? 'paid') === 'void') {
+      // Drop the invoice from the bar and free the table on the floor snapshot
+      // so the portal updates live without waiting for another floor push.
+      const amount = sale.total_cents || before?.total_cents || 0;
+      refundCents += Math.max(0, amount);
+      if (sale.table_name) freeFloorOnTable.run(businessId, sale.table_name);
+    }
     accepted += 1;
   }
-  return { accepted, rejected, paidTables: [...paidTables], openTables: [...openTables] };
+  return {
+    accepted,
+    rejected,
+    paidTables: [...paidTables],
+    openTables: [...openTables],
+    voidTables: [...voidTables],
+    lastInvoiceCents,
+    refundCents
+  };
 });
 
 /**
@@ -411,15 +445,24 @@ salesRouter.post('/sync', (req, res) => {
   if (Array.isArray(floor)) {
     tables = replaceFloor(row.id, deviceId, floor, result.paidTables || [], result.openTables || []);
   }
-  // Tell every open portal and admin tab for this business to refetch. A sync
-  // that accepted nothing changed nothing, so it stays quiet.
-  if (result.accepted > 0 || Array.isArray(floor)) {
-    publish(row.id, { accepted: result.accepted, tables });
+  // Voids free the floor even when the till omitted a fresh snapshot.
+  for (const tableName of result.voidTables || []) {
+    freeFloorOnTable.run(row.id, tableName);
   }
-  // Live bar moves with invoices — notify after accepted sales too.
+  // Tell every open portal and admin tab for this business to refetch.
+  if (result.accepted > 0 || Array.isArray(floor) || (result.voidTables || []).length) {
+    publish(row.id, {
+      accepted: result.accepted,
+      tables,
+      refund: result.refundCents > 0
+    });
+  }
   if (result.accepted > 0) {
     setImmediate(() => {
-      checkSalesNotify(row)
+      checkSalesNotify(row, {
+        lastInvoiceCents: result.lastInvoiceCents,
+        refundCents: result.refundCents
+      })
         .then((r) => {
           if (r && r.ok === false) console.warn('notify skip', row.id, r.reason || r);
           else if (r && !r.delivered) console.warn('notify no delivery', row.id, r);

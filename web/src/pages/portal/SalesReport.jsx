@@ -522,16 +522,30 @@ export function GjendjaTable({ data }) {
       .sort((a, b) => b.localeCompare(a))
       .map((key) => {
         const dayShifts = byDay.get(key).slice().sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
-        // Same as server shiftDayBar: latest event per shift (Shtyp or Mbyll).
+        let untilPrint = 0;
+        let printToClose = 0;
         const latestByShift = new Map();
+        const closedShiftKeys = new Set(
+          dayShifts.filter((s) => s.kind === 'closed').map((s) => String(s.shiftUid || s.uid))
+        );
         for (const s of dayShifts) {
-          latestByShift.set(String(s.shiftUid || s.uid), s);
+          const sk = String(s.shiftUid || s.uid);
+          latestByShift.set(sk, s);
+          if (s.kind === 'closed') {
+            untilPrint += Number(s.untilPrint) || 0;
+            printToClose += Number(s.printToClose) || 0;
+          } else if (s.kind === 'printed' && !closedShiftKeys.has(sk)) {
+            // Shtyp without Mbyll yet — count toward "deri te Shtyp".
+            untilPrint += Number(s.untilPrint ?? s.total) || 0;
+          }
         }
         const total = [...latestByShift.values()].reduce((sum, s) => sum + (Number(s.total) || 0), 0);
         return {
           dayKey: key,
           date: localStamp(`${key} 00:00:00`).date,
           total,
+          untilPrint,
+          printToClose,
           shifts: dayShifts
         };
       });
@@ -549,7 +563,7 @@ export function GjendjaTable({ data }) {
 
   return (
     <div className="ad-card pt-panel">
-      <div className="pt-gj-stats">
+      <div className="pt-gj-stats pt-gj-stats-4">
         <div className="pt-gj-stat">
           <div className="ad-hint">Mbyllje gjendje</div>
           <div className="ad-heading pt-gj-stat-value">{data?.count || 0}</div>
@@ -558,10 +572,19 @@ export function GjendjaTable({ data }) {
           <div className="ad-hint">Totali i të gjithëve</div>
           <div className="ad-heading pt-gj-stat-value">{formatEuro(data?.total)}</div>
         </div>
+        <div className="pt-gj-stat">
+          <div className="ad-hint">Deri te Shtyp</div>
+          <div className="ad-heading pt-gj-stat-value">{formatEuro(data?.untilPrint)}</div>
+        </div>
+        <div className="pt-gj-stat">
+          <div className="ad-hint">Shtyp → Mbyll</div>
+          <div className="ad-heading pt-gj-stat-value">{formatEuro(data?.printToClose)}</div>
+        </div>
       </div>
       <h2 className="ad-heading pt-h">Shitjet sipas mbylljes së gjendjes</h2>
       <p className="ad-hint" style={{ margin: '-8px 0 14px', lineHeight: 1.45 }}>
-        Kliko datën për orën, intervalin, totalin dhe kamarierët.
+        <b>Deri te Shtyp</b> = sa u bë deri sa u klikua Shtyp gjendjen.
+        <b> Shtyp → Mbyll</b> = sa u bë nga Shtyp deri te Mbyll gjendjen.
       </p>
       <div className="pt-gj">
         {days.map((day) => {
@@ -575,6 +598,10 @@ export function GjendjaTable({ data }) {
                 aria-expanded={open}
               >
                 <span className="pt-gj-day-date">{day.date}</span>
+                <span className="pt-gj-day-money">
+                  <span className="ad-hint">Deri te Shtyp {formatEuro(day.untilPrint)}</span>
+                  <span className="ad-hint">Shtyp→Mbyll {formatEuro(day.printToClose)}</span>
+                </span>
                 <span className="pt-gj-day-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
               </button>
               {open && (
@@ -594,6 +621,16 @@ export function GjendjaTable({ data }) {
                           <span className="pt-gj-period" data-label="Periudha">{opened.time} – {closed.time}</span>
                           <span className="pt-gj-total" data-label="Totali">{formatEuro(shift.total)}</span>
                         </div>
+                        {(shift.untilPrint != null || shift.printToClose != null) && (
+                          <div className="pt-gj-segments">
+                            {shift.untilPrint != null && (
+                              <span>Deri te Shtyp: <b>{formatEuro(shift.untilPrint)}</b></span>
+                            )}
+                            {shift.printToClose != null && shift.kind === 'closed' && (
+                              <span>Shtyp → Mbyll: <b>{formatEuro(shift.printToClose)}</b></span>
+                            )}
+                          </div>
+                        )}
                         {waiters.length > 0 && (
                           <ul className="pt-list">
                             {waiters.map((w) => (

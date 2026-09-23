@@ -124,6 +124,7 @@ export async function sendToBusinesses(businessIds, message) {
     body: message.body,
     url: message.url || '/portal',
     tag: message.tag || undefined,
+    tone: message.tone || undefined
   });
   const drop = db.prepare('DELETE FROM push_subscriptions WHERE id = ?');
   const touch = db.prepare("UPDATE push_subscriptions SET last_sent_at = datetime('now') WHERE id = ?");
@@ -136,7 +137,7 @@ export async function sendToBusinesses(businessIds, message) {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
-          { TTL: 60 * 60 * 24, urgency: 'high' }
+          { TTL: 60 * 60 * 24, urgency: message.tone === 'refund' ? 'high' : 'high' }
         );
         touch.run(s.id);
         delivered++;
@@ -195,23 +196,32 @@ function euroPlain(cents) {
   return Number.isInteger(v) ? `${v} EURO` : `${v.toFixed(2)} EURO`;
 }
 
-function notifyPayload(business, printedCents, totalCents, tag) {
+function notifyPayload(business, { invoiceCents, totalCents, tag, tone }) {
   const name = String(business.name || 'SelliX').trim() || 'SelliX';
+  if (tone === 'refund') {
+    return {
+      title: `🔴 ${name}`,
+      body: `REFUND : ${euroPlain(invoiceCents)}\nTOTALI : ${euroPlain(totalCents)}`,
+      url: '/portal',
+      tag,
+      tone: 'refund'
+    };
+  }
   return {
     title: name,
-    body: `PRINTUAR ${euroPlain(printedCents)}\nTOTALI : ${euroPlain(totalCents)}`,
+    body: `PRINTUAR : ${euroPlain(invoiceCents)}\nTOTALI : ${euroPlain(totalCents)}`,
     url: '/portal',
-    tag
+    tag,
+    tone: 'print'
   };
 }
 
 /**
- * After Shtyp/Mbyll gjendjen sync. Sends push based on portal notify settings:
- * - always: every time today's gjendja total goes up
- * - customize: when total crosses the user threshold (100€, 200€, …)
- * - off: no automatic total pushes
+ * After sales or Shtyp/Mbyll sync. opts:
+ * - lastInvoiceCents: last printed/paid invoice in the batch
+ * - refundCents: amount voided/refunded in the batch
  */
-export async function checkSalesNotify(business) {
+export async function checkSalesNotify(business, opts = {}) {
   const row =
     business?.id != null
       ? db.prepare('SELECT * FROM businesses WHERE id = ?').get(business.id) || business
@@ -221,33 +231,54 @@ export async function checkSalesNotify(business) {
 
   const day = shopToday();
   const total = todayNotifyCents(row.id);
-  if (total <= 0) return { ok: false, reason: 'no_total' };
+  const state = getNotifyState(row.id, day);
+  const last = state.last_total_cents || 0;
+  const refundHint = Math.max(0, Number(opts.refundCents) || 0);
+  const invoiceHint = Math.max(0, Number(opts.lastInvoiceCents) || 0);
+  const dropped = Math.max(0, last - total);
+  const isRefund = refundHint > 0 || dropped > 0;
 
-  let state = getNotifyState(row.id, day);
-
-  // After switching the bar to gjendja-only, older notify_state rows can hold a
-  // higher sales-based total and permanently block pushes. Realign quietly.
-  if ((state.last_total_cents || 0) > total) {
-    upsertNotifyState(row.id, day, 0, 0);
-    state = { last_total_cents: 0, last_milestone: 0 };
-  }
-
-  const printed = Math.max(0, total - (state.last_total_cents || 0));
-
-  if (prefs.mode === 'always') {
-    if (total <= state.last_total_cents) return { ok: false, reason: 'unchanged' };
+  if (isRefund) {
+    if (total === last && refundHint <= 0) return { ok: false, reason: 'unchanged' };
+    const refundAmount = refundHint || dropped;
+    if (refundAmount <= 0 && total === last) return { ok: false, reason: 'unchanged' };
     const result = await sendToBusinesses(
       [row.id],
-      notifyPayload(row, printed || total, total, `total-${day}-${total}`)
+      notifyPayload(row, {
+        invoiceCents: refundAmount,
+        totalCents: total,
+        tag: `refund-${day}-${total}-${refundAmount}`,
+        tone: 'refund'
+      })
     );
-    // Only lock the day-state after a real delivery — otherwise a missing
-    // subscription permanently swallows the notify.
+    if (result.delivered > 0) {
+      upsertNotifyState(row.id, day, total, state.last_milestone);
+    } else {
+      console.warn('notify refund: undelivered', row.id, result);
+    }
+    return { ok: true, tone: 'refund', ...result };
+  }
+
+  if (total <= 0) return { ok: false, reason: 'no_total' };
+
+  if (prefs.mode === 'always') {
+    if (total <= last) return { ok: false, reason: 'unchanged' };
+    const printed = invoiceHint || Math.max(0, total - last) || total;
+    const result = await sendToBusinesses(
+      [row.id],
+      notifyPayload(row, {
+        invoiceCents: printed,
+        totalCents: total,
+        tag: `total-${day}-${total}`,
+        tone: 'print'
+      })
+    );
     if (result.delivered > 0) {
       upsertNotifyState(row.id, day, total, state.last_milestone);
     } else {
       console.warn('notify always: undelivered', row.id, result);
     }
-    return { ok: true, ...result };
+    return { ok: true, tone: 'print', ...result };
   }
 
   // customize — milestone every N euros (e.g. 100, 200, 300…)
@@ -255,19 +286,27 @@ export async function checkSalesNotify(business) {
   if (step <= 0) return { ok: false, reason: 'bad_step' };
   const milestone = Math.floor(total / step);
   if (milestone < 1 || milestone <= state.last_milestone) {
+    // Still advance last_total so the next print delta is accurate
+    if (total > last) upsertNotifyState(row.id, day, total, state.last_milestone);
     return { ok: false, reason: 'below_threshold', total, step, milestone, last: state.last_milestone };
   }
 
+  const printed = invoiceHint || Math.max(0, total - last) || step;
   const result = await sendToBusinesses(
     [row.id],
-    notifyPayload(row, printed || step, total, `threshold-${day}-${milestone}`)
+    notifyPayload(row, {
+      invoiceCents: printed,
+      totalCents: total,
+      tag: `threshold-${day}-${milestone}`,
+      tone: 'print'
+    })
   );
   if (result.delivered > 0) {
     upsertNotifyState(row.id, day, total, milestone);
   } else {
     console.warn('notify customize: undelivered', row.id, result);
   }
-  return { ok: true, ...result };
+  return { ok: true, tone: 'print', ...result };
 }
 
 /** @deprecated use checkSalesNotify — kept so older call sites still work */

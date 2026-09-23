@@ -798,26 +798,84 @@ export function listShiftCloses(businessId) {
   const rows = db.prepare(`
     SELECT * FROM shift_closes
     WHERE business_id = ?
-    ORDER BY closed_at DESC, id DESC
+    ORDER BY closed_at ASC, id ASC
   `).all(businessId);
 
-  const shifts = rows.map((r) => ({
-    uid: r.event_uid,
-    shiftUid: r.shift_uid,
-    kind: r.kind === 'printed' ? 'printed' : 'closed',
-    openedAt: r.opened_at,
-    closedAt: r.closed_at,
-    closedBy: r.closed_by || '',
-    total: fromCents(r.total_cents),
-    paid: fromCents(r.paid_cents),
-    open: fromCents(r.open_cents),
-    waiters: parseWaiters(r.waiters_json)
-  }));
+  // Pair Shtyp → Mbyll per shift_uid so the portal can show:
+  // - deri te Shtyp (printed.total)
+  // - nga Shtyp deri Mbyll (closed.total - printed.total)
+  const byShift = new Map();
+  for (const r of rows) {
+    const sk =
+      String(r.shift_uid || '').trim() ||
+      String(r.event_uid || '').trim() ||
+      String(r.id);
+    const list = byShift.get(sk) || [];
+    list.push(r);
+    byShift.set(sk, list);
+  }
 
-  const closed = shifts.filter((s) => s.kind === 'closed');
+  const shifts = [];
+  let untilPrintSum = 0;
+  let printToCloseSum = 0;
+  let closedCount = 0;
+  let closedTotal = 0;
+
+  for (const [, events] of byShift) {
+    let lastPrinted = null;
+    for (const r of events) {
+      const kind = r.kind === 'printed' ? 'printed' : 'closed';
+      const total = fromCents(r.total_cents);
+      const base = {
+        uid: r.event_uid,
+        shiftUid: r.shift_uid,
+        kind,
+        openedAt: r.opened_at,
+        closedAt: r.closed_at,
+        closedBy: r.closed_by || '',
+        total,
+        paid: fromCents(r.paid_cents),
+        open: fromCents(r.open_cents),
+        waiters: parseWaiters(r.waiters_json),
+        untilPrint: null,
+        printToClose: null
+      };
+
+      if (kind === 'printed') {
+        lastPrinted = r;
+        base.untilPrint = total;
+        untilPrintSum += total;
+        shifts.push(base);
+        continue;
+      }
+
+      // closed
+      closedCount += 1;
+      closedTotal += total;
+      if (lastPrinted) {
+        const printedTotal = fromCents(lastPrinted.total_cents);
+        base.untilPrint = printedTotal;
+        base.printToClose = Math.max(0, total - printedTotal);
+        printToCloseSum += base.printToClose;
+        lastPrinted = null;
+      } else {
+        // No Shtyp before this Mbyll — whole close counts as "deri te mbyllja".
+        base.untilPrint = total;
+        base.printToClose = 0;
+        untilPrintSum += total;
+      }
+      shifts.push(base);
+    }
+  }
+
+  // Newest first for the UI.
+  shifts.sort((a, b) => String(b.closedAt).localeCompare(String(a.closedAt)));
+
   return {
-    count: closed.length,
-    total: closed.reduce((sum, s) => sum + s.total, 0),
+    count: closedCount,
+    total: closedTotal,
+    untilPrint: untilPrintSum,
+    printToClose: printToCloseSum,
     shifts
   };
 }
