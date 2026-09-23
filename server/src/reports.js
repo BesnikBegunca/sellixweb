@@ -82,6 +82,37 @@ export function businessDayWindow(businessId, asOf = shopToday()) {
   return { from: `${startDay} 00:00:00` };
 }
 
+/**
+ * The last completed gjendja session (becomes "Dje" after Mbyll).
+ * Window: (previousClose, lastClose] — or [openedAt, lastClose] if only one close.
+ */
+export function previousBusinessDayWindow(businessId) {
+  const closes = db
+    .prepare(
+      `SELECT id, closed_at, opened_at, total_cents FROM shift_closes
+       WHERE business_id = ?
+         AND LOWER(COALESCE(kind, 'closed')) = 'closed'
+       ORDER BY datetime(closed_at) DESC, id DESC
+       LIMIT 2`
+    )
+    .all(businessId);
+  if (!closes.length) return null;
+  const last = closes[0];
+  if (closes.length >= 2) {
+    return {
+      after: String(closes[1].closed_at).trim(),
+      to: String(last.closed_at).trim(),
+      closedTotalCents: Number(last.total_cents) || 0
+    };
+  }
+  const from = String(last.opened_at || '').trim() || null;
+  return {
+    from,
+    to: String(last.closed_at).trim(),
+    closedTotalCents: Number(last.total_cents) || 0
+  };
+}
+
 /** Stable key for notify_state for the current open business day. */
 export function businessDayKey(businessId, asOf = shopToday()) {
   const win = businessDayWindow(businessId, asOf);
@@ -90,8 +121,23 @@ export function businessDayKey(businessId, asOf = shopToday()) {
 }
 
 function businessDaySql(column, win) {
+  if (win.after && win.to) {
+    return {
+      sql: ` AND datetime(${column}) > ? AND datetime(${column}) <= ?`,
+      params: [win.after, win.to]
+    };
+  }
   if (win.after) {
     return { sql: ` AND datetime(${column}) > ?`, params: [win.after] };
+  }
+  if (win.from && win.to) {
+    return {
+      sql: ` AND datetime(${column}) >= ? AND datetime(${column}) <= ?`,
+      params: [win.from, win.to]
+    };
+  }
+  if (win.to) {
+    return { sql: ` AND datetime(${column}) <= ?`, params: [win.to] };
   }
   return { sql: ` AND datetime(${column}) >= ?`, params: [win.from] };
 }
@@ -157,6 +203,11 @@ function periodFilter(period, asOf, column = 'sold_at', businessId = null) {
   // "Sot" = current gjendja session (survives past midnight until Mbyll).
   if (period === 'today' && businessId != null) {
     return businessDaySql(column, businessDayWindow(businessId, asOf));
+  }
+  // "Dje" = last completed Mbyll session (the money that just left Sot).
+  if (period === 'yesterday' && businessId != null) {
+    const prev = previousBusinessDayWindow(businessId);
+    if (prev) return businessDaySql(column, prev);
   }
   const bounds = periodBounds(period, asOf);
   if (!bounds) return { sql: '', params: [] };
@@ -373,10 +424,37 @@ function sumSales(businessId, period, asOf) {
   return { total: fromCents(row.total_cents), count: row.count };
 }
 
+/**
+ * "Dje" = last Mbyll gjendjen session. Uses the till's closed total so the
+ * amount that just left Sot lands here; week/month still keep the same sales.
+ */
+function sumPreviousBusinessDay(businessId, asOf) {
+  const prev = previousBusinessDayWindow(businessId);
+  if (!prev) return sumSales(businessId, 'yesterday', asOf);
+
+  const filter = businessDaySql('sold_at', prev);
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
+       FROM sales
+       WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}${filter.sql}`
+    )
+    .get(businessId, ...filter.params);
+
+  const salesTotal = fromCents(row.total_cents);
+  const closedTotal = fromCents(prev.closedTotalCents);
+  // Prefer the Mbyll figure when the till sent one.
+  if (prev.closedTotalCents > 0) {
+    return { total: closedTotal, count: row.count || 1 };
+  }
+  return { total: salesTotal, count: row.count };
+}
+
 export function periodTotals(businessId, asOf) {
   return {
     today: dayBarTotal(businessId, asOf),
-    yesterday: sumSales(businessId, 'yesterday', asOf),
+    yesterday: sumPreviousBusinessDay(businessId, asOf),
     week: sumSales(businessId, 'week', asOf),
     month: sumSales(businessId, 'month', asOf),
     month3: sumSales(businessId, 'month3', asOf),
