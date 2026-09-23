@@ -336,22 +336,33 @@ export async function checkSalesNotify(business, opts = {}) {
 /**
  * Push for Shtyp / Mbyll gjendjen.
  * Title: GJENDJA E SHTYPUR | GJENDJA E MBYLLUR
+ * Controlled by notify_gjendja_print / notify_gjendja_close (independent of sales mode).
  */
 export async function notifyGjendjaEvents(business, events = []) {
   const row =
     business?.id != null
       ? db.prepare('SELECT * FROM businesses WHERE id = ?').get(business.id) || business
       : business;
-  const prefs = readNotifyPrefs(row);
-  if (prefs.mode === 'off') return { ok: false, reason: 'off' };
   if (!events.length) return { ok: false, reason: 'no_events' };
+
+  const allowPrint = row.notify_gjendja_print == null ? true : Number(row.notify_gjendja_print) !== 0;
+  const allowClose = row.notify_gjendja_close == null ? true : Number(row.notify_gjendja_close) !== 0;
 
   const name = String(row.name || 'SelliX').trim() || 'SelliX';
   let delivered = 0;
   let failed = 0;
+  let skipped = 0;
 
   for (const ev of events) {
     const printed = ev.kind === 'printed' || ev.kind === 'print';
+    if (printed && !allowPrint) {
+      skipped += 1;
+      continue;
+    }
+    if (!printed && !allowClose) {
+      skipped += 1;
+      continue;
+    }
     const title = printed ? 'GJENDJA E SHTYPUR' : 'GJENDJA E MBYLLUR';
     const totalCents = Math.max(0, Number(ev.totalCents) || 0);
     const result = await sendToBusinesses([row.id], {
@@ -371,8 +382,8 @@ export async function notifyGjendjaEvents(business, events = []) {
   const state = getNotifyState(row.id, day);
   upsertNotifyState(row.id, day, total, state.last_milestone);
 
-  if (!delivered) console.warn('gjendja notify: undelivered', row.id, { delivered, failed });
-  return { ok: true, delivered, failed };
+  if (!delivered && !skipped) console.warn('gjendja notify: undelivered', row.id, { delivered, failed });
+  return { ok: true, delivered, failed, skipped };
 }
 
 /** @deprecated use checkSalesNotify — kept so older call sites still work */

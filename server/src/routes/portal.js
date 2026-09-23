@@ -148,7 +148,9 @@ function notifySettingsPayload(row) {
         : 10000;
   return {
     mode: mode === 'always' || mode === 'off' || mode === 'customize' ? mode : 'always',
-    threshold: thresholdCents / 100
+    threshold: thresholdCents / 100,
+    gjendjaPrint: row.notify_gjendja_print == null ? true : Number(row.notify_gjendja_print) !== 0,
+    gjendjaClose: row.notify_gjendja_close == null ? true : Number(row.notify_gjendja_close) !== 0
   };
 }
 
@@ -174,9 +176,32 @@ portalRouter.patch('/me/notify-settings', requirePortal, (req, res) => {
     thresholdCents = Math.round(euros * 100);
   }
 
+  const gjendjaPrint =
+    req.body?.gjendjaPrint === undefined
+      ? row.notify_gjendja_print == null
+        ? 1
+        : Number(row.notify_gjendja_print) !== 0
+          ? 1
+          : 0
+      : req.body.gjendjaPrint
+        ? 1
+        : 0;
+  const gjendjaClose =
+    req.body?.gjendjaClose === undefined
+      ? row.notify_gjendja_close == null
+        ? 1
+        : Number(row.notify_gjendja_close) !== 0
+          ? 1
+          : 0
+      : req.body.gjendjaClose
+        ? 1
+        : 0;
+
   db.prepare(
-    `UPDATE businesses SET notify_mode = ?, notify_threshold_cents = ?, updated_at = datetime('now') WHERE id = ?`
-  ).run(mode, thresholdCents, row.id);
+    `UPDATE businesses SET notify_mode = ?, notify_threshold_cents = ?,
+      notify_gjendja_print = ?, notify_gjendja_close = ?,
+      updated_at = datetime('now') WHERE id = ?`
+  ).run(mode, thresholdCents, gjendjaPrint, gjendjaClose, row.id);
   // Let the next Shtyp/Mbyll fire a fresh notify under the new rules.
   db.prepare('DELETE FROM notify_state WHERE business_id = ?').run(row.id);
   const updated = db.prepare('SELECT * FROM businesses WHERE id = ?').get(row.id);

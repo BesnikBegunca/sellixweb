@@ -98,6 +98,11 @@ function parseSale(raw) {
   if (total == null || tax === null || discount === null) return null;
 
   const summed = items.reduce((acc, item) => acc + item.total_cents, 0);
+  const deltaRaw = pick(raw, 'printDelta', 'print_delta', 'printedDelta', 'delta');
+  let printDeltaCents = null;
+  if (deltaRaw !== undefined && deltaRaw !== null && deltaRaw !== '') {
+    printDeltaCents = toCents(deltaRaw);
+  }
   return {
     sale_uid: saleUid,
     sold_at: soldAt,
@@ -109,6 +114,7 @@ function parseSale(raw) {
     receipt_no: optionalString(raw, ['receiptNo', 'receipt_no', 'receipt'], 50),
     staff_name: optionalString(raw, ['staffName', 'staff_name', 'staff', 'waiter'], 200),
     status: parseTableStatus(raw),
+    print_delta_cents: printDeltaCents,
     hasItems,
     items
   };
@@ -291,8 +297,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   }
   for (const sale of parsed) {
     const before = findSale.get(businessId, sale.sale_uid);
-    // Previous amount on this invoice / table — so PRINTUAR is only the new slice
-    // (10€ then +5€ → notify 10, then 5 — never 15).
+    // Previous amount on this invoice / table — fallback when POS omits printDelta.
     let prevCents = Number(before?.total_cents) || 0;
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       const existingOpen = findOpenOnTable.get(
@@ -305,11 +310,16 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
       }
     }
 
+    const explicitDelta =
+      sale.print_delta_cents != null && Number.isFinite(sale.print_delta_cents)
+        ? Math.max(0, sale.print_delta_cents)
+        : null;
+    const computedDelta = Math.max(0, (sale.total_cents || 0) - prevCents);
+    const delta = explicitDelta != null ? explicitDelta : computedDelta;
+
     upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
-      // Printo→Paguaj: same uid becomes paid; void only duplicate opens (floor:*).
       voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
-      const delta = Math.max(0, (sale.total_cents || 0) - prevCents);
       if (delta > 0) printedDeltaCents += delta;
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
@@ -320,7 +330,6 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
         sale.staff_name || ''
       );
       if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
-      const delta = Math.max(0, (sale.total_cents || 0) - prevCents);
       if (delta > 0) printedDeltaCents += delta;
     }
     if ((sale.status ?? 'paid') === 'void') {

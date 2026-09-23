@@ -102,9 +102,39 @@ function AccountTab({ business }) {
   );
 }
 
+function ToggleRow({ label, hint, checked, onChange, disabled }) {
+  return (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 14,
+        padding: '12px 0',
+        borderBottom: '1px solid rgba(255,255,255,.06)',
+        cursor: disabled ? 'default' : 'pointer'
+      }}
+    >
+      <span>
+        <span style={{ display: 'block', fontWeight: 600 }}>{label}</span>
+        {hint && <span className="ad-hint" style={{ display: 'block', marginTop: 4, lineHeight: 1.45 }}>{hint}</span>}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }}
+      />
+    </label>
+  );
+}
+
 function NotificationsTab() {
   const [mode, setMode] = useState('always');
   const [threshold, setThreshold] = useState('100');
+  const [gjendjaPrint, setGjendjaPrint] = useState(true);
+  const [gjendjaClose, setGjendjaClose] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -117,13 +147,19 @@ function NotificationsTab() {
         if (!alive) return;
         setMode(s.mode || 'always');
         setThreshold(String(s.threshold || 100));
+        setGjendjaPrint(s.gjendjaPrint !== false);
+        setGjendjaClose(s.gjendjaClose !== false);
       })
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, []);
 
-  const save = async (nextMode = mode, nextThreshold = threshold) => {
+  const save = async (patch = {}) => {
+    const nextMode = patch.mode ?? mode;
+    const nextThreshold = patch.threshold ?? threshold;
+    const nextPrint = patch.gjendjaPrint ?? gjendjaPrint;
+    const nextClose = patch.gjendjaClose ?? gjendjaClose;
     setSaving(true);
     setError('');
     setNote('');
@@ -131,10 +167,14 @@ function NotificationsTab() {
       const euros = Number(String(nextThreshold).replace(',', '.'));
       const s = await api.portalSetNotifySettings({
         mode: nextMode,
-        threshold: Number.isFinite(euros) ? euros : 100
+        threshold: Number.isFinite(euros) ? euros : 100,
+        gjendjaPrint: nextPrint,
+        gjendjaClose: nextClose
       });
       setMode(s.mode);
       setThreshold(String(s.threshold));
+      setGjendjaPrint(s.gjendjaPrint !== false);
+      setGjendjaClose(s.gjendjaClose !== false);
       setNote('Cilësimet e njoftimeve u ruajtën.');
     } catch (err) {
       setError(err.message);
@@ -148,16 +188,37 @@ function NotificationsTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="ad-card pt-panel">
-        <h2 className="ad-heading pt-h">Cilësimet e njoftimeve</h2>
+        <h2 className="ad-heading pt-h">Gjendja</h2>
+        <p className="ad-hint" style={{ margin: '0 0 8px', lineHeight: 1.5 }}>
+          Njoftime vetëm për Shtyp / Mbyll gjendjen — mund t’i lësh aktive edhe nëse shitjet janë Off.
+        </p>
+        <ToggleRow
+          label="Gjendja e shtypur"
+          hint="Kur shtypet Shtyp gjendjen në POS"
+          checked={gjendjaPrint}
+          disabled={saving}
+          onChange={(v) => { setGjendjaPrint(v); save({ gjendjaPrint: v }); }}
+        />
+        <ToggleRow
+          label="Gjendja e mbyllur"
+          hint="Kur shtypet Mbyll gjendjen në POS"
+          checked={gjendjaClose}
+          disabled={saving}
+          onChange={(v) => { setGjendjaClose(v); save({ gjendjaClose: v }); }}
+        />
+      </div>
+
+      <div className="ad-card pt-panel">
+        <h2 className="ad-heading pt-h">Shitjet / printimet</h2>
         <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-          Zgjidh kur do të njoftohesh për totalin e ditës (nga Shtyp / Mbyll gjendjen).
+          Njoftim për çdo printim tavoline (PRINTUAR). Zgjidh Off nëse do vetëm njoftimet e gjendjes lart.
         </p>
 
         <div className="pt-pills" role="tablist" aria-label="Mënyra e njoftimit" style={{ marginBottom: 16 }}>
           <button
             type="button"
             className={`pt-pill${mode === 'always' ? ' active' : ''}`}
-            onClick={() => { setMode('always'); save('always', threshold); }}
+            onClick={() => { setMode('always'); save({ mode: 'always' }); }}
             disabled={saving}
           >
             Always notify
@@ -165,7 +226,7 @@ function NotificationsTab() {
           <button
             type="button"
             className={`pt-pill${mode === 'customize' ? ' active' : ''}`}
-            onClick={() => { setMode('customize'); save('customize', threshold); }}
+            onClick={() => { setMode('customize'); save({ mode: 'customize' }); }}
             disabled={saving}
           >
             Customize notify
@@ -173,7 +234,7 @@ function NotificationsTab() {
           <button
             type="button"
             className={`pt-pill${mode === 'off' ? ' active' : ''}`}
-            onClick={() => { setMode('off'); save('off', threshold); }}
+            onClick={() => { setMode('off'); save({ mode: 'off' }); }}
             disabled={saving}
           >
             Off
@@ -182,7 +243,7 @@ function NotificationsTab() {
 
         {mode === 'always' && (
           <p className="ad-hint" style={{ lineHeight: 1.5, margin: '0 0 12px' }}>
-            Njoftim në çdo përditësim të totalit (kur totali rritet pas Shtyp / Mbyll gjendjen).
+            Njoftim për çdo printim të ri (vetëm shuma e shtuar, p.sh. +5 € jo totali i tavolinës).
           </p>
         )}
 
@@ -190,7 +251,7 @@ function NotificationsTab() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              save('customize', threshold);
+              save({ mode: 'customize', threshold });
             }}
             style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}
           >
@@ -219,7 +280,7 @@ function NotificationsTab() {
 
         {mode === 'off' && (
           <p className="ad-hint" style={{ lineHeight: 1.5, margin: '0 0 12px' }}>
-            Njoftimet automatike për totalin janë fikur. Mesazhet nga SelliX (licenca) vazhdojnë.
+            Njoftimet e printimeve të tavolinave janë fikur. Gjendja (lart) mbetet sipas zgjedhjes sate.
           </p>
         )}
 

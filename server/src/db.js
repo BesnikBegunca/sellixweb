@@ -157,7 +157,9 @@ const BUSINESS_MIGRATIONS = [
   ['license_notice_at', 'ALTER TABLE businesses ADD COLUMN license_notice_at TEXT'],
   ['portal_password_plain', "ALTER TABLE businesses ADD COLUMN portal_password_plain TEXT NOT NULL DEFAULT ''"],
   ["notify_mode", "ALTER TABLE businesses ADD COLUMN notify_mode TEXT NOT NULL DEFAULT 'always'"],
-  ['notify_threshold_cents', 'ALTER TABLE businesses ADD COLUMN notify_threshold_cents INTEGER NOT NULL DEFAULT 10000']
+  ['notify_threshold_cents', 'ALTER TABLE businesses ADD COLUMN notify_threshold_cents INTEGER NOT NULL DEFAULT 10000'],
+  ['notify_gjendja_print', 'ALTER TABLE businesses ADD COLUMN notify_gjendja_print INTEGER NOT NULL DEFAULT 1'],
+  ['notify_gjendja_close', 'ALTER TABLE businesses ADD COLUMN notify_gjendja_close INTEGER NOT NULL DEFAULT 1']
 ];
 for (const [column, sql] of BUSINESS_MIGRATIONS) {
   if (!businessColumns.has(column)) db.exec(sql);
