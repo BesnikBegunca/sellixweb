@@ -151,8 +151,6 @@ export async function sendToBusinesses(businessIds, message) {
   return { delivered, failed };
 }
 
-const euro = (cents) => `${(cents / 100).toFixed(2)} €`;
-
 function todayNotifyCents(businessId) {
   const day = shopToday();
   const bar = dayBarTotal(businessId, day);
@@ -192,6 +190,21 @@ function upsertNotifyState(businessId, day, lastTotalCents, lastMilestone) {
   ).run(businessId, day, lastTotalCents, lastMilestone);
 }
 
+function euroPlain(cents) {
+  const v = Math.max(0, Number(cents) || 0) / 100;
+  return Number.isInteger(v) ? `${v} EURO` : `${v.toFixed(2)} EURO`;
+}
+
+function notifyPayload(business, printedCents, totalCents, tag) {
+  const name = String(business.name || 'SelliX').trim() || 'SelliX';
+  return {
+    title: name,
+    body: `PRINTUAR ${euroPlain(printedCents)}\nTOTALI : ${euroPlain(totalCents)}`,
+    url: '/portal',
+    tag
+  };
+}
+
 /**
  * After till sync (sales or gjendja). Sends push based on portal notify settings:
  * - always: every time today's total goes up
@@ -207,16 +220,15 @@ export async function checkSalesNotify(business) {
   if (total <= 0) return;
 
   const state = getNotifyState(business.id, day);
+  const printed = Math.max(0, total - (state.last_total_cents || 0));
 
   if (prefs.mode === 'always') {
     if (total <= state.last_total_cents) return;
     upsertNotifyState(business.id, day, total, state.last_milestone);
-    await sendToBusinesses([business.id], {
-      title: 'Printuar',
-      body: `Totali i Përditësuar: ${euro(total)}`,
-      url: '/portal',
-      tag: `total-${day}-${total}`
-    });
+    await sendToBusinesses(
+      [business.id],
+      notifyPayload(business, printed, total, `total-${day}-${total}`)
+    );
     return;
   }
 
@@ -227,12 +239,10 @@ export async function checkSalesNotify(business) {
   if (milestone < 1 || milestone <= state.last_milestone) return;
 
   upsertNotifyState(business.id, day, total, milestone);
-  await sendToBusinesses([business.id], {
-    title: 'Printuar',
-    body: `Totali i Përditësuar: ${euro(total)} · Kaluar ${euro(milestone * step)}`,
-    url: '/portal',
-    tag: `threshold-${day}-${milestone}`
-  });
+  await sendToBusinesses(
+    [business.id],
+    notifyPayload(business, printed || step, total, `threshold-${day}-${milestone}`)
+  );
 }
 
 /** @deprecated use checkSalesNotify — kept so older call sites still work */
