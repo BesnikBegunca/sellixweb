@@ -58,7 +58,7 @@ export default function PortalTables() {
         </div>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Bari është totali nga Shtyp / Mbyll gjendjen në POS — i njëjti total që del në gjendje.
+        Bari është totali nga Shtyp / Mbyll gjendjen. Paguaj liron tavolinën — nuk e ul barin.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
       <TodayRing

@@ -324,6 +324,7 @@ export function periodTotals(businessId, asOf) {
 /**
  * Bar from Shtyp/Mbyll gjendjen — the till's real shift total.
  * Latest event per shift for the day (print updates the running total; close finalizes).
+ * Paguaj never touches this — only a new Shtyp/Mbyll (or void on the till) changes it.
  */
 export function shiftDayBar(businessId, asOf) {
   const rows = db
@@ -347,11 +348,9 @@ export function shiftDayBar(businessId, asOf) {
   return { total: fromCents(cents), count: rows.length };
 }
 
-/** Prefer gjendja total; fall back to sales only before the first Shtyp/Mbyll today. */
+/** Bar = gjendja total only. Never falls back to live sales (those drop on Paguaj). */
 export function dayBarTotal(businessId, asOf) {
-  const fromShifts = shiftDayBar(businessId, asOf);
-  if (fromShifts.count > 0) return fromShifts;
-  return sumSales(businessId, 'today', asOf);
+  return shiftDayBar(businessId, asOf);
 }
 
 const TABLE_NAME_RE = /(?:tavolina|table)\s*(\d+)/i;
