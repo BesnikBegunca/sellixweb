@@ -212,8 +212,8 @@ export async function checkSalesNotify(business) {
     if (total <= state.last_total_cents) return;
     upsertNotifyState(business.id, day, total, state.last_milestone);
     await sendToBusinesses([business.id], {
-      title: 'Përditësim i totalit',
-      body: `Totali sot: ${euro(total)}`,
+      title: 'Printuar',
+      body: `Totali i Përditësuar: ${euro(total)}`,
       url: '/portal',
       tag: `total-${day}-${total}`
     });
@@ -228,8 +228,8 @@ export async function checkSalesNotify(business) {
 
   upsertNotifyState(business.id, day, total, milestone);
   await sendToBusinesses([business.id], {
-    title: 'Objektivi i njoftimit',
-    body: `Keni kaluar ${euro(milestone * step)} · Totali sot: ${euro(total)}`,
+    title: 'Printuar',
+    body: `Totali i Përditësuar: ${euro(total)} · Kaluar ${euro(milestone * step)}`,
     url: '/portal',
     tag: `threshold-${day}-${milestone}`
   });
