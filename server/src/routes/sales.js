@@ -164,20 +164,22 @@ const findOpenOnTable = db.prepare(`
     id DESC
   LIMIT 1
 `);
-const deleteFloorOpenOnTable = db.prepare(`
-  DELETE FROM sales
-  WHERE business_id = ?
-    AND TRIM(table_name) = TRIM(?)
-    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
-    AND LOWER(COALESCE(status, 'paid')) = 'open'
-    AND sale_uid LIKE 'floor:%'
-`);
 const deleteAllFloorOpensOnTable = db.prepare(`
   DELETE FROM sales
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid LIKE 'floor:%'
+`);
+// A table the floor reports as free must not keep an open invoice. Ghost
+// floor:* rows are always stale; POS opens are only cleared for the till that
+// sent the snapshot, so a second till's open visit is never touched.
+const deleteStaleOpensOnTable = db.prepare(`
+  DELETE FROM sales
+  WHERE business_id = ?
+    AND TRIM(table_name) = TRIM(?)
+    AND LOWER(COALESCE(status, 'paid')) = 'open'
+    AND (sale_uid LIKE 'floor:%' OR device_id = ?)
 `);
 const deleteOtherOpensOnTable = db.prepare(`
   DELETE FROM sales
@@ -258,6 +260,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
   const paidTables = new Set();
+  const openTables = new Set();
   const parsed = [];
   for (const raw of rawSales) {
     const sale = parseSale(raw);
@@ -267,6 +270,9 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     }
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
       paidTables.add(sale.table_name);
+    }
+    if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
+      openTables.add(sale.table_name);
     }
     parsed.push(sale);
   }
@@ -289,21 +295,34 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     }
     accepted += 1;
   }
-  return { accepted, rejected, paidTables: [...paidTables] };
+  return { accepted, rejected, paidTables: [...paidTables], openTables: [...openTables] };
 });
 
 /**
  * Mirror occupied floor into at most one open sale per table.
  * Prefer an existing POS open; only mint floor:* when none exists.
  */
-function syncOpenSalesFromFloor(businessId, deviceId, tables, _paidTables = []) {
+function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], openTables = []) {
   const now = shopNowLocal();
+  const normalize = (value) => String(value || '').trim().toLowerCase();
+  const paid = new Set(paidTables.map(normalize));
+  const opened = new Set(openTables.map(normalize));
+
   for (const table of tables) {
     const tableName = table.table_name;
     const staffName = table.staff_name || '';
+    // Paguaj syncs before the till clears the table, so the snapshot in that
+    // same request still says "occupied". Treat a table paid in this batch as
+    // free, otherwise the mirror mints a ghost open and the total double-counts.
+    const justPaid = paid.has(normalize(tableName));
 
-    if (!table.occupied || table.total_cents <= 0) {
-      deleteFloorOpenOnTable.run(businessId, tableName, staffName);
+    if (!table.occupied || table.total_cents <= 0 || justPaid) {
+      deleteAllFloorOpensOnTable.run(businessId, tableName);
+      // Unless the same batch also brought a fresh open for this table (a new
+      // visit right after paying), nothing may stay open on it.
+      if (!opened.has(normalize(tableName))) {
+        deleteStaleOpensOnTable.run(businessId, tableName, deviceId || '');
+      }
       continue;
     }
 
@@ -377,7 +396,7 @@ function parseFloorTable(raw) {
   };
 }
 
-const replaceFloor = db.transaction((businessId, deviceId, rawTables, paidTables) => {
+const replaceFloor = db.transaction((businessId, deviceId, rawTables, paidTables, openTables) => {
   const byKey = new Map();
   for (const raw of Array.isArray(rawTables) ? rawTables : []) {
     const table = parseFloorTable(raw);
@@ -389,7 +408,7 @@ const replaceFloor = db.transaction((businessId, deviceId, rawTables, paidTables
   for (const table of parsed) {
     insertFloor.run({ business_id: businessId, ...table });
   }
-  syncOpenSalesFromFloor(businessId, deviceId, parsed, paidTables);
+  syncOpenSalesFromFloor(businessId, deviceId, parsed, paidTables, openTables);
   return parsed.length;
 });
 
@@ -412,7 +431,7 @@ salesRouter.post('/sync', (req, res) => {
   const result = syncBatch(row.id, deviceId, sales);
   let tables = 0;
   if (Array.isArray(floor)) {
-    tables = replaceFloor(row.id, deviceId, floor, result.paidTables || []);
+    tables = replaceFloor(row.id, deviceId, floor, result.paidTables || [], result.openTables || []);
   }
   // Tell every open portal and admin tab for this business to refetch. A sync
   // that accepted nothing changed nothing, so it stays quiet.
