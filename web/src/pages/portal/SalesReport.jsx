@@ -522,7 +522,12 @@ export function GjendjaTable({ data }) {
       .sort((a, b) => b.localeCompare(a))
       .map((key) => {
         const dayShifts = byDay.get(key).slice().sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
-        const total = dayShifts.reduce((sum, s) => sum + (s.kind === 'printed' ? 0 : Number(s.total) || 0), 0);
+        // Same as server shiftDayBar: latest event per shift (Shtyp or Mbyll).
+        const latestByShift = new Map();
+        for (const s of dayShifts) {
+          latestByShift.set(String(s.shiftUid || s.uid), s);
+        }
+        const total = [...latestByShift.values()].reduce((sum, s) => sum + (Number(s.total) || 0), 0);
         return {
           dayKey: key,
           date: localStamp(`${key} 00:00:00`).date,

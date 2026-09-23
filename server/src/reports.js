@@ -322,9 +322,8 @@ export function periodTotals(businessId, asOf) {
 }
 
 /**
- * Bar from Shtyp/Mbyll gjendjen — the till's real shift total.
- * Latest event per shift for the day (print updates the running total; close finalizes).
- * Paguaj never touches this — only a new Shtyp/Mbyll (or void on the till) changes it.
+ * Bar = totali i gjendjes (Shtyp / Mbyll). Latest event per shift for the day.
+ * Paguaj never touches this — only a new Shtyp/Mbyll changes it.
  */
 export function shiftDayBar(businessId, asOf) {
   const rows = db
@@ -348,20 +347,8 @@ export function shiftDayBar(businessId, asOf) {
   return { total: fromCents(cents), count: rows.length };
 }
 
-/** Bar = gjendja total only. Never falls back to live sales (those drop on Paguaj). */
-/**
- * The bar the owner watches. Paguaj must never shrink it, so it takes whichever
- * is higher: the till's own Shtyp/Mbyll gjendjen figure, or the day's active
- * orders (open + paid, void excluded). Printo raises it immediately; paying a
- * table only flips that invoice from open to paid, so the amount stays put.
- */
+/** Same figure as Gjendja "Totali ditor" for that day — never from live sales. */
 export function dayBarTotal(businessId, asOf) {
-  // Once the till has synced invoices, they are the truth: Printo raises the
-  // bar, Paguaj leaves it alone, and a refund/delete on the till voids the
-  // invoice, which lowers it. Before the first invoice of the day arrives the
-  // till's own Shtyp/Mbyll gjendjen figure stands in.
-  const orders = sumSales(businessId, 'today', asOf);
-  if (orders.count > 0) return orders;
   return shiftDayBar(businessId, asOf);
 }
 
@@ -470,8 +457,7 @@ export function liveTables(businessId, asOf = shopToday()) {
   }
 
   const tables = sortTables([...byKey.values()]);
-  // What is sitting on the floor right now — this one does fall when a table is
-  // paid and freed, because the table is no longer occupied.
+  // What is sitting on the floor right now — falls when a table is paid/freed.
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
   const printed = dayBarTotal(businessId, asOf);
   const orders = dayOrdersTotal(businessId, asOf);
