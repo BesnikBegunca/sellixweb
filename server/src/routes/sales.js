@@ -171,15 +171,18 @@ const deleteAllFloorOpensOnTable = db.prepare(`
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid LIKE 'floor:%'
 `);
-// A table the floor reports as free must not keep an open invoice. Ghost
-// floor:* rows are always stale; POS opens are only cleared for the till that
-// sent the snapshot, so a second till's open visit is never touched.
-const deleteStaleOpensOnTable = db.prepare(`
-  DELETE FROM sales
+// A table the floor reports as free was paid (the till only clears a table
+// after Paguaj), so its leftover open invoice is settled rather than deleted:
+// the money must never drop off the bar. Paguaj later resends the same
+// sale_uid, which updates this very row instead of adding a second one.
+// Scoped to the till that sent the snapshot so another till's live visit stays.
+const settleStaleOpensOnTable = db.prepare(`
+  UPDATE sales SET status = 'paid', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
-    AND (sale_uid LIKE 'floor:%' OR device_id = ?)
+    AND sale_uid NOT LIKE 'floor:%'
+    AND (device_id = ? OR TRIM(COALESCE(device_id, '')) = '')
 `);
 const deleteOtherOpensOnTable = db.prepare(`
   DELETE FROM sales
@@ -317,11 +320,12 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], o
     const justPaid = paid.has(normalize(tableName));
 
     if (!table.occupied || table.total_cents <= 0 || justPaid) {
+      // Mirror ghosts stand for no real invoice, so they go.
       deleteAllFloorOpensOnTable.run(businessId, tableName);
       // Unless the same batch also brought a fresh open for this table (a new
-      // visit right after paying), nothing may stay open on it.
+      // visit started right after paying), settle what is left over.
       if (!opened.has(normalize(tableName))) {
-        deleteStaleOpensOnTable.run(businessId, tableName, deviceId || '');
+        settleStaleOpensOnTable.run(businessId, tableName, deviceId || '');
       }
       continue;
     }
