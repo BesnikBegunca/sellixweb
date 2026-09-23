@@ -309,7 +309,7 @@ function sumSales(businessId, period, asOf) {
 
 export function periodTotals(businessId, asOf) {
   return {
-    today: sumSales(businessId, 'today', asOf),
+    today: dayBarTotal(businessId, asOf),
     yesterday: sumSales(businessId, 'yesterday', asOf),
     week: sumSales(businessId, 'week', asOf),
     month: sumSales(businessId, 'month', asOf),
@@ -319,6 +319,39 @@ export function periodTotals(businessId, asOf) {
     year: sumSales(businessId, 'year', asOf),
     all: sumSales(businessId, 'all', asOf)
   };
+}
+
+/**
+ * Bar from Shtyp/Mbyll gjendjen — the till's real shift total.
+ * Latest event per shift for the day (print updates the running total; close finalizes).
+ */
+export function shiftDayBar(businessId, asOf) {
+  const rows = db
+    .prepare(
+      `SELECT s.total_cents AS total_cents
+       FROM shift_closes s
+       INNER JOIN (
+         SELECT CASE
+                  WHEN TRIM(COALESCE(shift_uid, '')) = '' THEN event_uid
+                  ELSE shift_uid
+                END AS sk,
+                MAX(id) AS max_id
+         FROM shift_closes
+         WHERE business_id = ?
+           AND date(closed_at) = ?
+         GROUP BY sk
+       ) latest ON latest.max_id = s.id`
+    )
+    .all(businessId, asOf);
+  const cents = rows.reduce((sum, r) => sum + (Number(r.total_cents) || 0), 0);
+  return { total: fromCents(cents), count: rows.length };
+}
+
+/** Prefer gjendja total; fall back to sales only before the first Shtyp/Mbyll today. */
+export function dayBarTotal(businessId, asOf) {
+  const fromShifts = shiftDayBar(businessId, asOf);
+  if (fromShifts.count > 0) return fromShifts;
+  return sumSales(businessId, 'today', asOf);
 }
 
 const TABLE_NAME_RE = /(?:tavolina|table)\s*(\d+)/i;
@@ -422,8 +455,8 @@ export function liveTables(businessId, asOf = shopToday()) {
 
   const tables = sortTables([...byKey.values()]);
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
-  // Cumulative order total for the day — never shrinks on Paguaj, only on void.
-  const printed = sumSales(businessId, 'today', asOf);
+  // Real bar = Shtyp/Mbyll gjendjen total from the till.
+  const printed = dayBarTotal(businessId, asOf);
 
   return {
     occupied: tables.length,

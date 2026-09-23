@@ -44,9 +44,9 @@ export default function PortalTables() {
   if (error && !floor) return <div className="ad-error">{error}</div>;
   if (loading && !floor) return <div className="ad-hint">Duke ngarkuar tavolinat…</div>;
 
-  // Waiter print total today: open + paid, one amount per invoice (no drop on Paguaj).
+  // Bar = total from Shtyp/Mbyll gjendjen (real till figure).
   const ringTotals = {
-    today: floor?.bar || { total: 0, count: 0 }
+    today: floor?.bar || overview?.totals?.today || { total: 0, count: 0 }
   };
 
   return (
@@ -58,8 +58,7 @@ export default function PortalTables() {
         </div>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Bari është totali i porosive sot — rritet me çdo Printo, nuk zbritet te Paguaj.
-        Zbritje vetëm nëse porosia fshihet nga admin në desktop.
+        Bari është totali nga Shtyp / Mbyll gjendjen në POS — i njëjti total që del në gjendje.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
       <TodayRing
