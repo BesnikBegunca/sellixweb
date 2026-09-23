@@ -4,7 +4,7 @@ import { db } from '../db.js';
 import { effectiveStatus, findLiveByLicenseKey } from '../licenses.js';
 import { toCents } from '../reports.js';
 import { publish } from '../events.js';
-import { checkSalesNotify } from '../push.js';
+import { notifyGjendjaEvents } from '../push.js';
 
 export const shiftsRouter = Router();
 
@@ -115,6 +115,7 @@ const upsertShift = db.prepare(`
 const syncBatch = db.transaction((businessId, deviceId, rawShifts) => {
   let accepted = 0;
   let rejected = 0;
+  const events = [];
   for (const raw of rawShifts) {
     const shift = parseShift(raw);
     if (!shift) {
@@ -122,9 +123,14 @@ const syncBatch = db.transaction((businessId, deviceId, rawShifts) => {
       continue;
     }
     upsertShift.run({ business_id: businessId, device_id: deviceId, ...shift });
+    events.push({
+      kind: shift.kind,
+      totalCents: shift.total_cents,
+      eventUid: shift.event_uid
+    });
     accepted += 1;
   }
-  return { accepted, rejected };
+  return { accepted, rejected, events };
 });
 
 shiftsRouter.post('/sync', (req, res) => {
@@ -144,12 +150,12 @@ shiftsRouter.post('/sync', (req, res) => {
   if (result.accepted > 0) {
     publish(row.id, { shifts: result.accepted });
     setImmediate(() => {
-      checkSalesNotify(row)
+      notifyGjendjaEvents(row, result.events || [])
         .then((r) => {
-          if (r && r.ok === false) console.warn('notify skip', row.id, r.reason || r);
-          else if (r && !r.delivered) console.warn('notify no delivery', row.id, r);
+          if (r && r.ok === false) console.warn('gjendja notify skip', row.id, r.reason || r);
+          else if (r && !r.delivered) console.warn('gjendja notify no delivery', row.id, r);
         })
-        .catch((err) => console.warn('notify push', err?.message));
+        .catch((err) => console.warn('gjendja notify', err?.message));
     });
   }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected });

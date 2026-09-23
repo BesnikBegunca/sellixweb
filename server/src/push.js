@@ -308,6 +308,48 @@ export async function checkSalesNotify(business, opts = {}) {
   return { ok: true, tone: 'print', ...result };
 }
 
+/**
+ * Push for Shtyp / Mbyll gjendjen.
+ * Title: GJENDJA E SHTYPUR | GJENDJA E MBYLLUR
+ */
+export async function notifyGjendjaEvents(business, events = []) {
+  const row =
+    business?.id != null
+      ? db.prepare('SELECT * FROM businesses WHERE id = ?').get(business.id) || business
+      : business;
+  const prefs = readNotifyPrefs(row);
+  if (prefs.mode === 'off') return { ok: false, reason: 'off' };
+  if (!events.length) return { ok: false, reason: 'no_events' };
+
+  const name = String(row.name || 'SelliX').trim() || 'SelliX';
+  let delivered = 0;
+  let failed = 0;
+
+  for (const ev of events) {
+    const printed = ev.kind === 'printed' || ev.kind === 'print';
+    const title = printed ? 'GJENDJA E SHTYPUR' : 'GJENDJA E MBYLLUR';
+    const totalCents = Math.max(0, Number(ev.totalCents) || 0);
+    const result = await sendToBusinesses([row.id], {
+      title,
+      body: `${name}\nTOTALI : ${euroPlain(totalCents)}`,
+      url: '/portal/gjendja',
+      tag: `gjendja-${ev.kind}-${ev.eventUid || Date.now()}`,
+      tone: printed ? 'gjendja-print' : 'gjendja-close'
+    });
+    delivered += result.delivered;
+    failed += result.failed;
+  }
+
+  // Keep sales-notify state aligned so invoice pushes don't re-fire the same total.
+  const day = businessDayKey(row.id);
+  const total = todayNotifyCents(row.id);
+  const state = getNotifyState(row.id, day);
+  upsertNotifyState(row.id, day, total, state.last_milestone);
+
+  if (!delivered) console.warn('gjendja notify: undelivered', row.id, { delivered, failed });
+  return { ok: true, delivered, failed };
+}
+
 /** @deprecated use checkSalesNotify — kept so older call sites still work */
 export async function checkDailyGoal(business) {
   return checkSalesNotify(business);
