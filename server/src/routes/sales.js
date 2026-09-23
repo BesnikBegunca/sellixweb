@@ -273,6 +273,40 @@ function upsertSale(businessId, deviceId, sale) {
   }
 }
 
+/**
+ * One row per kitchen print for "Faturat e fundit". Does not affect bar/totals
+ * (status=print is excluded from ACTIVE_SALE_SQL). Amount = this print's delta.
+ */
+function insertPrintSlice(businessId, deviceId, sale, deltaCents) {
+  if (!deltaCents || deltaCents <= 0) return;
+  const stamp = String(sale.sold_at || '').replace(/[^\d]/g, '') || String(Date.now());
+  const uid = `print:${sale.sale_uid}:${stamp}:${deltaCents}`;
+  // Idempotent: same print re-synced after a failed mark must not duplicate.
+  if (findSale.get(businessId, uid)) return;
+  const info = insertSale.run({
+    business_id: businessId,
+    device_id: deviceId || '',
+    sale_uid: uid,
+    sold_at: sale.sold_at,
+    total_cents: deltaCents,
+    tax_cents: 0,
+    discount_cents: 0,
+    payment_method: sale.payment_method || 'cash',
+    table_name: sale.table_name || '',
+    receipt_no: sale.receipt_no || '',
+    staff_name: sale.staff_name || '',
+    status: 'print'
+  });
+  const saleId = info.lastInsertRowid;
+  // First print (delta == full total): keep the item lines. Later adds: no
+  // reliable line split from the till payload, so leave items empty.
+  if (sale.hasItems && sale.items?.length && deltaCents === sale.total_cents) {
+    for (const item of sale.items) {
+      insertItem.run({ sale_id: saleId, ...item });
+    }
+  }
+}
+
 const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
@@ -331,7 +365,11 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
       voidAllFloorOpensOnTable.run(businessId, sale.table_name, staff);
       const kept = findOpenOnTable.get(businessId, sale.table_name, staff);
       if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, staff, kept.id);
-      if (delta > 0) printedDeltaCents += delta;
+      if (delta > 0) {
+        printedDeltaCents += delta;
+        // Separate invoice row per print (e.g. +10 then +5), not one merged tab.
+        insertPrintSlice(businessId, deviceId, sale, delta);
+      }
     }
     if ((sale.status ?? 'paid') === 'void') {
       const amount = sale.total_cents || before?.total_cents || 0;

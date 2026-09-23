@@ -468,12 +468,16 @@ export function SalesList({ sales, isRestaurant = true }) {
     <div className="ad-card pt-panel">
       <h2 className="ad-heading pt-h">Faturat e fundit</h2>
       <div className="pt-sales">
-        {rows.map((s) => {
+        {rows.map((s, index) => {
           const paid = s.status !== 'open';
           const open = openId === s.saleUid;
           const items = s.items || [];
+          const latest = index === 0;
           return (
-            <div key={s.saleUid} className={`ad-card pt-sale${paid ? ' paid' : ''}${open ? ' open' : ''}`}>
+            <div
+              key={s.saleUid}
+              className={`ad-card pt-sale${paid ? ' paid' : ''}${open ? ' open' : ''}${latest ? ' latest' : ''}`}
+            >
               <button
                 type="button"
                 className="pt-sale-toggle"
@@ -495,7 +499,7 @@ export function SalesList({ sales, isRestaurant = true }) {
                   </div>
                   <div className="pt-sale-side">
                     <div className="pt-sale-total">{formatEuro(s.total)}</div>
-                    <div className={`pt-sale-status${paid ? ' paid' : ''}`}>
+                    <div className={`pt-sale-status${paid ? ' paid' : ''}${latest ? ' latest' : ''}`}>
                       {paid ? 'Paguar' : 'Printuar'}
                     </div>
                   </div>

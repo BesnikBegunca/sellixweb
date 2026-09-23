@@ -410,6 +410,20 @@
   border-color: #5EC79A;
 }
 
+.pt-sale.latest {
+  border-color: #2DD4BF;
+  background: color-mix(in srgb, #2DD4BF 10%, rgba(255,255,255,.03));
+  box-shadow: inset 4px 0 0 #2DD4BF;
+}
+
+.pt-sale.latest .pt-sale-total {
+  color: #2DD4BF;
+}
+
+.pt-sale.latest .pt-sale-table {
+  color: #2DD4BF;
+}
+
 .pt-sale-toggle {
   display: block;
   width: 100%;
@@ -458,6 +472,10 @@
 
 .pt-sale-status.paid {
   color: #5EC79A;
+}
+
+.pt-sale-status.latest {
+  color: #2DD4BF;
 }
 
 .pt-sale-items {

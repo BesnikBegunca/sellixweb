@@ -165,7 +165,19 @@ export function fromCents(cents) {
 }
 
 // Orders that count on the bar / totals. Void = admin/manager deleted on the till.
-const ACTIVE_SALE_SQL = `AND LOWER(COALESCE(status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled')`;
+// status=print = per-print display rows for Faturat e fundit (not money).
+const ACTIVE_SALE_SQL = `AND LOWER(COALESCE(status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled', 'print')`;
+
+/** Receipt feed: paid + each print slice. Hide open tabs that already have print: children. */
+const LIST_SALE_SQL = `AND LOWER(COALESCE(status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled')
+         AND NOT (
+           LOWER(COALESCE(status, 'paid')) = 'open'
+           AND EXISTS (
+             SELECT 1 FROM sales p
+             WHERE p.business_id = sales.business_id
+               AND p.sale_uid LIKE ('print:' || sales.sale_uid || ':%')
+           )
+         )`;
 
 function addDays(isoDate, days) {
   const [y, m, d] = isoDate.split('-').map(Number);
@@ -832,7 +844,7 @@ export function topProducts(businessId, period, asOf, limit = 12) {
        FROM sale_items i
        JOIN sales s ON s.id = i.sale_id
        WHERE s.business_id = ?
-         AND LOWER(COALESCE(s.status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled')${filter.sql}
+         AND LOWER(COALESCE(s.status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled', 'print')${filter.sql}
        GROUP BY i.name
        ORDER BY total_cents DESC, quantity DESC
        LIMIT ?`
@@ -852,7 +864,7 @@ export function listSales(businessId, period, asOf, limit = 50) {
     .prepare(
       `SELECT * FROM sales
        WHERE business_id = ?
-         ${ACTIVE_SALE_SQL}${filter.sql}
+         ${LIST_SALE_SQL}${filter.sql}
        ORDER BY sold_at DESC, id DESC
        LIMIT ?`
     )
@@ -881,21 +893,25 @@ export function listSales(businessId, period, asOf, limit = 50) {
     bySale.set(item.sale_id, list);
   }
 
-  return rows.map((r) => ({
-    saleUid: r.sale_uid,
-    soldAt: r.sold_at,
-    total: fromCents(r.total_cents),
-    tax: fromCents(r.tax_cents),
-    discount: fromCents(r.discount_cents),
-    paymentMethod: r.payment_method,
-    tableName: r.table_name,
-    deviceId: r.device_id || '',
-    deviceNumber: numbers.get(String(r.device_id || '')) || null,
-    receiptNo: r.receipt_no,
-    staffName: r.staff_name,
-    status: String(r.status || 'paid').toLowerCase() === 'open' ? 'open' : 'paid',
-    items: bySale.get(r.id) || []
-  }));
+  return rows.map((r) => {
+    const st = String(r.status || 'paid').toLowerCase();
+    return {
+      saleUid: r.sale_uid,
+      soldAt: r.sold_at,
+      total: fromCents(r.total_cents),
+      tax: fromCents(r.tax_cents),
+      discount: fromCents(r.discount_cents),
+      paymentMethod: r.payment_method,
+      tableName: r.table_name,
+      deviceId: r.device_id || '',
+      deviceNumber: numbers.get(String(r.device_id || '')) || null,
+      receiptNo: r.receipt_no,
+      staffName: r.staff_name,
+      status: st === 'open' || st === 'print' ? 'open' : 'paid',
+      printSlice: st === 'print' || String(r.sale_uid || '').startsWith('print:'),
+      items: bySale.get(r.id) || []
+    };
+  });
 }
 
 export function overviewPayload(business, asOf) {
