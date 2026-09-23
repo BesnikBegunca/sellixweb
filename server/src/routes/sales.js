@@ -206,9 +206,6 @@ function shopNowLocal(timeZone = 'Europe/Belgrade') {
   return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
 }
 
-function floorSaleUid(tableName, staffName) {
-  return `floor:${tableName}:${staffName || ''}`.slice(0, 200);
-}
 
 function upsertSale(businessId, deviceId, sale) {
   const existing = findSale.get(businessId, sale.sale_uid);
@@ -299,9 +296,9 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
 });
 
 /**
- * Mirror occupied floor into at most one open sale per table.
- * Prefer an existing POS open; only mint floor:* when none exists.
- * Never delete order amounts — only void duplicates. Paguaj must not shrink the bar.
+ * Keeps the open invoice of an occupied table in step with the floor total.
+ * Never mints invoices and never deletes amounts: Paguaj must neither shrink
+ * the bar nor add to it.
  */
 function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], openTables = []) {
   const now = shopNowLocal();
@@ -341,21 +338,11 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], o
       continue;
     }
 
+    // No invoice for this table yet (items added but nothing printed). The
+    // grid still shows it from the floor snapshot, so nothing is minted here:
+    // a synthetic open row would be counted again next to the real invoice
+    // once Paguaj lands, which is what used to inflate the bar.
     voidAllFloorOpensOnTable.run(businessId, tableName);
-    insertSale.run({
-      business_id: businessId,
-      device_id: deviceId || '',
-      sale_uid: `${floorSaleUid(tableName, staffName)}:${Date.now()}`.slice(0, 200),
-      sold_at: now,
-      total_cents: table.total_cents,
-      tax_cents: 0,
-      discount_cents: 0,
-      payment_method: 'cash',
-      table_name: tableName,
-      receipt_no: '',
-      staff_name: staffName,
-      status: 'open'
-    });
   }
 }
 
