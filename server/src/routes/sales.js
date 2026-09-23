@@ -266,7 +266,7 @@ function upsertSale(businessId, deviceId, sale) {
 const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
-  let lastInvoiceCents = 0;
+  let printedDeltaCents = 0;
   let refundCents = 0;
   const paidTables = new Set();
   const openTables = new Set();
@@ -291,12 +291,26 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   }
   for (const sale of parsed) {
     const before = findSale.get(businessId, sale.sale_uid);
+    // Previous amount on this invoice / table — so PRINTUAR is only the new slice
+    // (10€ then +5€ → notify 10, then 5 — never 15).
+    let prevCents = Number(before?.total_cents) || 0;
+    if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
+      const existingOpen = findOpenOnTable.get(
+        businessId,
+        sale.table_name,
+        sale.staff_name || ''
+      );
+      if (existingOpen) {
+        prevCents = Math.max(prevCents, Number(existingOpen.total_cents) || 0);
+      }
+    }
+
     upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
       // Printo→Paguaj: same uid becomes paid; void only duplicate opens (floor:*).
-      // Amounts stay in the bar — void rows are excluded, paid row keeps the total.
       voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
-      lastInvoiceCents = sale.total_cents || lastInvoiceCents;
+      const delta = Math.max(0, (sale.total_cents || 0) - prevCents);
+      if (delta > 0) printedDeltaCents += delta;
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       voidAllFloorOpensOnTable.run(businessId, sale.table_name);
@@ -306,11 +320,10 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
         sale.staff_name || ''
       );
       if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
-      lastInvoiceCents = sale.total_cents || lastInvoiceCents;
+      const delta = Math.max(0, (sale.total_cents || 0) - prevCents);
+      if (delta > 0) printedDeltaCents += delta;
     }
     if ((sale.status ?? 'paid') === 'void') {
-      // Drop the invoice from the bar and free the table on the floor snapshot
-      // so the portal updates live without waiting for another floor push.
       const amount = sale.total_cents || before?.total_cents || 0;
       refundCents += Math.max(0, amount);
       if (sale.table_name) freeFloorOnTable.run(businessId, sale.table_name);
@@ -323,7 +336,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     paidTables: [...paidTables],
     openTables: [...openTables],
     voidTables: [...voidTables],
-    lastInvoiceCents,
+    lastInvoiceCents: printedDeltaCents,
     refundCents
   };
 });

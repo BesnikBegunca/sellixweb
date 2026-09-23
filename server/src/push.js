@@ -217,7 +217,7 @@ function notifyPayload(business, { invoiceCents, totalCents, tag, tone }) {
 
 /**
  * After sales sync. opts:
- * - lastInvoiceCents: last printed/paid invoice in the batch
+ * - lastInvoiceCents: only the newly printed slice (delta), not the table total
  * - refundCents: amount voided/refunded in the batch (explicit voids only)
  */
 export async function checkSalesNotify(business, opts = {}) {
@@ -233,6 +233,7 @@ export async function checkSalesNotify(business, opts = {}) {
   const state = getNotifyState(row.id, day);
   const last = state.last_total_cents || 0;
   const refundHint = Math.max(0, Number(opts.refundCents) || 0);
+  // Delta only — e.g. +10€ then +5€, never the cumulative 15€.
   const invoiceHint = Math.max(0, Number(opts.lastInvoiceCents) || 0);
 
   // Refund ONLY when the till sent an explicit void — never infer from a
@@ -268,19 +269,19 @@ export async function checkSalesNotify(business, opts = {}) {
   if (total <= 0 && invoiceHint <= 0) return { ok: false, reason: 'no_total' };
 
   if (prefs.mode === 'always') {
-    // New invoice in this sync → always notify PRINTUAR with that amount.
+    // Only the newly printed amount (delta), not the running table total.
     if (invoiceHint > 0) {
       const result = await sendToBusinesses(
         [row.id],
         notifyPayload(row, {
           invoiceCents: invoiceHint,
-          totalCents: Math.max(total, last + invoiceHint),
+          totalCents: total > 0 ? total : last + invoiceHint,
           tag: `total-${day}-${Date.now()}`,
           tone: 'print'
         })
       );
       if (result.delivered > 0) {
-        upsertNotifyState(row.id, day, Math.max(total, last), state.last_milestone);
+        upsertNotifyState(row.id, day, total > 0 ? total : last + invoiceHint, state.last_milestone);
       } else {
         console.warn('notify always: undelivered', row.id, result);
       }
