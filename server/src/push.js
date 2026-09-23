@@ -7,7 +7,7 @@
 // daily goal, and a message an admin writes on the Notifications page.
 import webpush from 'web-push';
 import { db } from './db.js';
-import { shopToday, dayBarTotal } from './reports.js';
+import { shopToday, dayBarTotal, businessDayKey } from './reports.js';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_settings (
@@ -153,8 +153,7 @@ export async function sendToBusinesses(businessIds, message) {
 }
 
 function todayNotifyCents(businessId) {
-  const day = shopToday();
-  const bar = dayBarTotal(businessId, day);
+  const bar = dayBarTotal(businessId, shopToday());
   return Math.max(0, Math.round(Number(bar.total || 0) * 100));
 }
 
@@ -229,7 +228,7 @@ export async function checkSalesNotify(business, opts = {}) {
   const prefs = readNotifyPrefs(row);
   if (prefs.mode === 'off') return { ok: false, reason: 'off' };
 
-  const day = shopToday();
+  const day = businessDayKey(row.id);
   const total = todayNotifyCents(row.id);
   const state = getNotifyState(row.id, day);
   const last = state.last_total_cents || 0;

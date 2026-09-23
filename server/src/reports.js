@@ -34,6 +34,68 @@ export function shopToday(timeZone = 'Europe/Belgrade') {
   }).format(new Date());
 }
 
+function shopHour(timeZone = 'Europe/Belgrade') {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date());
+  return Number(parts.find((p) => p.type === 'hour')?.value || 0);
+}
+
+/**
+ * Restaurant "Sot" does not flip at midnight — it runs from the last
+ * Mbyll gjendjen until the next Mbyll. After a close the bar is 0 until new sales.
+ *
+ * Returns either { after } (exclusive lower bound) or { from } (inclusive).
+ */
+export function businessDayWindow(businessId, asOf = shopToday()) {
+  const lastClose = db
+    .prepare(
+      `SELECT closed_at FROM shift_closes
+       WHERE business_id = ?
+         AND LOWER(COALESCE(kind, 'closed')) = 'closed'
+       ORDER BY datetime(closed_at) DESC, id DESC
+       LIMIT 1`
+    )
+    .get(businessId);
+  if (lastClose?.closed_at) {
+    return { after: String(lastClose.closed_at).trim() };
+  }
+
+  // Never closed: prefer the open shift's opened_at (Shtyp / Hap).
+  const openShift = db
+    .prepare(
+      `SELECT opened_at FROM shift_closes
+       WHERE business_id = ?
+         AND TRIM(COALESCE(opened_at, '')) != ''
+       ORDER BY datetime(opened_at) DESC, id DESC
+       LIMIT 1`
+    )
+    .get(businessId);
+  if (openShift?.opened_at) {
+    return { from: String(openShift.opened_at).trim() };
+  }
+
+  // No gjendja data yet — if it's after midnight but before 06:00, keep yesterday.
+  const startDay = shopHour() < 6 ? addDays(asOf, -1) : asOf;
+  return { from: `${startDay} 00:00:00` };
+}
+
+/** Stable key for notify_state for the current open business day. */
+export function businessDayKey(businessId, asOf = shopToday()) {
+  const win = businessDayWindow(businessId, asOf);
+  if (win.after) return `after:${win.after}`;
+  return `from:${win.from}`;
+}
+
+function businessDaySql(column, win) {
+  if (win.after) {
+    return { sql: ` AND datetime(${column}) > ?`, params: [win.after] };
+  }
+  return { sql: ` AND datetime(${column}) >= ?`, params: [win.from] };
+}
+
 export function readAsOf(req) {
   const q = typeof req.query?.date === 'string' ? req.query.date.trim() : '';
   return /^\d{4}-\d{2}-\d{2}$/.test(q) ? q : shopToday();
@@ -91,7 +153,11 @@ export function periodBounds(period, asOf) {
   }
 }
 
-function periodFilter(period, asOf, column = 'sold_at') {
+function periodFilter(period, asOf, column = 'sold_at', businessId = null) {
+  // "Sot" = current gjendja session (survives past midnight until Mbyll).
+  if (period === 'today' && businessId != null) {
+    return businessDaySql(column, businessDayWindow(businessId, asOf));
+  }
   const bounds = periodBounds(period, asOf);
   if (!bounds) return { sql: '', params: [] };
   return {
@@ -295,7 +361,7 @@ export function reportSnapshot(business, kind, periodKey, asOf = shopToday()) {
 // Orders that count on the bar / totals. Void = admin/manager deleted on the till.
 /** Total of active orders (open + paid). Paguaj does not shrink this; only void does. */
 function sumSales(businessId, period, asOf) {
-  const filter = periodFilter(period, asOf);
+  const filter = periodFilter(period, asOf, 'sold_at', businessId);
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
@@ -322,9 +388,11 @@ export function periodTotals(businessId, asOf) {
 }
 
 /**
- * Bar from Shtyp/Mbyll — latest event per shift for the day.
+ * Bar from Shtyp/Mbyll within the current business day (since last Mbyll).
  */
 export function shiftDayBar(businessId, asOf) {
+  const win = businessDayWindow(businessId, asOf);
+  const daySql = businessDaySql('closed_at', win);
   const rows = db
     .prepare(
       `SELECT s.total_cents AS total_cents
@@ -337,19 +405,18 @@ export function shiftDayBar(businessId, asOf) {
                 MAX(id) AS max_id
          FROM shift_closes
          WHERE business_id = ?
-           AND date(closed_at) = ?
+           ${daySql.sql.replace(/^\s*AND/, 'AND')}
          GROUP BY sk
        ) latest ON latest.max_id = s.id`
     )
-    .all(businessId, asOf);
+    .all(businessId, ...daySql.params);
   const cents = rows.reduce((sum, r) => sum + (Number(r.total_cents) || 0), 0);
   return { total: fromCents(cents), count: rows.length };
 }
 
 /**
- * Live day bar: follows gjendja live (open + paid invoices) as the till syncs.
- * Printo / floor sync raises it immediately; Paguaj only flips open→paid so the
- * amount stays. Shtyp/Mbyll is used when it is higher (or before any invoice).
+ * Live day bar for the open gjendja session. Survives past midnight until Mbyll;
+ * after Mbyll the window starts after that close → total 0.
  */
 export function dayBarTotal(businessId, asOf) {
   const live = dayOrdersTotal(businessId, asOf);
@@ -358,7 +425,7 @@ export function dayBarTotal(businessId, asOf) {
   return printed;
 }
 
-/** Day's active orders (open + paid). Drops only when the till voids an order. */
+/** Day's active orders in the current gjendja session. */
 export function dayOrdersTotal(businessId, asOf) {
   return sumSales(businessId, 'today', asOf);
 }
@@ -519,7 +586,7 @@ export function deviceTotals(businessId, period, asOf) {
     )
     .all(businessId);
 
-  const filter = periodFilter(period, asOf);
+  const filter = periodFilter(period, asOf, 'sold_at', businessId);
   const sold = db
     .prepare(
       `SELECT device_id,
@@ -655,7 +722,7 @@ export function monthlySeries(businessId, asOf, months = 12) {
 }
 
 export function paymentBreakdown(businessId, period, asOf) {
-  const filter = periodFilter(period, asOf);
+  const filter = periodFilter(period, asOf, 'sold_at', businessId);
   const rows = db
     .prepare(
       `SELECT CASE WHEN TRIM(payment_method) = '' THEN 'unknown' ELSE payment_method END AS method,
@@ -676,7 +743,7 @@ export function paymentBreakdown(businessId, period, asOf) {
 }
 
 export function topProducts(businessId, period, asOf, limit = 12) {
-  const filter = periodFilter(period, asOf, 's.sold_at');
+  const filter = periodFilter(period, asOf, 's.sold_at', businessId);
   const rows = db
     .prepare(
       `SELECT i.name AS name,
@@ -699,7 +766,7 @@ export function topProducts(businessId, period, asOf, limit = 12) {
 }
 
 export function listSales(businessId, period, asOf, limit = 50) {
-  const filter = periodFilter(period, asOf);
+  const filter = periodFilter(period, asOf, 'sold_at', businessId);
   const cap = Math.min(200, Math.max(1, Number(limit) || 50));
   const rows = db
     .prepare(
@@ -752,6 +819,7 @@ export function listSales(businessId, period, asOf, limit = 50) {
 }
 
 export function overviewPayload(business, asOf) {
+  const win = businessDayWindow(business.id, asOf);
   return {
     business: {
       id: business.id,
@@ -760,6 +828,9 @@ export function overviewPayload(business, asOf) {
       isRestaurant: isRestaurantSector(business.sector)
     },
     asOf,
+    businessDay: win.after
+      ? { sinceClose: win.after }
+      : { sinceOpen: win.from },
     totals: periodTotals(business.id, asOf),
     goal: fromCents(business.daily_goal_cents) || 200
   };

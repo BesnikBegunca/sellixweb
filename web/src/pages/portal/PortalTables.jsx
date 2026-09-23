@@ -60,8 +60,8 @@ export default function PortalTables() {
         </div>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Bari është <b>live</b> — ndryshon me gjendjen e tavolinave dhe printimeve (SSE).
-        Paguaj nuk e zbret; zbret vetëm nëse porosia fshihet (void) nga POS-i.
+        Bari është <b>live</b> për ditën e gjendjes — vazhdon edhe pas orës 00:00 derisa
+        të bëhet <b>Mbyll gjendjen</b>, pastaj kthehet në 0. Paguaj nuk e zbret.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
       <TodayRing
