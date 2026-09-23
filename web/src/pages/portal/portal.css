@@ -602,12 +602,39 @@
 }
 
 .pt-table-card.has-staff {
-  border-color: color-mix(in srgb, var(--staff-color, rgba(255,255,255,.09)) 70%, rgba(255,255,255,.09));
+  border-color: color-mix(in srgb, var(--staff-color, rgba(255,255,255,.09)) 55%, rgba(255,255,255,.09));
+  border-left: 4px solid var(--staff-color, #5EC79A);
+  background: color-mix(in srgb, var(--staff-color, transparent) 8%, rgba(255,255,255,.03));
 }
 
-.pt-table-card.has-staff .pt-table-name,
-.pt-table-card.has-staff .pt-table-waiter {
+.pt-table-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pt-table-card.has-staff .pt-table-name {
   color: var(--staff-color, #ECF3EE);
+  margin-bottom: 0;
+}
+
+.pt-table-waiter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--staff-color, #ECF3EE);
+  background: color-mix(in srgb, var(--staff-color, #5EC79A) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--staff-color, #5EC79A) 40%, transparent);
+  white-space: nowrap;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pt-table-waiter {

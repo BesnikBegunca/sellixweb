@@ -574,23 +574,25 @@ export function liveTables(businessId, asOf = shopToday()) {
     )
     .all(businessId);
 
-  const freeTableNames = new Set();
+  const freeSlots = new Set(); // table\0staff — only hide that waiter's card
   const hasFloor = snapshot.length > 0;
   for (const row of snapshot) {
     if (Number(row.occupied) === 1) continue;
     const number = tableNumber(row.name);
     const name = number ? `Tavolina ${number}` : row.name;
-    freeTableNames.add(name.trim().toLowerCase());
+    const staffName = String(row.staff_name || '').trim();
+    freeSlots.add(`${name.trim().toLowerCase()}\0${staffName.toLowerCase()}`);
   }
 
   const byKey = new Map();
   for (const row of openTableRows(businessId)) {
     const number = tableNumber(row.name);
     const name = number ? `Tavolina ${number}` : row.name;
-    // Till already freed the table — hide it from the grid, but openSalesLatestSum
-    // still counts the invoice until Paguaj lands (bar must not drop).
-    if (hasFloor && freeTableNames.has(name.trim().toLowerCase())) continue;
     const staffName = String(row.staff_name || '').trim();
+    const slotKey = `${name.trim().toLowerCase()}\0${staffName.toLowerCase()}`;
+    // Only hide this waiter if THEIR floor slot is free — other waiters on
+    // the same table number stay visible and in the total.
+    if (hasFloor && freeSlots.has(slotKey)) continue;
     byKey.set(
       `${name}\0${staffName}`,
       mapTableRow({ ...row, name, staff_name: staffName })

@@ -165,14 +165,14 @@ const updateSale = db.prepare(`
 `);
 
 const findSale = db.prepare('SELECT * FROM sales WHERE business_id = ? AND sale_uid = ?');
+// One open tab per (table + waiter) — never pick another waiter's open on the same table.
 const findOpenOnTable = db.prepare(`
   SELECT * FROM sales
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
+    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
-  ORDER BY
-    CASE WHEN TRIM(COALESCE(staff_name, '')) = TRIM(?) THEN 0 ELSE 1 END,
-    id DESC
+  ORDER BY id DESC
   LIMIT 1
 `);
 // Never DELETE order amounts on Paguaj — void duplicates only. Bar stays unless
@@ -181,6 +181,7 @@ const voidAllFloorOpensOnTable = db.prepare(`
   UPDATE sales SET status = 'void', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
+    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid LIKE 'floor:%'
 `);
@@ -188,6 +189,7 @@ const voidOpensOnTableExceptUid = db.prepare(`
   UPDATE sales SET status = 'void', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
+    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid != ?
 `);
@@ -195,6 +197,7 @@ const voidOtherOpensOnTable = db.prepare(`
   UPDATE sales SET status = 'void', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
+    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND id != ?
 `);
@@ -203,6 +206,7 @@ const freeFloorOnTable = db.prepare(`
   SET occupied = 0, total_cents = 0, updated_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
+    AND TRIM(COALESCE(staff_name, '')) = TRIM(?)
 `);
 const deleteItems = db.prepare('DELETE FROM sale_items WHERE sale_id = ?');
 const insertItem = db.prepare(`
@@ -276,7 +280,9 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let refundCents = 0;
   const paidTables = new Set();
   const openTables = new Set();
-  const voidTables = new Set();
+  const voidSlots = []; // { table, staff }
+  const tableStaffKey = (table, staff) =>
+    `${String(table || '').trim().toLowerCase()}\0${String(staff || '').trim().toLowerCase()}`;
   const parsed = [];
   for (const raw of rawSales) {
     const sale = parseSale(raw);
@@ -284,27 +290,25 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
       rejected += 1;
       continue;
     }
+    const staff = sale.staff_name || '';
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
-      paidTables.add(sale.table_name);
+      paidTables.add(tableStaffKey(sale.table_name, staff));
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
-      openTables.add(sale.table_name);
+      openTables.add(tableStaffKey(sale.table_name, staff));
     }
     if ((sale.status ?? 'paid') === 'void' && sale.table_name) {
-      voidTables.add(sale.table_name);
+      voidSlots.push({ table: sale.table_name, staff });
     }
     parsed.push(sale);
   }
   for (const sale of parsed) {
     const before = findSale.get(businessId, sale.sale_uid);
-    // Previous amount on this invoice / table — fallback when POS omits printDelta.
+    const staff = sale.staff_name || '';
+    // Previous amount for THIS waiter on this table only.
     let prevCents = Number(before?.total_cents) || 0;
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
-      const existingOpen = findOpenOnTable.get(
-        businessId,
-        sale.table_name,
-        sale.staff_name || ''
-      );
+      const existingOpen = findOpenOnTable.get(businessId, sale.table_name, staff);
       if (existingOpen) {
         prevCents = Math.max(prevCents, Number(existingOpen.total_cents) || 0);
       }
@@ -319,23 +323,20 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
 
     upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
-      voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
+      // Only this waiter's opens — other waiters on the same table stay.
+      voidOpensOnTableExceptUid.run(businessId, sale.table_name, staff, sale.sale_uid);
       if (delta > 0) printedDeltaCents += delta;
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
-      voidAllFloorOpensOnTable.run(businessId, sale.table_name);
-      const kept = findOpenOnTable.get(
-        businessId,
-        sale.table_name,
-        sale.staff_name || ''
-      );
-      if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
+      voidAllFloorOpensOnTable.run(businessId, sale.table_name, staff);
+      const kept = findOpenOnTable.get(businessId, sale.table_name, staff);
+      if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, staff, kept.id);
       if (delta > 0) printedDeltaCents += delta;
     }
     if ((sale.status ?? 'paid') === 'void') {
       const amount = sale.total_cents || before?.total_cents || 0;
       refundCents += Math.max(0, amount);
-      if (sale.table_name) freeFloorOnTable.run(businessId, sale.table_name);
+      if (sale.table_name) freeFloorOnTable.run(businessId, sale.table_name, staff);
     }
     accepted += 1;
   }
@@ -344,18 +345,17 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     rejected,
     paidTables: [...paidTables],
     openTables: [...openTables],
-    voidTables: [...voidTables],
+    voidSlots,
     lastInvoiceCents: printedDeltaCents,
     refundCents
   };
 });
 
 /**
- * Keeps the open invoice of an occupied table in step with the floor total.
- * Never mints invoices and never deletes amounts: Paguaj must neither shrink
- * the bar nor add to it.
+ * Keeps the open invoice of an occupied table+waiter in step with the floor.
+ * Never touches another waiter's tab on the same table number.
  */
-function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], openTables = []) {
+function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = []) {
   const now = shopNowLocal();
   const normalize = (value) => String(value || '').trim().toLowerCase();
   const paid = new Set(paidTables.map(normalize));
@@ -363,9 +363,9 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], o
   for (const table of tables) {
     const tableName = table.table_name;
     const staffName = table.staff_name || '';
-    const justPaid = paid.has(normalize(tableName));
+    const key = `${normalize(tableName)}\0${normalize(staffName)}`;
+    const justPaid = paid.has(key);
 
-    // Freed on till, or paid in this same batch — do not touch sales rows.
     if (!table.occupied || table.total_cents <= 0 || justPaid) {
       continue;
     }
@@ -387,17 +387,13 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], o
       });
       const uid = String(existingOpen.sale_uid || '');
       if (!uid.startsWith('floor:')) {
-        voidAllFloorOpensOnTable.run(businessId, tableName);
+        voidAllFloorOpensOnTable.run(businessId, tableName, staffName);
       }
-      voidOtherOpensOnTable.run(businessId, tableName, existingOpen.id);
+      voidOtherOpensOnTable.run(businessId, tableName, staffName, existingOpen.id);
       continue;
     }
 
-    // No invoice for this table yet (items added but nothing printed). The
-    // grid still shows it from the floor snapshot, so nothing is minted here:
-    // a synthetic open row would be counted again next to the real invoice
-    // once Paguaj lands, which is what used to inflate the bar.
-    voidAllFloorOpensOnTable.run(businessId, tableName);
+    voidAllFloorOpensOnTable.run(businessId, tableName, staffName);
   }
 }
 
@@ -467,12 +463,12 @@ salesRouter.post('/sync', (req, res) => {
   if (Array.isArray(floor)) {
     tables = replaceFloor(row.id, deviceId, floor, result.paidTables || [], result.openTables || []);
   }
-  // Voids free the floor even when the till omitted a fresh snapshot.
-  for (const tableName of result.voidTables || []) {
-    freeFloorOnTable.run(row.id, tableName);
+  // Voids free the floor for that waiter+table only.
+  for (const slot of result.voidSlots || []) {
+    freeFloorOnTable.run(row.id, slot.table, slot.staff || '');
   }
   // Tell every open portal and admin tab for this business to refetch.
-  if (result.accepted > 0 || Array.isArray(floor) || (result.voidTables || []).length) {
+  if (result.accepted > 0 || Array.isArray(floor) || (result.voidSlots || []).length) {
     publish(row.id, {
       accepted: result.accepted,
       tables,

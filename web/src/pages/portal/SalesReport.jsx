@@ -279,6 +279,15 @@ export function TablesGrid({ tables }) {
     return names.sort((a, b) => a.localeCompare(b, 'sq', { sensitivity: 'base' }));
   }, [rows]);
 
+  const sameTableShared = useMemo(() => {
+    const counts = new Map();
+    for (const t of rows) {
+      const n = String(t.name || '').trim().toLowerCase();
+      counts.set(n, (counts.get(n) || 0) + 1);
+    }
+    return [...counts.values()].some((c) => c > 1);
+  }, [rows]);
+
   useEffect(() => {
     if (staffFilter && !staffNames.includes(staffFilter)) setStaffFilter('');
   }, [staffFilter, staffNames]);
@@ -288,7 +297,10 @@ export function TablesGrid({ tables }) {
   }
 
   const visible = staffFilter ? rows.filter((t) => staffLabel(t.staffName) === staffFilter) : rows;
-  const showStaffChrome = staffNames.length > 1 || (staffNames.length === 1 && staffNames[0] !== STAFF_UNNAMED);
+  const showStaffChrome =
+    staffNames.length > 1 ||
+    sameTableShared ||
+    (staffNames.length === 1 && staffNames[0] !== STAFF_UNNAMED);
 
   return (
     <div>
@@ -328,9 +340,16 @@ export function TablesGrid({ tables }) {
                 className={`ad-card pt-table-card${showStaffChrome ? ' has-staff' : ''}`}
                 style={showStaffChrome ? { '--staff-color': color } : undefined}
               >
-                <div className="ad-heading pt-table-name">{t.name}</div>
+                <div className="pt-table-top">
+                  <div className="ad-heading pt-table-name">{t.name}</div>
+                  {showStaffChrome && (
+                    <span className="pt-table-waiter-chip" style={{ '--staff-color': color }}>
+                      <span className="pt-staff-dot" />
+                      {waiter}
+                    </span>
+                  )}
+                </div>
                 <div className="pt-table-total">{formatEuro(t.total)}</div>
-                {showStaffChrome && <div className="pt-table-waiter">{waiter}</div>}
                 <div className="ad-hint">{t.count} {t.count === 1 ? 'porosi' : 'porosi'}</div>
               </div>
             );
