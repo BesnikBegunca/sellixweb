@@ -7,7 +7,7 @@
 // daily goal, and a message an admin writes on the Notifications page.
 import webpush from 'web-push';
 import { db } from './db.js';
-import { shopToday } from './reports.js';
+import { shopToday, dayBarTotal } from './reports.js';
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_settings (
@@ -34,6 +34,15 @@ db.exec(`
     total_cents INTEGER NOT NULL DEFAULT 0,
     goal_cents INTEGER NOT NULL DEFAULT 0,
     sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (business_id, day)
+  );
+
+  -- Tracks last notified total / milestone so Always / Customize don't spam.
+  CREATE TABLE IF NOT EXISTS notify_state (
+    business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    day TEXT NOT NULL,
+    last_total_cents INTEGER NOT NULL DEFAULT 0,
+    last_milestone INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (business_id, day)
   );
 
@@ -144,32 +153,91 @@ export async function sendToBusinesses(businessIds, message) {
 
 const euro = (cents) => `${(cents / 100).toFixed(2)} €`;
 
-/**
- * Called after every till sync. Pushes "goal reached" the first time today's
- * total crosses the business's daily goal, and never again that day.
- */
-export async function checkDailyGoal(business) {
+function todayNotifyCents(businessId) {
   const day = shopToday();
-  if (db.prepare('SELECT 1 FROM goal_pushes WHERE business_id = ? AND day = ?').get(business.id, day)) return;
+  const bar = dayBarTotal(businessId, day);
+  return Math.max(0, Math.round(Number(bar.total || 0) * 100));
+}
 
-  const goalCents = business.daily_goal_cents > 0 ? business.daily_goal_cents : 20000;
-  const { total } = db
-    .prepare('SELECT COALESCE(SUM(total_cents), 0) AS total FROM sales WHERE business_id = ? AND date(sold_at) = ?')
-    .get(business.id, day);
-  if (total < goalCents) return;
+function readNotifyPrefs(business) {
+  const mode = String(business.notify_mode || 'customize').toLowerCase();
+  const threshold =
+    business.notify_threshold_cents > 0
+      ? business.notify_threshold_cents
+      : business.daily_goal_cents > 0
+        ? business.daily_goal_cents
+        : 10000;
+  if (mode === 'always' || mode === 'off' || mode === 'customize') {
+    return { mode, thresholdCents: threshold };
+  }
+  return { mode: 'customize', thresholdCents: threshold };
+}
 
-  // Claim the day first so two overlapping syncs cannot both send.
-  const claimed = db
-    .prepare('INSERT OR IGNORE INTO goal_pushes (business_id, day, total_cents, goal_cents) VALUES (?, ?, ?, ?)')
-    .run(business.id, day, total, goalCents);
-  if (!claimed.changes) return;
+function getNotifyState(businessId, day) {
+  return (
+    db.prepare('SELECT * FROM notify_state WHERE business_id = ? AND day = ?').get(businessId, day) || {
+      last_total_cents: 0,
+      last_milestone: 0
+    }
+  );
+}
 
+function upsertNotifyState(businessId, day, lastTotalCents, lastMilestone) {
+  db.prepare(
+    `INSERT INTO notify_state (business_id, day, last_total_cents, last_milestone)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(business_id, day) DO UPDATE SET
+       last_total_cents = excluded.last_total_cents,
+       last_milestone = excluded.last_milestone`
+  ).run(businessId, day, lastTotalCents, lastMilestone);
+}
+
+/**
+ * After till sync (sales or gjendja). Sends push based on portal notify settings:
+ * - always: every time today's total goes up
+ * - customize: when total crosses the user threshold (100€, 200€, …)
+ * - off: no automatic total pushes
+ */
+export async function checkSalesNotify(business) {
+  const prefs = readNotifyPrefs(business);
+  if (prefs.mode === 'off') return;
+
+  const day = shopToday();
+  const total = todayNotifyCents(business.id);
+  if (total <= 0) return;
+
+  const state = getNotifyState(business.id, day);
+
+  if (prefs.mode === 'always') {
+    if (total <= state.last_total_cents) return;
+    upsertNotifyState(business.id, day, total, state.last_milestone);
+    await sendToBusinesses([business.id], {
+      title: 'Përditësim i totalit',
+      body: `Totali sot: ${euro(total)}`,
+      url: '/portal',
+      tag: `total-${day}-${total}`
+    });
+    return;
+  }
+
+  // customize — milestone every N euros (e.g. 100, 200, 300…)
+  const step = prefs.thresholdCents;
+  if (step <= 0) return;
+  const milestone = Math.floor(total / step);
+  if (milestone < 1 || milestone <= state.last_milestone) return;
+
+  upsertNotifyState(business.id, day, total, milestone);
   await sendToBusinesses([business.id], {
-    title: '🎉 Urime! Keni arritur objektivin',
-    body: `Shitjet sot: ${euro(total)} · Objektivi ditor: ${euro(goalCents)}`,
+    title: 'Objektivi i njoftimit',
+    body: `Keni kaluar ${euro(milestone * step)} · Totali sot: ${euro(total)}`,
     url: '/portal',
-    tag: `goal-${day}`,
+    tag: `threshold-${day}-${milestone}`
   });
+}
+
+/** @deprecated use checkSalesNotify — kept so older call sites still work */
+export async function checkDailyGoal(business) {
+  return checkSalesNotify(business);
 }
 
 /** Keeps every admin-originated push in the Notifications history. */

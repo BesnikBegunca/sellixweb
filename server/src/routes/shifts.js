@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { effectiveStatus, findLiveByLicenseKey } from '../licenses.js';
 import { toCents } from '../reports.js';
 import { publish } from '../events.js';
+import { checkSalesNotify } from '../push.js';
 
 export const shiftsRouter = Router();
 
@@ -142,6 +143,7 @@ shiftsRouter.post('/sync', (req, res) => {
   const result = syncBatch(row.id, deviceId, shifts);
   if (result.accepted > 0) {
     publish(row.id, { shifts: result.accepted });
+    setImmediate(() => checkSalesNotify(row).catch((err) => console.warn('notify push', err?.message)));
   }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected });
 });

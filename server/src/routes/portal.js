@@ -138,6 +138,49 @@ portalRouter.patch('/me/goal', requirePortal, (req, res) => {
   res.json({ goal: cents / 100 });
 });
 
+function notifySettingsPayload(row) {
+  const mode = String(row.notify_mode || 'customize').toLowerCase();
+  const thresholdCents =
+    row.notify_threshold_cents > 0
+      ? row.notify_threshold_cents
+      : row.daily_goal_cents > 0
+        ? row.daily_goal_cents
+        : 10000;
+  return {
+    mode: mode === 'always' || mode === 'off' || mode === 'customize' ? mode : 'customize',
+    threshold: thresholdCents / 100
+  };
+}
+
+portalRouter.get('/me/notify-settings', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  res.json(notifySettingsPayload(row));
+});
+
+portalRouter.patch('/me/notify-settings', requirePortal, (req, res) => {
+  const row = requireActivePortal(req, res);
+  if (!row) return;
+  const modeRaw = String(req.body?.mode || '').toLowerCase();
+  const mode = modeRaw === 'always' || modeRaw === 'off' || modeRaw === 'customize' ? modeRaw : null;
+  if (!mode) return res.status(400).json({ error: 'Zgjidh Always, Customize ose Off.' });
+
+  let thresholdCents = row.notify_threshold_cents > 0 ? row.notify_threshold_cents : 10000;
+  if (req.body?.threshold !== undefined) {
+    const euros = Number(req.body.threshold);
+    if (!Number.isFinite(euros) || euros < 1 || euros > 10000000) {
+      return res.status(400).json({ error: 'Shuma e njoftimit duhet të jetë valide (min. 1 €).' });
+    }
+    thresholdCents = Math.round(euros * 100);
+  }
+
+  db.prepare(
+    `UPDATE businesses SET notify_mode = ?, notify_threshold_cents = ?, updated_at = datetime('now') WHERE id = ?`
+  ).run(mode, thresholdCents, row.id);
+  const updated = db.prepare('SELECT * FROM businesses WHERE id = ?').get(row.id);
+  res.json(notifySettingsPayload(updated));
+});
+
 portalRouter.get('/overview', requirePortal, (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
