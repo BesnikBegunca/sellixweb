@@ -216,9 +216,9 @@ function notifyPayload(business, { invoiceCents, totalCents, tag, tone }) {
 }
 
 /**
- * After sales or Shtyp/Mbyll sync. opts:
+ * After sales sync. opts:
  * - lastInvoiceCents: last printed/paid invoice in the batch
- * - refundCents: amount voided/refunded in the batch
+ * - refundCents: amount voided/refunded in the batch (explicit voids only)
  */
 export async function checkSalesNotify(business, opts = {}) {
   const row =
@@ -234,13 +234,14 @@ export async function checkSalesNotify(business, opts = {}) {
   const last = state.last_total_cents || 0;
   const refundHint = Math.max(0, Number(opts.refundCents) || 0);
   const invoiceHint = Math.max(0, Number(opts.lastInvoiceCents) || 0);
-  const dropped = Math.max(0, last - total);
-  const isRefund = refundHint > 0 || dropped > 0;
+
+  // Refund ONLY when the till sent an explicit void — never infer from a
+  // lower bar (gjendja/Shtyp can realign totals and used to fake "refund").
+  // If the same batch also has a new print, prefer PRINTUAR when the bar did not drop.
+  const isRefund = refundHint > 0 && !(invoiceHint > 0 && total >= last);
 
   if (isRefund) {
-    if (total === last && refundHint <= 0) return { ok: false, reason: 'unchanged' };
-    const refundAmount = refundHint || dropped;
-    if (refundAmount <= 0 && total === last) return { ok: false, reason: 'unchanged' };
+    const refundAmount = refundHint;
     const result = await sendToBusinesses(
       [row.id],
       notifyPayload(row, {
@@ -258,11 +259,35 @@ export async function checkSalesNotify(business, opts = {}) {
     return { ok: true, tone: 'refund', ...result };
   }
 
-  if (total <= 0) return { ok: false, reason: 'no_total' };
+  // Bar went down without a void (session/window change) — realign quietly.
+  if (total < last && invoiceHint <= 0) {
+    upsertNotifyState(row.id, day, total, state.last_milestone);
+    return { ok: false, reason: 'realigned' };
+  }
+
+  if (total <= 0 && invoiceHint <= 0) return { ok: false, reason: 'no_total' };
 
   if (prefs.mode === 'always') {
+    // New invoice in this sync → always notify PRINTUAR with that amount.
+    if (invoiceHint > 0) {
+      const result = await sendToBusinesses(
+        [row.id],
+        notifyPayload(row, {
+          invoiceCents: invoiceHint,
+          totalCents: Math.max(total, last + invoiceHint),
+          tag: `total-${day}-${Date.now()}`,
+          tone: 'print'
+        })
+      );
+      if (result.delivered > 0) {
+        upsertNotifyState(row.id, day, Math.max(total, last), state.last_milestone);
+      } else {
+        console.warn('notify always: undelivered', row.id, result);
+      }
+      return { ok: true, tone: 'print', ...result };
+    }
     if (total <= last) return { ok: false, reason: 'unchanged' };
-    const printed = invoiceHint || Math.max(0, total - last) || total;
+    const printed = Math.max(0, total - last) || total;
     const result = await sendToBusinesses(
       [row.id],
       notifyPayload(row, {
@@ -285,7 +310,6 @@ export async function checkSalesNotify(business, opts = {}) {
   if (step <= 0) return { ok: false, reason: 'bad_step' };
   const milestone = Math.floor(total / step);
   if (milestone < 1 || milestone <= state.last_milestone) {
-    // Still advance last_total so the next print delta is accurate
     if (total > last) upsertNotifyState(row.id, day, total, state.last_milestone);
     return { ok: false, reason: 'below_threshold', total, step, milestone, last: state.last_milestone };
   }
