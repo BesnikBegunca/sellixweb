@@ -44,10 +44,13 @@ export default function PortalTables() {
   if (error && !floor) return <div className="ad-error">{error}</div>;
   if (loading && !floor) return <div className="ad-hint">Duke ngarkuar tavolinat…</div>;
 
-  // Bar = total from Shtyp/Mbyll gjendjen (real till figure).
+  // Bar = the day's figure that never shrinks on Paguaj: the higher of the
+  // till's Shtyp/Mbyll gjendjen total and today's orders (open + paid).
   const ringTotals = {
     today: floor?.bar || overview?.totals?.today || { total: 0, count: 0 }
   };
+  const openNow = floor?.openTotal ?? 0;
+  const euro = (v) => `${Number(v || 0).toFixed(2)} €`;
 
   return (
     <div className="pt-page">
@@ -58,7 +61,8 @@ export default function PortalTables() {
         </div>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Bari është totali nga Shtyp / Mbyll gjendjen. Paguaj liron tavolinën — nuk e ul barin.
+        Bari është totali i ditës — rritet me çdo Printo dhe <b>nuk zbritet kur shtyp Paguaj</b>.
+        Zbret vetëm nëse porosia fshihet (void) nga POS-i.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
       <TodayRing
@@ -69,6 +73,11 @@ export default function PortalTables() {
           setOverview((prev) => (prev ? { ...prev, goal } : prev));
         }}
       />
+      <div className="pt-floor-now">
+        <span>Tavolina të hapura tani</span>
+        <b>{euro(openNow)}</b>
+        <span className="ad-hint">{floor?.tables?.length || 0} tavolina · pas Paguaj tavolina lirohet, totali i ditës mbetet</span>
+      </div>
       <TablesGrid tables={floor?.tables} />
     </div>
   );

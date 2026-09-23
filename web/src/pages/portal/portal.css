@@ -1198,3 +1198,24 @@
 @keyframes pt-welcome-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pt-welcome-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .pt-welcome, .pt-welcome-card { animation: none; } }
+
+/* Floor snapshot under the ring: what is open right now, next to the day total. */
+.pt-floor-now {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  font-size: 14px;
+}
+.pt-floor-now b {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: #5EC79A;
+}
+.pt-floor-now .ad-hint { flex: 1 1 100%; }

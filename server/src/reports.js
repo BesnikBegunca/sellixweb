@@ -349,8 +349,21 @@ export function shiftDayBar(businessId, asOf) {
 }
 
 /** Bar = gjendja total only. Never falls back to live sales (those drop on Paguaj). */
+/**
+ * The bar the owner watches. Paguaj must never shrink it, so it takes whichever
+ * is higher: the till's own Shtyp/Mbyll gjendjen figure, or the day's active
+ * orders (open + paid, void excluded). Printo raises it immediately; paying a
+ * table only flips that invoice from open to paid, so the amount stays put.
+ */
 export function dayBarTotal(businessId, asOf) {
-  return shiftDayBar(businessId, asOf);
+  const shift = shiftDayBar(businessId, asOf);
+  const orders = sumSales(businessId, 'today', asOf);
+  return orders.total > shift.total ? orders : shift;
+}
+
+/** Day's active orders (open + paid). Drops only when the till voids an order. */
+export function dayOrdersTotal(businessId, asOf) {
+  return sumSales(businessId, 'today', asOf);
 }
 
 const TABLE_NAME_RE = /(?:tavolina|table)\s*(\d+)/i;
@@ -453,14 +466,17 @@ export function liveTables(businessId, asOf = shopToday()) {
   }
 
   const tables = sortTables([...byKey.values()]);
+  // What is sitting on the floor right now — this one does fall when a table is
+  // paid and freed, because the table is no longer occupied.
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
-  // Real bar = Shtyp/Mbyll gjendjen total from the till.
   const printed = dayBarTotal(businessId, asOf);
+  const orders = dayOrdersTotal(businessId, asOf);
 
   return {
     occupied: tables.length,
     free: 0,
     openTotal,
+    orders,
     asOf,
     bar: {
       total: printed.total,
