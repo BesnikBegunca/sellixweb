@@ -356,9 +356,13 @@ export function shiftDayBar(businessId, asOf) {
  * table only flips that invoice from open to paid, so the amount stays put.
  */
 export function dayBarTotal(businessId, asOf) {
-  const shift = shiftDayBar(businessId, asOf);
+  // Once the till has synced invoices, they are the truth: Printo raises the
+  // bar, Paguaj leaves it alone, and a refund/delete on the till voids the
+  // invoice, which lowers it. Before the first invoice of the day arrives the
+  // till's own Shtyp/Mbyll gjendjen figure stands in.
   const orders = sumSales(businessId, 'today', asOf);
-  return orders.total > shift.total ? orders : shift;
+  if (orders.count > 0) return orders;
+  return shiftDayBar(businessId, asOf);
 }
 
 /** Day's active orders (open + paid). Drops only when the till voids an order. */

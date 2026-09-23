@@ -286,10 +286,9 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
       );
       if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
     }
-    if (sale.status === 'void' && sale.table_name) {
-      // Explicit admin/manager delete from the till — bar may go down.
-      voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
-    }
+    // A void needs nothing else: upsertSale already flipped that one invoice,
+    // and reports leave void rows out, so the bar drops by exactly its amount.
+    // Other invoices on the same table belong to other orders and stay.
     accepted += 1;
   }
   return { accepted, rejected, paidTables: [...paidTables], openTables: [...openTables] };
