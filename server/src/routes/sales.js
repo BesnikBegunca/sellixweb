@@ -273,11 +273,80 @@ function upsertSale(businessId, deviceId, sale) {
   }
 }
 
+const selectItemsBySaleId = db.prepare(
+  `SELECT name, quantity, unit_price_cents, total_cents, category
+   FROM sale_items WHERE sale_id = ? ORDER BY id ASC`
+);
+
+function loadSaleItems(saleId) {
+  if (!saleId) return [];
+  return selectItemsBySaleId.all(saleId);
+}
+
+function itemKey(item) {
+  return `${String(item.name || '')
+    .trim()
+    .toLowerCase()}\0${Number(item.unit_price_cents) || 0}`;
+}
+
+/** Lines added since the last print (qty/total delta per product). */
+function diffPrintItems(newItems, prevItems) {
+  if (!Array.isArray(newItems) || newItems.length === 0) return [];
+  if (!Array.isArray(prevItems) || prevItems.length === 0) {
+    return newItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+      category: item.category || ''
+    }));
+  }
+
+  const prevMap = new Map();
+  for (const p of prevItems) {
+    const k = itemKey(p);
+    const cur = prevMap.get(k) || {
+      quantity: 0,
+      total_cents: 0,
+      unit_price_cents: p.unit_price_cents,
+      name: p.name,
+      category: p.category || ''
+    };
+    cur.quantity += Number(p.quantity) || 0;
+    cur.total_cents += Number(p.total_cents) || 0;
+    prevMap.set(k, cur);
+  }
+
+  const out = [];
+  for (const n of newItems) {
+    const k = itemKey(n);
+    const prev = prevMap.get(k);
+    const prevQty = prev ? Number(prev.quantity) || 0 : 0;
+    const prevTotal = prev ? Number(prev.total_cents) || 0 : 0;
+    const qty = (Number(n.quantity) || 0) - prevQty;
+    const total = (Number(n.total_cents) || 0) - prevTotal;
+    if (qty > 0.0001 || total > 0) {
+      out.push({
+        name: n.name,
+        quantity: qty > 0 ? qty : Number(n.quantity) || 1,
+        unit_price_cents: n.unit_price_cents,
+        total_cents: Math.max(0, total),
+        category: n.category || ''
+      });
+      if (prev) {
+        prev.quantity = 0;
+        prev.total_cents = 0;
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * One row per kitchen print for "Faturat e fundit". Does not affect bar/totals
  * (status=print is excluded from ACTIVE_SALE_SQL). Amount = this print's delta.
  */
-function insertPrintSlice(businessId, deviceId, sale, deltaCents) {
+function insertPrintSlice(businessId, deviceId, sale, deltaCents, prevItems = []) {
   if (!deltaCents || deltaCents <= 0) return;
   const stamp = String(sale.sold_at || '').replace(/[^\d]/g, '') || String(Date.now());
   const uid = `print:${sale.sale_uid}:${stamp}:${deltaCents}`;
@@ -298,12 +367,21 @@ function insertPrintSlice(businessId, deviceId, sale, deltaCents) {
     status: 'print'
   });
   const saleId = info.lastInsertRowid;
-  // First print (delta == full total): keep the item lines. Later adds: no
-  // reliable line split from the till payload, so leave items empty.
-  if (sale.hasItems && sale.items?.length && deltaCents === sale.total_cents) {
-    for (const item of sale.items) {
-      insertItem.run({ sale_id: saleId, ...item });
-    }
+  if (!sale.hasItems || !sale.items?.length) return;
+
+  let lines = diffPrintItems(sale.items, prevItems);
+  // If we cannot split (same lines resent), still show what the till sent.
+  if (!lines.length) {
+    lines = sale.items.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+      category: item.category || ''
+    }));
+  }
+  for (const item of lines) {
+    insertItem.run({ sale_id: saleId, ...item });
   }
 }
 
@@ -341,12 +419,22 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     const staff = sale.staff_name || '';
     // Previous amount for THIS waiter on this table only.
     let prevCents = Number(before?.total_cents) || 0;
+    let prevOpen = before;
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       const existingOpen = findOpenOnTable.get(businessId, sale.table_name, staff);
       if (existingOpen) {
         prevCents = Math.max(prevCents, Number(existingOpen.total_cents) || 0);
+        if (!prevOpen || existingOpen.id !== before?.id) {
+          // Prefer the live open tab's lines for print-item diff.
+          if ((Number(existingOpen.total_cents) || 0) >= (Number(before?.total_cents) || 0)) {
+            prevOpen = existingOpen;
+          }
+        }
       }
     }
+    // Snapshot lines before upsert replaces them.
+    const prevItems =
+      (sale.status ?? 'paid') === 'open' && prevOpen ? loadSaleItems(prevOpen.id) : [];
 
     const explicitDelta =
       sale.print_delta_cents != null && Number.isFinite(sale.print_delta_cents)
@@ -368,7 +456,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
       if (delta > 0) {
         printedDeltaCents += delta;
         // Separate invoice row per print (e.g. +10 then +5), not one merged tab.
-        insertPrintSlice(businessId, deviceId, sale, delta);
+        insertPrintSlice(businessId, deviceId, sale, delta, prevItems);
       }
     }
     if ((sale.status ?? 'paid') === 'void') {

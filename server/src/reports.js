@@ -895,6 +895,35 @@ export function listSales(businessId, period, asOf, limit = 50) {
 
   return rows.map((r) => {
     const st = String(r.status || 'paid').toLowerCase();
+    const printSlice = st === 'print' || String(r.sale_uid || '').startsWith('print:');
+    let rowItems = bySale.get(r.id) || [];
+    // Older print slices were stored without lines — fall back to the parent tab.
+    if (printSlice && rowItems.length === 0) {
+      const parentUid = String(r.sale_uid || '').match(/^print:(.+):\d+:\d+$/)?.[1];
+      if (parentUid) {
+        const parent = db
+          .prepare('SELECT id FROM sales WHERE business_id = ? AND sale_uid = ?')
+          .get(businessId, parentUid);
+        if (parent) {
+          const cached = bySale.get(parent.id);
+          rowItems = cached?.length
+            ? cached
+            : db
+                .prepare(
+                  `SELECT name, quantity, unit_price_cents, total_cents, category
+                   FROM sale_items WHERE sale_id = ? ORDER BY id ASC`
+                )
+                .all(parent.id)
+                .map((item) => ({
+                  name: item.name,
+                  quantity: Number(item.quantity) || 0,
+                  unitPrice: fromCents(item.unit_price_cents),
+                  total: fromCents(item.total_cents),
+                  category: item.category
+                }));
+        }
+      }
+    }
     return {
       saleUid: r.sale_uid,
       soldAt: r.sold_at,
@@ -908,8 +937,8 @@ export function listSales(businessId, period, asOf, limit = 50) {
       receiptNo: r.receipt_no,
       staffName: r.staff_name,
       status: st === 'open' || st === 'print' ? 'open' : 'paid',
-      printSlice: st === 'print' || String(r.sale_uid || '').startsWith('print:'),
-      items: bySale.get(r.id) || []
+      printSlice,
+      items: rowItems
     };
   });
 }
