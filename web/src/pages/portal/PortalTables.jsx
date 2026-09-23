@@ -58,8 +58,8 @@ export default function PortalTables() {
         </div>
       </div>
       <p className="ad-hint" style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
-        Bari është totali i printimeve sot (tavolina të hapura + të paguara), pa numëruar dy herë Printo→Paguaj.
-        Takeaway dhe banaku hyjnë te Shitjet, jo këtu.
+        Bari është totali i porosive sot — rritet me çdo Printo, nuk zbritet te Paguaj.
+        Zbritje vetëm nëse porosia fshihet nga admin në desktop.
       </p>
       {error && <div className="ad-error" style={{ marginBottom: 12 }}>{error}</div>}
       <TodayRing

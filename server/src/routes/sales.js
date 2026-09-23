@@ -118,6 +118,10 @@ function parseTableStatus(raw) {
   const value = asString(pick(raw, 'status', 'tableStatus', 'state'), 20).toLowerCase();
   if (value === 'open' || value === 'printed' || value === 'occupied') return 'open';
   if (value === 'paid' || value === 'closed' || value === 'completed') return 'paid';
+  // Admin / manager deleted or cancelled the order on the till — drops the bar.
+  if (value === 'void' || value === 'deleted' || value === 'cancelled' || value === 'canceled') {
+    return 'void';
+  }
   return undefined;
 }
 
@@ -158,22 +162,24 @@ const findOpenOnTable = db.prepare(`
     id DESC
   LIMIT 1
 `);
-const deleteAllFloorOpensOnTable = db.prepare(`
-  DELETE FROM sales
+// Never DELETE order amounts on Paguaj — void duplicates only. Bar stays unless
+// the till later sends status=void for an admin/manager delete.
+const voidAllFloorOpensOnTable = db.prepare(`
+  UPDATE sales SET status = 'void', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid LIKE 'floor:%'
 `);
-const deleteOpensOnTableExceptUid = db.prepare(`
-  DELETE FROM sales
+const voidOpensOnTableExceptUid = db.prepare(`
+  UPDATE sales SET status = 'void', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
     AND sale_uid != ?
 `);
-const deleteOtherOpensOnTable = db.prepare(`
-  DELETE FROM sales
+const voidOtherOpensOnTable = db.prepare(`
+  UPDATE sales SET status = 'void', synced_at = datetime('now')
   WHERE business_id = ?
     AND TRIM(table_name) = TRIM(?)
     AND LOWER(COALESCE(status, 'paid')) = 'open'
@@ -270,18 +276,22 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   for (const sale of parsed) {
     upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
-      // Close the visit: keep the paid row (same uid updates open→paid), drop
-      // any other open ghosts on that table. Bar total stays (open moves to paid).
-      deleteOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
+      // Printo→Paguaj: same uid becomes paid; void only duplicate opens (floor:*).
+      // Amounts stay in the bar — void rows are excluded, paid row keeps the total.
+      voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
-      deleteAllFloorOpensOnTable.run(businessId, sale.table_name);
+      voidAllFloorOpensOnTable.run(businessId, sale.table_name);
       const kept = findOpenOnTable.get(
         businessId,
         sale.table_name,
         sale.staff_name || ''
       );
-      if (kept) deleteOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
+      if (kept) voidOtherOpensOnTable.run(businessId, sale.table_name, kept.id);
+    }
+    if (sale.status === 'void' && sale.table_name) {
+      // Explicit admin/manager delete from the till — bar may go down.
+      voidOpensOnTableExceptUid.run(businessId, sale.table_name, sale.sale_uid);
     }
     accepted += 1;
   }
@@ -291,9 +301,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
 /**
  * Mirror occupied floor into at most one open sale per table.
  * Prefer an existing POS open; only mint floor:* when none exists.
- *
- * Free / just-paid floor must NOT delete or settle opens — that races ahead of
- * Paguaj and drops the bar. Only a paid sale closes invoices.
+ * Never delete order amounts — only void duplicates. Paguaj must not shrink the bar.
  */
 function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], openTables = []) {
   const now = shopNowLocal();
@@ -327,13 +335,13 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = [], o
       });
       const uid = String(existingOpen.sale_uid || '');
       if (!uid.startsWith('floor:')) {
-        deleteAllFloorOpensOnTable.run(businessId, tableName);
+        voidAllFloorOpensOnTable.run(businessId, tableName);
       }
-      deleteOtherOpensOnTable.run(businessId, tableName, existingOpen.id);
+      voidOtherOpensOnTable.run(businessId, tableName, existingOpen.id);
       continue;
     }
 
-    deleteAllFloorOpensOnTable.run(businessId, tableName);
+    voidAllFloorOpensOnTable.run(businessId, tableName);
     insertSale.run({
       business_id: businessId,
       device_id: deviceId || '',

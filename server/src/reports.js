@@ -56,6 +56,9 @@ export function fromCents(cents) {
   return Math.round(Number(cents) || 0) / 100;
 }
 
+// Orders that count on the bar / totals. Void = admin/manager deleted on the till.
+const ACTIVE_SALE_SQL = `AND LOWER(COALESCE(status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled')`;
+
 function addDays(isoDate, days) {
   const [y, m, d] = isoDate.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d + days));
@@ -166,7 +169,8 @@ export function sumRange(businessId, from, to) {
     .prepare(
       `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
        FROM sales
-       WHERE business_id = ?${filter.sql}`
+       WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}${filter.sql}`
     )
     .get(businessId, ...filter.params);
   return { total: fromCents(row.total_cents), count: row.count };
@@ -180,6 +184,7 @@ export function dailySeriesRange(businessId, from, to) {
               COUNT(*) AS count
        FROM sales
        WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}
          AND date(sold_at) >= ?
          AND date(sold_at) <= ?
        GROUP BY date(sold_at)
@@ -201,6 +206,7 @@ export function monthlySeriesRange(businessId, from, to) {
               COUNT(*) AS count
        FROM sales
        WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}
          AND date(sold_at) >= ?
          AND date(sold_at) <= ?
        GROUP BY strftime('%Y-%m', sold_at)
@@ -222,7 +228,8 @@ function paymentsInRange(businessId, from, to) {
               COALESCE(SUM(total_cents), 0) AS total_cents,
               COUNT(*) AS count
        FROM sales
-       WHERE business_id = ?${filter.sql}
+       WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}${filter.sql}
        GROUP BY CASE WHEN TRIM(payment_method) = '' THEN 'unknown' ELSE payment_method END
        ORDER BY total_cents DESC`
     )
@@ -285,7 +292,8 @@ export function reportSnapshot(business, kind, periodKey, asOf = shopToday()) {
   };
 }
 
-/** Paid + open — one row per invoice (Printo then Paguaj upserts, never doubles). */
+// Orders that count on the bar / totals. Void = admin/manager deleted on the till.
+/** Total of active orders (open + paid). Paguaj does not shrink this; only void does. */
 function sumSales(businessId, period, asOf) {
   const filter = periodFilter(period, asOf);
   const row = db
@@ -293,61 +301,23 @@ function sumSales(businessId, period, asOf) {
       `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
        FROM sales
        WHERE business_id = ?
-         AND LOWER(COALESCE(status, 'paid')) != 'open'${filter.sql}`
+         ${ACTIVE_SALE_SQL}${filter.sql}`
     )
     .get(businessId, ...filter.params);
   return { total: fromCents(row.total_cents), count: row.count };
 }
 
-function openSalesLatestSum(businessId) {
-  const row = db
-    .prepare(
-      `SELECT COALESCE(SUM(s.total_cents), 0) AS total_cents, COUNT(*) AS count
-       FROM sales s
-       INNER JOIN (
-         SELECT TRIM(table_name) AS tn,
-                TRIM(COALESCE(staff_name, '')) AS sn,
-                MAX(id) AS max_id
-         FROM sales
-         WHERE business_id = ?
-           AND TRIM(table_name) != ''
-           AND LOWER(COALESCE(status, 'paid')) = 'open'
-         GROUP BY TRIM(table_name), TRIM(COALESCE(staff_name, ''))
-       ) latest ON latest.max_id = s.id`
-    )
-    .get(businessId);
-  // Takeaway / counter opens without a table name — include once each.
-  const loose = db
-    .prepare(
-      `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
-       FROM sales
-       WHERE business_id = ?
-         AND TRIM(table_name) = ''
-         AND LOWER(COALESCE(status, 'paid')) = 'open'`
-    )
-    .get(businessId);
-  return {
-    total: fromCents(row.total_cents) + fromCents(loose.total_cents),
-    count: (row.count || 0) + (loose.count || 0)
-  };
-}
-
 export function periodTotals(businessId, asOf) {
-  const openNow = openSalesLatestSum(businessId);
-  const addOpen = (base) => ({
-    total: Number((base.total + openNow.total).toFixed(2)),
-    count: base.count + openNow.count
-  });
   return {
-    today: addOpen(sumSales(businessId, 'today', asOf)),
+    today: sumSales(businessId, 'today', asOf),
     yesterday: sumSales(businessId, 'yesterday', asOf),
-    week: addOpen(sumSales(businessId, 'week', asOf)),
-    month: addOpen(sumSales(businessId, 'month', asOf)),
-    month3: addOpen(sumSales(businessId, 'month3', asOf)),
-    month6: addOpen(sumSales(businessId, 'month6', asOf)),
-    month9: addOpen(sumSales(businessId, 'month9', asOf)),
-    year: addOpen(sumSales(businessId, 'year', asOf)),
-    all: addOpen(sumSales(businessId, 'all', asOf))
+    week: sumSales(businessId, 'week', asOf),
+    month: sumSales(businessId, 'month', asOf),
+    month3: sumSales(businessId, 'month3', asOf),
+    month6: sumSales(businessId, 'month6', asOf),
+    month9: sumSales(businessId, 'month9', asOf),
+    year: sumSales(businessId, 'year', asOf),
+    all: sumSales(businessId, 'all', asOf)
   };
 }
 
@@ -452,8 +422,8 @@ export function liveTables(businessId, asOf = shopToday()) {
 
   const tables = sortTables([...byKey.values()]);
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
-  const paidToday = sumSales(businessId, 'today', asOf);
-  const openNow = openSalesLatestSum(businessId);
+  // Cumulative order total for the day — never shrinks on Paguaj, only on void.
+  const printed = sumSales(businessId, 'today', asOf);
 
   return {
     occupied: tables.length,
@@ -461,8 +431,8 @@ export function liveTables(businessId, asOf = shopToday()) {
     openTotal,
     asOf,
     bar: {
-      total: Number((paidToday.total + openNow.total).toFixed(2)),
-      count: paidToday.count + openNow.count
+      total: printed.total,
+      count: printed.count
     },
     tables
   };
@@ -513,7 +483,8 @@ export function deviceTotals(businessId, period, asOf) {
               COUNT(*) AS count,
               MAX(sold_at) AS last_sold_at
          FROM sales
-        WHERE business_id = ?${filter.sql}
+        WHERE business_id = ?
+          ${ACTIVE_SALE_SQL}${filter.sql}
         GROUP BY device_id`
     )
     .all(businessId, ...filter.params);
@@ -587,6 +558,7 @@ export function dailySeries(businessId, asOf, days = 14) {
               COUNT(*) AS count
        FROM sales
        WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}
          AND date(sold_at) >= ?
          AND date(sold_at) <= ?
        GROUP BY date(sold_at)`
@@ -621,6 +593,7 @@ export function monthlySeries(businessId, asOf, months = 12) {
               COUNT(*) AS count
        FROM sales
        WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}
          AND strftime('%Y-%m', sold_at) >= ?
          AND strftime('%Y-%m', sold_at) <= ?
        GROUP BY strftime('%Y-%m', sold_at)`
@@ -645,7 +618,8 @@ export function paymentBreakdown(businessId, period, asOf) {
               COALESCE(SUM(total_cents), 0) AS total_cents,
               COUNT(*) AS count
        FROM sales
-       WHERE business_id = ?${filter.sql}
+       WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}${filter.sql}
        GROUP BY CASE WHEN TRIM(payment_method) = '' THEN 'unknown' ELSE payment_method END
        ORDER BY total_cents DESC`
     )
@@ -666,7 +640,8 @@ export function topProducts(businessId, period, asOf, limit = 12) {
               COALESCE(SUM(i.total_cents), 0) AS total_cents
        FROM sale_items i
        JOIN sales s ON s.id = i.sale_id
-       WHERE s.business_id = ?${filter.sql}
+       WHERE s.business_id = ?
+         AND LOWER(COALESCE(s.status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled')${filter.sql}
        GROUP BY i.name
        ORDER BY total_cents DESC, quantity DESC
        LIMIT ?`
@@ -685,7 +660,8 @@ export function listSales(businessId, period, asOf, limit = 50) {
   const rows = db
     .prepare(
       `SELECT * FROM sales
-       WHERE business_id = ?${filter.sql}
+       WHERE business_id = ?
+         ${ACTIVE_SALE_SQL}${filter.sql}
        ORDER BY sold_at DESC, id DESC
        LIMIT ?`
     )
