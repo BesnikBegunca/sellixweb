@@ -123,6 +123,7 @@ db.exec(`
     receipt_no TEXT NOT NULL DEFAULT '',
     staff_name TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'paid',
+    is_fiscal INTEGER NOT NULL DEFAULT 0,
     synced_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (business_id, sale_uid)
   );
@@ -173,6 +174,9 @@ if (!adminColumns.has('password_plain')) {
 const salesColumns = new Set(db.prepare('PRAGMA table_info(sales)').all().map((c) => c.name));
 if (salesColumns.size && !salesColumns.has('status')) {
   db.exec("ALTER TABLE sales ADD COLUMN status TEXT NOT NULL DEFAULT 'paid'");
+}
+if (salesColumns.size && !salesColumns.has('is_fiscal')) {
+  db.exec('ALTER TABLE sales ADD COLUMN is_fiscal INTEGER NOT NULL DEFAULT 0');
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_sales_business_status ON sales (business_id, status)');
 

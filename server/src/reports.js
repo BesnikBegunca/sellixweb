@@ -938,6 +938,7 @@ export function listSales(businessId, period, asOf, limit = 50) {
       staffName: r.staff_name,
       status: st === 'open' || st === 'print' ? 'open' : 'paid',
       printSlice,
+      fiscalCoupon: Number(r.is_fiscal) === 1,
       items: rowItems
     };
   });

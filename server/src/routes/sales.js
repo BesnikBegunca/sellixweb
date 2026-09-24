@@ -114,16 +114,43 @@ function parseSale(raw) {
     receipt_no: optionalString(raw, ['receiptNo', 'receipt_no', 'receipt'], 50),
     staff_name: optionalString(raw, ['staffName', 'staff_name', 'staff', 'waiter'], 200),
     status: parseTableStatus(raw),
+    is_fiscal: parseFiscalFlag(raw) ? 1 : 0,
     print_delta_cents: printDeltaCents,
     hasItems,
     items
   };
 }
 
+function parseFiscalFlag(raw) {
+  const truthy = (v) =>
+    v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
+  if (truthy(pick(raw, 'fiscalCoupon', 'fiscal_coupon', 'isFiscal', 'is_fiscal', 'isFiscalCoupon'))) {
+    return true;
+  }
+  const kind = asString(
+    pick(raw, 'kind', 'receiptType', 'receipt_type', 'receiptKind', 'saleType', 'type'),
+    40
+  ).toLowerCase();
+  if (['fiscal', 'fiscal_coupon', 'kupon_fiskal', 'kuponfiskal', 'atk'].includes(kind)) {
+    return true;
+  }
+  const status = asString(pick(raw, 'status', 'tableStatus', 'state'), 40).toLowerCase();
+  return status === 'fiscal' || status === 'kupon_fiskal' || status === 'kuponfiskal';
+}
+
 function parseTableStatus(raw) {
   const value = asString(pick(raw, 'status', 'tableStatus', 'state'), 20).toLowerCase();
   if (value === 'open' || value === 'printed' || value === 'occupied') return 'open';
-  if (value === 'paid' || value === 'closed' || value === 'completed') return 'paid';
+  if (
+    value === 'paid' ||
+    value === 'closed' ||
+    value === 'completed' ||
+    value === 'fiscal' ||
+    value === 'kupon_fiskal' ||
+    value === 'kuponfiskal'
+  ) {
+    return 'paid';
+  }
   // Admin / manager deleted, cancelled, or refunded the order on the till.
   if (
     value === 'void' ||
@@ -141,10 +168,10 @@ function parseTableStatus(raw) {
 const insertSale = db.prepare(`
   INSERT INTO sales (
     business_id, sale_uid, device_id, sold_at, total_cents, tax_cents, discount_cents,
-    payment_method, table_name, receipt_no, staff_name, status, synced_at
+    payment_method, table_name, receipt_no, staff_name, status, is_fiscal, synced_at
   ) VALUES (
     @business_id, @sale_uid, @device_id, @sold_at, @total_cents, @tax_cents, @discount_cents,
-    @payment_method, @table_name, @receipt_no, @staff_name, @status, datetime('now')
+    @payment_method, @table_name, @receipt_no, @staff_name, @status, @is_fiscal, datetime('now')
   )
 `);
 
@@ -160,6 +187,7 @@ const updateSale = db.prepare(`
     receipt_no = @receipt_no,
     staff_name = @staff_name,
     status = @status,
+    is_fiscal = CASE WHEN @is_fiscal = 1 THEN 1 ELSE COALESCE(is_fiscal, 0) END,
     synced_at = datetime('now')
   WHERE id = @id
 `);
@@ -245,7 +273,8 @@ function upsertSale(businessId, deviceId, sale) {
       table_name: sale.table_name ?? existing.table_name,
       receipt_no: sale.receipt_no ?? existing.receipt_no,
       staff_name: sale.staff_name ?? existing.staff_name,
-      status: sale.status ?? existing.status ?? 'paid'
+      status: sale.status ?? existing.status ?? 'paid',
+      is_fiscal: sale.is_fiscal ? 1 : 0
     });
     saleId = existing.id;
     if (sale.hasItems) deleteItems.run(saleId);
@@ -262,7 +291,8 @@ function upsertSale(businessId, deviceId, sale) {
       table_name: sale.table_name ?? '',
       receipt_no: sale.receipt_no ?? '',
       staff_name: sale.staff_name ?? '',
-      status: sale.status ?? 'paid'
+      status: sale.status ?? 'paid',
+      is_fiscal: sale.is_fiscal ? 1 : 0
     });
     saleId = info.lastInsertRowid;
   }
@@ -364,7 +394,8 @@ function insertPrintSlice(businessId, deviceId, sale, deltaCents, prevItems = []
     table_name: sale.table_name || '',
     receipt_no: sale.receipt_no || '',
     staff_name: sale.staff_name || '',
-    status: 'print'
+    status: 'print',
+    is_fiscal: 0
   });
   const saleId = info.lastInsertRowid;
   if (!sale.hasItems || !sale.items?.length) return;
@@ -389,6 +420,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
   let accepted = 0;
   let rejected = 0;
   let printedDeltaCents = 0;
+  let fiscalInvoiceCents = 0;
   let refundCents = 0;
   const paidTables = new Set();
   const openTables = new Set();
@@ -447,7 +479,18 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
       // Only this waiter's opens — other waiters on the same table stay.
       voidOpensOnTableExceptUid.run(businessId, sale.table_name, staff, sale.sale_uid);
-      if (delta > 0) printedDeltaCents += delta;
+    }
+    if ((sale.status ?? 'paid') === 'paid') {
+      if (sale.is_fiscal) {
+        // Fiscal coupon: notify even when open→paid leaves the bar unchanged.
+        const amt = delta > 0 ? delta : Math.max(0, sale.total_cents || 0);
+        if (amt > 0) {
+          fiscalInvoiceCents += amt;
+          printedDeltaCents += amt;
+        }
+      } else if (delta > 0 && sale.table_name) {
+        printedDeltaCents += delta;
+      }
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
       voidAllFloorOpensOnTable.run(businessId, sale.table_name, staff);
@@ -473,6 +516,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
     openTables: [...openTables],
     voidSlots,
     lastInvoiceCents: printedDeltaCents,
+    fiscalInvoiceCents,
     refundCents
   };
 });
@@ -509,7 +553,8 @@ function syncOpenSalesFromFloor(businessId, deviceId, tables, paidTables = []) {
         table_name: tableName,
         receipt_no: existingOpen.receipt_no || '',
         staff_name: staffName || existingOpen.staff_name || '',
-        status: 'open'
+        status: 'open',
+        is_fiscal: 0
       });
       const uid = String(existingOpen.sale_uid || '');
       if (!uid.startsWith('floor:')) {
@@ -605,6 +650,7 @@ salesRouter.post('/sync', (req, res) => {
     setImmediate(() => {
       checkSalesNotify(row, {
         lastInvoiceCents: result.lastInvoiceCents,
+        fiscalInvoiceCents: result.fiscalInvoiceCents,
         refundCents: result.refundCents
       })
         .then((r) => {

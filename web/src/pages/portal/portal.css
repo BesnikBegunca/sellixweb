@@ -410,6 +410,10 @@
   border-color: #5EC79A;
 }
 
+.pt-sale.fiscal {
+  border-color: #38BDF8;
+}
+
 .pt-sale.latest {
   border-color: #2DD4BF;
   background: color-mix(in srgb, #2DD4BF 10%, rgba(255,255,255,.03));
@@ -472,6 +476,10 @@
 
 .pt-sale-status.paid {
   color: #5EC79A;
+}
+
+.pt-sale-status.fiscal {
+  color: #38BDF8;
 }
 
 .pt-sale-status.latest {

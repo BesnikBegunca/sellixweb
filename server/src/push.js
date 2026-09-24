@@ -206,6 +206,15 @@ function notifyPayload(business, { invoiceCents, totalCents, tag, tone }) {
       tone: 'refund'
     };
   }
+  if (tone === 'fiscal') {
+    return {
+      title: name,
+      body: `KUPON FISKAL : ${euroPlain(invoiceCents)}\nTOTALI : ${euroPlain(totalCents)}`,
+      url: '/portal',
+      tag,
+      tone: 'fiscal'
+    };
+  }
   return {
     title: name,
     body: `PRINTUAR : ${euroPlain(invoiceCents)}\nTOTALI : ${euroPlain(totalCents)}`,
@@ -218,6 +227,7 @@ function notifyPayload(business, { invoiceCents, totalCents, tag, tone }) {
 /**
  * After sales sync. opts:
  * - lastInvoiceCents: only the newly printed slice (delta), not the table total
+ * - fiscalInvoiceCents: amount from ATK fiscal coupons in this batch
  * - refundCents: amount voided/refunded in the batch (explicit voids only)
  */
 export async function checkSalesNotify(business, opts = {}) {
@@ -233,8 +243,11 @@ export async function checkSalesNotify(business, opts = {}) {
   const state = getNotifyState(row.id, day);
   const last = state.last_total_cents || 0;
   const refundHint = Math.max(0, Number(opts.refundCents) || 0);
+  const fiscalHint = Math.max(0, Number(opts.fiscalInvoiceCents) || 0);
   // Delta only — e.g. +10€ then +5€, never the cumulative 15€.
   const invoiceHint = Math.max(0, Number(opts.lastInvoiceCents) || 0);
+  const printTone = fiscalHint > 0 ? 'fiscal' : 'print';
+  const notifyInvoice = fiscalHint > 0 ? fiscalHint : invoiceHint;
 
   // Refund ONLY when the till sent an explicit void — never infer from a
   // lower bar (gjendja/Shtyp can realign totals and used to fake "refund").
@@ -261,31 +274,31 @@ export async function checkSalesNotify(business, opts = {}) {
   }
 
   // Bar went down without a void (session/window change) — realign quietly.
-  if (total < last && invoiceHint <= 0) {
+  if (total < last && invoiceHint <= 0 && fiscalHint <= 0) {
     upsertNotifyState(row.id, day, total, state.last_milestone);
     return { ok: false, reason: 'realigned' };
   }
 
-  if (total <= 0 && invoiceHint <= 0) return { ok: false, reason: 'no_total' };
+  if (total <= 0 && invoiceHint <= 0 && fiscalHint <= 0) return { ok: false, reason: 'no_total' };
 
   if (prefs.mode === 'always') {
     // Only the newly printed amount (delta), not the running table total.
-    if (invoiceHint > 0) {
+    if (notifyInvoice > 0) {
       const result = await sendToBusinesses(
         [row.id],
         notifyPayload(row, {
-          invoiceCents: invoiceHint,
-          totalCents: total > 0 ? total : last + invoiceHint,
+          invoiceCents: notifyInvoice,
+          totalCents: total > 0 ? total : last + notifyInvoice,
           tag: `total-${day}-${Date.now()}`,
-          tone: 'print'
+          tone: printTone
         })
       );
       if (result.delivered > 0) {
-        upsertNotifyState(row.id, day, total > 0 ? total : last + invoiceHint, state.last_milestone);
+        upsertNotifyState(row.id, day, total > 0 ? total : last + notifyInvoice, state.last_milestone);
       } else {
         console.warn('notify always: undelivered', row.id, result);
       }
-      return { ok: true, tone: 'print', ...result };
+      return { ok: true, tone: printTone, ...result };
     }
     if (total <= last) return { ok: false, reason: 'unchanged' };
     const printed = Math.max(0, total - last) || total;
@@ -295,7 +308,7 @@ export async function checkSalesNotify(business, opts = {}) {
         invoiceCents: printed,
         totalCents: total,
         tag: `total-${day}-${total}`,
-        tone: 'print'
+        tone: printTone
       })
     );
     if (result.delivered > 0) {
@@ -303,7 +316,7 @@ export async function checkSalesNotify(business, opts = {}) {
     } else {
       console.warn('notify always: undelivered', row.id, result);
     }
-    return { ok: true, tone: 'print', ...result };
+    return { ok: true, tone: printTone, ...result };
   }
 
   // customize — milestone every N euros (e.g. 100, 200, 300…)
@@ -315,14 +328,14 @@ export async function checkSalesNotify(business, opts = {}) {
     return { ok: false, reason: 'below_threshold', total, step, milestone, last: state.last_milestone };
   }
 
-  const printed = invoiceHint || Math.max(0, total - last) || step;
+  const printed = notifyInvoice || Math.max(0, total - last) || step;
   const result = await sendToBusinesses(
     [row.id],
     notifyPayload(row, {
       invoiceCents: printed,
       totalCents: total,
       tag: `threshold-${day}-${milestone}`,
-      tone: 'print'
+      tone: printTone
     })
   );
   if (result.delivered > 0) {
@@ -330,7 +343,7 @@ export async function checkSalesNotify(business, opts = {}) {
   } else {
     console.warn('notify customize: undelivered', row.id, result);
   }
-  return { ok: true, tone: 'print', ...result };
+  return { ok: true, tone: printTone, ...result };
 }
 
 /**

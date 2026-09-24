@@ -470,13 +470,15 @@ export function SalesList({ sales, isRestaurant = true }) {
       <div className="pt-sales">
         {rows.map((s, index) => {
           const paid = s.status !== 'open';
+          const fiscal = !!s.fiscalCoupon;
           const open = openId === s.saleUid;
           const items = s.items || [];
           const latest = index === 0;
+          const statusLabel = fiscal ? 'Kupon Fiskal' : paid ? 'Paguar' : 'Printuar';
           return (
             <div
               key={s.saleUid}
-              className={`ad-card pt-sale${paid ? ' paid' : ''}${open ? ' open' : ''}${latest ? ' latest' : ''}`}
+              className={`ad-card pt-sale${paid ? ' paid' : ''}${fiscal ? ' fiscal' : ''}${open ? ' open' : ''}${latest ? ' latest' : ''}`}
             >
               <button
                 type="button"
@@ -499,8 +501,8 @@ export function SalesList({ sales, isRestaurant = true }) {
                   </div>
                   <div className="pt-sale-side">
                     <div className="pt-sale-total">{formatEuro(s.total)}</div>
-                    <div className={`pt-sale-status${paid ? ' paid' : ''}${latest ? ' latest' : ''}`}>
-                      {paid ? 'Paguar' : 'Printuar'}
+                    <div className={`pt-sale-status${paid ? ' paid' : ''}${fiscal ? ' fiscal' : ''}${latest ? ' latest' : ''}`}>
+                      {statusLabel}
                     </div>
                   </div>
                 </div>
