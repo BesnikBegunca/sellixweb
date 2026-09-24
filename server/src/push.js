@@ -293,11 +293,10 @@ export async function checkSalesNotify(business, opts = {}) {
           tone: printTone
         })
       );
-      if (result.delivered > 0) {
-        upsertNotifyState(row.id, day, total > 0 ? total : last + notifyInvoice, state.last_milestone);
-      } else {
-        console.warn('notify always: undelivered', row.id, result);
-      }
+      // Always advance state so a failed push does not block the next invoice,
+      // but keep last aligned to the live bar when we have one.
+      upsertNotifyState(row.id, day, total > 0 ? total : last + notifyInvoice, state.last_milestone);
+      if (!result.delivered) console.warn('notify always: undelivered', row.id, result);
       return { ok: true, tone: printTone, ...result };
     }
     if (total <= last) return { ok: false, reason: 'unchanged' };
@@ -311,24 +310,43 @@ export async function checkSalesNotify(business, opts = {}) {
         tone: printTone
       })
     );
-    if (result.delivered > 0) {
-      upsertNotifyState(row.id, day, total, state.last_milestone);
-    } else {
-      console.warn('notify always: undelivered', row.id, result);
-    }
+    upsertNotifyState(row.id, day, total, state.last_milestone);
+    if (!result.delivered) console.warn('notify always: undelivered', row.id, result);
     return { ok: true, tone: printTone, ...result };
   }
 
-  // customize — milestone every N euros (e.g. 100, 200, 300…)
+  // customize — milestone every N euros, but still push each invoice/fiscal slice.
   const step = prefs.thresholdCents;
   if (step <= 0) return { ok: false, reason: 'bad_step' };
+
+  if (notifyInvoice > 0) {
+    const result = await sendToBusinesses(
+      [row.id],
+      notifyPayload(row, {
+        invoiceCents: notifyInvoice,
+        totalCents: total > 0 ? total : last + notifyInvoice,
+        tag: `total-${day}-${Date.now()}`,
+        tone: printTone
+      })
+    );
+    const milestone = Math.floor((total > 0 ? total : last + notifyInvoice) / step);
+    upsertNotifyState(
+      row.id,
+      day,
+      total > 0 ? total : last + notifyInvoice,
+      Math.max(state.last_milestone, milestone)
+    );
+    if (!result.delivered) console.warn('notify customize invoice: undelivered', row.id, result);
+    return { ok: true, tone: printTone, ...result };
+  }
+
   const milestone = Math.floor(total / step);
   if (milestone < 1 || milestone <= state.last_milestone) {
     if (total > last) upsertNotifyState(row.id, day, total, state.last_milestone);
     return { ok: false, reason: 'below_threshold', total, step, milestone, last: state.last_milestone };
   }
 
-  const printed = notifyInvoice || Math.max(0, total - last) || step;
+  const printed = Math.max(0, total - last) || step;
   const result = await sendToBusinesses(
     [row.id],
     notifyPayload(row, {
@@ -338,11 +356,8 @@ export async function checkSalesNotify(business, opts = {}) {
       tone: printTone
     })
   );
-  if (result.delivered > 0) {
-    upsertNotifyState(row.id, day, total, milestone);
-  } else {
-    console.warn('notify customize: undelivered', row.id, result);
-  }
+  upsertNotifyState(row.id, day, total, milestone);
+  if (!result.delivered) console.warn('notify customize: undelivered', row.id, result);
   return { ok: true, tone: printTone, ...result };
 }
 

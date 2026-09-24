@@ -488,7 +488,7 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
           fiscalInvoiceCents += amt;
           printedDeltaCents += amt;
         }
-      } else if (delta > 0 && sale.table_name) {
+      } else if (delta > 0) {
         printedDeltaCents += delta;
       }
     }
@@ -629,23 +629,16 @@ salesRouter.post('/sync', (req, res) => {
   if (sales.length > MAX_SALES) return res.status(400).json({ ok: false, error: 'too_many_sales', max: MAX_SALES });
 
   const deviceId = asString(pick(req.body, 'deviceId', 'device_id'), 200);
-  const result = syncBatch(row.id, deviceId, sales);
-  let tables = 0;
-  if (Array.isArray(floor)) {
-    tables = replaceFloor(row.id, deviceId, floor, result.paidTables || [], result.openTables || []);
+  let result;
+  try {
+    result = syncBatch(row.id, deviceId, sales);
+  } catch (err) {
+    console.warn('sales syncBatch', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'sync_failed' });
   }
-  // Voids free the floor for that waiter+table only.
-  for (const slot of result.voidSlots || []) {
-    freeFloorOnTable.run(row.id, slot.table, slot.staff || '');
-  }
-  // Tell every open portal and admin tab for this business to refetch.
-  if (result.accepted > 0 || Array.isArray(floor) || (result.voidSlots || []).length) {
-    publish(row.id, {
-      accepted: result.accepted,
-      tables,
-      refund: result.refundCents > 0
-    });
-  }
+
+  // Notify as soon as sales land — do not wait on floor sync (a floor error
+  // used to skip every PRINTUAR / KUPON FISKAL push).
   if (result.accepted > 0) {
     setImmediate(() => {
       checkSalesNotify(row, {
@@ -658,6 +651,30 @@ salesRouter.post('/sync', (req, res) => {
           else if (r && !r.delivered) console.warn('notify no delivery', row.id, r);
         })
         .catch((err) => console.warn('notify push', err?.message));
+    });
+  }
+
+  let tables = 0;
+  if (Array.isArray(floor)) {
+    try {
+      tables = replaceFloor(row.id, deviceId, floor, result.paidTables || [], result.openTables || []);
+    } catch (err) {
+      console.warn('sales floor sync', err?.message || err);
+    }
+  }
+  // Voids free the floor for that waiter+table only.
+  for (const slot of result.voidSlots || []) {
+    try {
+      freeFloorOnTable.run(row.id, slot.table, slot.staff || '');
+    } catch (_) {}
+  }
+  // Tell every open portal and admin tab for this business to refetch.
+  if (result.accepted > 0 || Array.isArray(floor) || (result.voidSlots || []).length) {
+    publish(row.id, {
+      accepted: result.accepted,
+      tables,
+      refund: result.refundCents > 0,
+      fiscal: (result.fiscalInvoiceCents || 0) > 0
     });
   }
   res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, tables });

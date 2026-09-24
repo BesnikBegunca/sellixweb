@@ -175,7 +175,9 @@ const salesColumns = new Set(db.prepare('PRAGMA table_info(sales)').all().map((c
 if (salesColumns.size && !salesColumns.has('status')) {
   db.exec("ALTER TABLE sales ADD COLUMN status TEXT NOT NULL DEFAULT 'paid'");
 }
-if (salesColumns.size && !salesColumns.has('is_fiscal')) {
+// Re-read after possible status migration so is_fiscal is never skipped.
+const salesColumnsNow = new Set(db.prepare('PRAGMA table_info(sales)').all().map((c) => c.name));
+if (salesColumnsNow.size && !salesColumnsNow.has('is_fiscal')) {
   db.exec('ALTER TABLE sales ADD COLUMN is_fiscal INTEGER NOT NULL DEFAULT 0');
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_sales_business_status ON sales (business_id, status)');

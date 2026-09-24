@@ -571,6 +571,32 @@ function sortTables(tables) {
 }
 
 /**
+ * ATK fiscal coupons issued in the current gjendja session (count + value).
+ * Live — resets after Mbyll like the day bar.
+ */
+export function fiscalDayTotal(businessId, asOf = shopToday()) {
+  const filter = periodFilter('today', asOf, 'sold_at', businessId);
+  try {
+    const row = db
+      .prepare(
+        `SELECT COALESCE(SUM(total_cents), 0) AS total_cents, COUNT(*) AS count
+         FROM sales
+         WHERE business_id = ?
+           AND COALESCE(is_fiscal, 0) = 1
+           AND LOWER(COALESCE(status, 'paid')) NOT IN ('void', 'deleted', 'cancelled', 'canceled', 'print')
+           ${filter.sql}`
+      )
+      .get(businessId, ...filter.params);
+    return {
+      total: fromCents(row?.total_cents),
+      count: Number(row?.count) || 0
+    };
+  } catch (_) {
+    return { total: 0, count: 0 };
+  }
+}
+
+/**
  * Live tavolina + waiter print bar for today.
  *
  * Bar = paid today + open tabs (deduped). Paguaj moves open→paid so the bar
@@ -626,6 +652,7 @@ export function liveTables(businessId, asOf = shopToday()) {
   const openTotal = tables.reduce((sum, t) => sum + t.total, 0);
   const printed = dayBarTotal(businessId, asOf);
   const orders = dayOrdersTotal(businessId, asOf);
+  const fiscal = fiscalDayTotal(businessId, asOf);
 
   return {
     occupied: tables.length,
@@ -637,6 +664,7 @@ export function liveTables(businessId, asOf = shopToday()) {
       total: printed.total,
       count: printed.count
     },
+    fiscal,
     tables
   };
 }
@@ -1068,11 +1096,14 @@ export function listShiftCloses(businessId) {
   // Newest first for the UI.
   shifts.sort((a, b) => String(b.closedAt).localeCompare(String(a.closedAt)));
 
+  const fiscal = fiscalDayTotal(businessId);
+
   return {
     count: closedCount,
     total: closedTotal,
     untilPrint: untilPrintSum,
     printToClose: printToCloseSum,
+    fiscal,
     shifts
   };
 }

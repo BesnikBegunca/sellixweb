@@ -77,6 +77,13 @@ export default function PortalTables() {
         <b>{euro(openNow)}</b>
         <span className="ad-hint">{floor?.tables?.length || 0} tavolina · hapura tani</span>
       </div>
+      <div className="pt-floor-now pt-floor-fiscal">
+        <span>Kupon Fiskal</span>
+        <b>{euro(floor?.fiscal?.total)}</b>
+        <span className="ad-hint">
+          {floor?.fiscal?.count || 0} {(floor?.fiscal?.count || 0) === 1 ? 'kupon' : 'kupona'} sot · live
+        </span>
+      </div>
       <TablesGrid tables={floor?.tables} />
     </div>
   );

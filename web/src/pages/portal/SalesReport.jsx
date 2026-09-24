@@ -598,7 +598,7 @@ export function GjendjaTable({ data }) {
 
   return (
     <div className="ad-card pt-panel">
-      <div className="pt-gj-stats pt-gj-stats-4">
+      <div className="pt-gj-stats pt-gj-stats-5">
         <div className="pt-gj-stat">
           <div className="ad-hint">Mbyllje gjendje</div>
           <div className="ad-heading pt-gj-stat-value">{data?.count || 0}</div>
@@ -614,6 +614,13 @@ export function GjendjaTable({ data }) {
         <div className="pt-gj-stat">
           <div className="ad-hint">Shtyp → Mbyll</div>
           <div className="ad-heading pt-gj-stat-value">{formatEuro(data?.printToClose)}</div>
+        </div>
+        <div className="pt-gj-stat pt-gj-stat-fiscal">
+          <div className="ad-hint">Kupon Fiskal</div>
+          <div className="ad-heading pt-gj-stat-value">{formatEuro(data?.fiscal?.total)}</div>
+          <div className="ad-hint pt-gj-stat-sub">
+            {data?.fiscal?.count || 0} {(data?.fiscal?.count || 0) === 1 ? 'kupon' : 'kupona'} sot
+          </div>
         </div>
       </div>
       <h2 className="ad-heading pt-h">Shitjet sipas mbylljes së gjendjes</h2>

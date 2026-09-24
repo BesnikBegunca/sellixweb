@@ -933,10 +933,37 @@
   grid-template-columns: repeat(2, 1fr);
 }
 
+.pt-gj-stats-5 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 @media (min-width: 720px) {
   .pt-gj-stats-4 {
     grid-template-columns: repeat(4, 1fr);
   }
+  .pt-gj-stats-5 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .pt-gj-stats-5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.pt-gj-stat-fiscal {
+  border-color: color-mix(in srgb, #38BDF8 45%, rgba(255,255,255,.1));
+  background: color-mix(in srgb, #38BDF8 12%, rgba(255,255,255,.03));
+  box-shadow: inset 4px 0 0 #38BDF8;
+}
+
+.pt-gj-stat-fiscal .pt-gj-stat-value {
+  color: #38BDF8;
+}
+
+.pt-gj-stat-sub {
+  margin-top: 4px;
 }
 
 .pt-gj-day-money {
@@ -1313,3 +1340,12 @@
   color: #5EC79A;
 }
 .pt-floor-now .ad-hint { flex: 1 1 100%; }
+
+.pt-floor-fiscal {
+  border-color: color-mix(in srgb, #38BDF8 45%, rgba(255,255,255,.1));
+  background: color-mix(in srgb, #38BDF8 12%, rgba(255,255,255,.03));
+  box-shadow: inset 4px 0 0 #38BDF8;
+}
+.pt-floor-fiscal b {
+  color: #38BDF8;
+}
