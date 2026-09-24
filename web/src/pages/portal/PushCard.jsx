@@ -71,9 +71,11 @@ export default function PushCard({ compact = false }) {
   const test = async () => {
     setBusy(true);
     setError('');
+    setNote('');
     try {
       const r = await api.portalPushTest();
-      setNote(r.delivered ? 'Njoftimi provë u dërgua.' : 'Asnjë pajisje nuk e mori njoftimin.');
+      if (r.delivered) setNote('Njoftimi provë u dërgua.');
+      else setError(r.error || `Asnjë pajisje nuk e mori (devices=${r.devices ?? 0}).`);
     } catch (err) {
       setError(err.message);
     } finally {

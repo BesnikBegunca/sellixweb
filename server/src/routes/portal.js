@@ -396,11 +396,22 @@ portalRouter.post('/push/unsubscribe', requirePortal, (req, res) => {
 portalRouter.post('/push/test', requirePortal, pushLimiter, async (req, res) => {
   const row = requireActivePortal(req, res);
   if (!row) return;
+  const devices = subscriptionCount(row.id);
+  if (!devices) {
+    return res.json({
+      ok: false,
+      delivered: 0,
+      failed: 0,
+      devices: 0,
+      error: 'Asnjë pajisje e abonuar. Hap Llogaria → aktivizo njoftimet në telefon.'
+    });
+  }
   const result = await sendToBusinesses([row.id], {
     title: row.name || 'SelliX',
-    body: 'PRINTUAR 0 EURO\nTOTALI : njoftimet jane aktive',
+    body: 'PRINTUAR : 0 EURO\nTOTALI : njoftimet jane aktive',
     url: '/portal',
-    tag: `test-${Date.now()}`
+    tag: `test-${Date.now()}`,
+    tone: 'print'
   });
-  res.json({ ok: true, devices: subscriptionCount(row.id), ...result });
+  res.json({ ok: true, devices, ...result });
 });

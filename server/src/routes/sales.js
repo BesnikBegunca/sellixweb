@@ -2,9 +2,9 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db.js';
 import { effectiveStatus, findLiveByLicenseKey } from '../licenses.js';
-import { toCents } from '../reports.js';
+import { toCents, dayBarTotal, businessDayKey, shopToday } from '../reports.js';
 import { publish } from '../events.js';
-import { checkSalesNotify } from '../push.js';
+import { checkSalesNotify, subscriptionCount } from '../push.js';
 
 export const salesRouter = Router();
 
@@ -382,22 +382,29 @@ function insertPrintSlice(businessId, deviceId, sale, deltaCents, prevItems = []
   const uid = `print:${sale.sale_uid}:${stamp}:${deltaCents}`;
   // Idempotent: same print re-synced after a failed mark must not duplicate.
   if (findSale.get(businessId, uid)) return;
-  const info = insertSale.run({
-    business_id: businessId,
-    device_id: deviceId || '',
-    sale_uid: uid,
-    sold_at: sale.sold_at,
-    total_cents: deltaCents,
-    tax_cents: 0,
-    discount_cents: 0,
-    payment_method: sale.payment_method || 'cash',
-    table_name: sale.table_name || '',
-    receipt_no: sale.receipt_no || '',
-    staff_name: sale.staff_name || '',
-    status: 'print',
-    is_fiscal: 0
-  });
-  const saleId = info.lastInsertRowid;
+  let saleId;
+  try {
+    const info = insertSale.run({
+      business_id: businessId,
+      device_id: deviceId || '',
+      sale_uid: uid,
+      sold_at: sale.sold_at,
+      total_cents: deltaCents,
+      tax_cents: 0,
+      discount_cents: 0,
+      payment_method: sale.payment_method || 'cash',
+      table_name: sale.table_name || '',
+      receipt_no: sale.receipt_no || '',
+      staff_name: sale.staff_name || '',
+      status: 'print',
+      is_fiscal: 0
+    });
+    saleId = info.lastInsertRowid;
+  } catch (err) {
+    // Never abort the whole syncBatch / notify path for a display row.
+    console.warn('insertPrintSlice', err?.message || err);
+    return;
+  }
   if (!sale.hasItems || !sale.items?.length) return;
 
   let lines = diffPrintItems(sale.items, prevItems);
@@ -412,7 +419,9 @@ function insertPrintSlice(businessId, deviceId, sale, deltaCents, prevItems = []
     }));
   }
   for (const item of lines) {
-    insertItem.run({ sale_id: saleId, ...item });
+    try {
+      insertItem.run({ sale_id: saleId, ...item });
+    } catch (_) {}
   }
 }
 
@@ -473,7 +482,10 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
         ? Math.max(0, sale.print_delta_cents)
         : null;
     const computedDelta = Math.max(0, (sale.total_cents || 0) - prevCents);
-    const delta = explicitDelta != null ? explicitDelta : computedDelta;
+    // Prefer POS delta when it is a real increase. printDelta:0 used to wipe
+    // computedDelta and silence every PRINTUAR push.
+    const delta =
+      explicitDelta != null && explicitDelta > 0 ? explicitDelta : computedDelta;
 
     upsertSale(businessId, deviceId, sale);
     if ((sale.status ?? 'paid') === 'paid' && sale.table_name) {
@@ -490,6 +502,9 @@ const syncBatch = db.transaction((businessId, deviceId, rawSales) => {
         }
       } else if (delta > 0) {
         printedDeltaCents += delta;
+      } else if (!before && (sale.total_cents || 0) > 0) {
+        // Brand-new paid invoice (no prior open on web) — still notify.
+        printedDeltaCents += sale.total_cents;
       }
     }
     if ((sale.status ?? 'paid') === 'open' && sale.table_name) {
@@ -613,7 +628,7 @@ const replaceFloor = db.transaction((businessId, deviceId, rawTables, paidTables
   return parsed.length;
 });
 
-salesRouter.post('/sync', (req, res) => {
+salesRouter.post('/sync', async (req, res) => {
   const key = readKey(req);
   if (!key) return res.status(400).json({ ok: false, error: 'missing_license_key' });
 
@@ -634,24 +649,48 @@ salesRouter.post('/sync', (req, res) => {
     result = syncBatch(row.id, deviceId, sales);
   } catch (err) {
     console.warn('sales syncBatch', err?.message || err);
-    return res.status(500).json({ ok: false, error: 'sync_failed' });
+    return res.status(500).json({ ok: false, error: 'sync_failed', detail: String(err?.message || err) });
   }
 
-  // Notify as soon as sales land — do not wait on floor sync (a floor error
-  // used to skip every PRINTUAR / KUPON FISKAL push).
+  // Notify immediately after sales land (before floor sync).
+  let notify = null;
   if (result.accepted > 0) {
-    setImmediate(() => {
-      checkSalesNotify(row, {
-        lastInvoiceCents: result.lastInvoiceCents,
-        fiscalInvoiceCents: result.fiscalInvoiceCents,
+    let invoiceCents = Math.max(0, Number(result.lastInvoiceCents) || 0);
+    let fiscalCents = Math.max(0, Number(result.fiscalInvoiceCents) || 0);
+    // Fallback: deltas wiped (printDelta:0) but day bar rose → still push.
+    if (invoiceCents <= 0 && fiscalCents <= 0 && (result.refundCents || 0) <= 0) {
+      try {
+        const day = businessDayKey(row.id);
+        const bar = dayBarTotal(row.id, shopToday());
+        const totalCents = Math.max(0, Math.round(Number(bar.total || 0) * 100));
+        const prev =
+          db
+            .prepare('SELECT last_total_cents FROM notify_state WHERE business_id = ? AND day = ?')
+            .get(row.id, day)?.last_total_cents || 0;
+        const rise = Math.max(0, totalCents - Number(prev || 0));
+        if (rise > 0) invoiceCents = rise;
+      } catch (err) {
+        console.warn('notify fallback', err?.message || err);
+      }
+    }
+    try {
+      notify = await checkSalesNotify(row, {
+        lastInvoiceCents: invoiceCents,
+        fiscalInvoiceCents: fiscalCents,
         refundCents: result.refundCents
-      })
-        .then((r) => {
-          if (r && r.ok === false) console.warn('notify skip', row.id, r.reason || r);
-          else if (r && !r.delivered) console.warn('notify no delivery', row.id, r);
-        })
-        .catch((err) => console.warn('notify push', err?.message));
-    });
+      });
+      if (notify && notify.ok === false) {
+        console.warn('notify skip', row.id, notify.reason || notify);
+      } else if (notify && !notify.delivered) {
+        console.warn('notify no delivery', row.id, {
+          devices: subscriptionCount(row.id),
+          ...notify
+        });
+      }
+    } catch (err) {
+      console.warn('notify push', err?.message || err);
+      notify = { ok: false, error: String(err?.message || err) };
+    }
   }
 
   let tables = 0;
@@ -677,5 +716,20 @@ salesRouter.post('/sync', (req, res) => {
       fiscal: (result.fiscalInvoiceCents || 0) > 0
     });
   }
-  res.json({ ok: true, accepted: result.accepted, rejected: result.rejected, tables });
+  res.json({
+    ok: true,
+    accepted: result.accepted,
+    rejected: result.rejected,
+    tables,
+    notify: notify
+      ? {
+          ok: notify.ok !== false,
+          delivered: notify.delivered || 0,
+          failed: notify.failed || 0,
+          reason: notify.reason || undefined,
+          tone: notify.tone || undefined,
+          devices: subscriptionCount(row.id)
+        }
+      : undefined
+  });
 });
