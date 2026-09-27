@@ -1349,3 +1349,399 @@
 .pt-floor-fiscal b {
   color: #38BDF8;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Light skin for the owner portal (phone first).
+   Paint only: every rule below re-colours or re-shapes what is already on the
+   page. Nothing is added, removed or re-wired — the markup, the data fetching
+   and the bar stay exactly as they were.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.ad.pt-shell,
+.ad.pt-login {
+  --pf-bg: #F1F3F5;
+  --pf-card: #FFFFFF;
+  --pf-ink: #101828;
+  --pf-ink-2: #475467;
+  --pf-muted: #8A94A6;
+  --pf-line: #E7EAEE;
+  --pf-green: #1F7A4C;
+  --pf-green-dark: #14603A;
+  --pf-green-soft: #E8F3EC;
+  --pf-red: #D92D20;
+  --pf-red-soft: #FEECEB;
+  --pf-radius: 20px;
+  --pf-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px -16px rgba(16, 24, 40, .24);
+  background: var(--pf-bg);
+  color: var(--pf-ink);
+}
+.pt-shell .ad-hint,
+.pt-login .ad-hint { color: var(--pf-muted); }
+.pt-shell .ad-heading,
+.pt-login .ad-heading { color: var(--pf-ink); }
+.pt-shell .ad-error { color: var(--pf-red); }
+
+/* Header — round avatar mark, business, two compact actions */
+.pt-shell .pt-top {
+  background: var(--pf-bg);
+  border-bottom: 0;
+  padding-bottom: 6px;
+}
+.pt-shell .pt-mark {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #2A8A58, var(--pf-green-dark));
+  box-shadow: 0 8px 18px -10px rgba(20, 96, 58, .8);
+}
+.pt-shell .pt-mark::before {
+  content: '';
+  width: 20px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 4px;
+}
+.pt-shell .pt-mark span {
+  left: 13px;
+  right: 13px;
+  top: 19px;
+  height: 2px;
+  background: #fff;
+}
+.pt-shell .pt-name { font-size: 19px; letter-spacing: -0.02em; }
+.pt-shell .pt-header-actions .ad-btn-ghost {
+  border-color: var(--pf-line);
+  background: var(--pf-card);
+  color: var(--pf-ink-2) !important;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: var(--pf-shadow);
+}
+.pt-shell .pt-btn-dil {
+  border-color: transparent;
+  background: var(--pf-red-soft);
+  color: var(--pf-red) !important;
+  border-radius: 999px;
+}
+.pt-shell .pt-btn-dil:hover {
+  background: #FBD7D4;
+  border-color: transparent;
+  color: var(--pf-red) !important;
+}
+
+/* Tabs — white pills, active is solid green */
+.pt-shell .pt-tabs { gap: 8px; padding-top: 6px; padding-bottom: 2px; }
+.pt-shell .pt-tab {
+  border-radius: 999px;
+  border: 1px solid var(--pf-line);
+  background: var(--pf-card);
+  color: var(--pf-ink-2);
+  font-weight: 600;
+  box-shadow: var(--pf-shadow);
+}
+.pt-shell .pt-tab.active {
+  background: var(--pf-green);
+  border-color: var(--pf-green);
+  color: #fff;
+  box-shadow: 0 10px 20px -12px rgba(31, 122, 76, .9);
+}
+
+/* Cards */
+.pt-shell .ad-card,
+.pt-login .ad-card {
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius);
+  background: var(--pf-card);
+  box-shadow: var(--pf-shadow);
+}
+.pt-shell .pt-panel { padding: 16px; }
+.pt-shell .pt-h { color: var(--pf-ink); font-size: 16px; }
+.pt-shell .pt-title { font-size: 26px; letter-spacing: -0.03em; }
+.pt-shell .pt-empty { color: var(--pf-muted); }
+
+/* Live badge */
+.pt-shell .pt-live {
+  border-color: var(--pf-line);
+  background: var(--pf-card);
+  color: var(--pf-green);
+  box-shadow: var(--pf-shadow);
+}
+.pt-shell .pt-live-time { color: var(--pf-muted); }
+.pt-shell .pt-live.off { color: var(--pf-muted); }
+
+/* Period pills */
+.pt-shell .pt-pill {
+  border-color: var(--pf-line);
+  background: var(--pf-card);
+  color: var(--pf-ink-2);
+  font-weight: 600;
+}
+.pt-shell .pt-pill.active {
+  background: var(--pf-green);
+  color: #fff;
+  border-color: var(--pf-green);
+}
+
+/* The bar — same ring, now the hero card of the page */
+.pt-shell .pt-today {
+  position: relative;
+  margin: 4px 0 18px;
+  padding: 22px 18px 18px;
+  border-radius: 28px;
+  background:
+    radial-gradient(120% 90% at 85% 0%, rgba(255, 255, 255, .14), transparent 60%),
+    linear-gradient(150deg, #2A8A58 0%, var(--pf-green) 45%, var(--pf-green-dark) 100%);
+  box-shadow: 0 20px 40px -24px rgba(20, 96, 58, .9);
+  overflow: hidden;
+}
+.pt-shell .pt-today::after {
+  content: '';
+  position: absolute;
+  right: -60px;
+  top: -70px;
+  width: 240px;
+  height: 240px;
+  border: 26px solid rgba(255, 255, 255, .07);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.pt-shell .pt-today-ring { width: min(230px, 66vw); }
+.pt-shell .pt-today-track { stroke: rgba(255, 255, 255, .22); }
+.pt-shell .pt-today-fill { stroke: #FFFFFF; }
+.pt-shell .pt-today-ring.is-over .pt-today-fill { stroke: #FFD5D2; }
+.pt-shell .pt-today-label { color: rgba(255, 255, 255, .78); }
+.pt-shell .pt-today-value { color: #fff; }
+.pt-shell .pt-today-pct { color: #BFEBD2; }
+.pt-shell .pt-today .ad-hint { color: rgba(255, 255, 255, .72); }
+.pt-shell .pt-today-ring.is-over .pt-today-label,
+.pt-shell .pt-today-ring.is-over .pt-today-pct { color: #FFD5D2; }
+.pt-shell .pt-today-goal .ad-btn-ghost {
+  border-color: transparent;
+  background: rgba(255, 255, 255, .16);
+  color: #fff !important;
+  border-radius: 999px;
+}
+.pt-shell .pt-today-goal .ad-btn-ghost:hover {
+  background: rgba(255, 255, 255, .26);
+  border-color: transparent;
+}
+.pt-shell .pt-today-form .ad-field {
+  background: rgba(255, 255, 255, .92);
+  color: var(--pf-ink);
+  border-color: transparent;
+}
+.pt-shell .pt-today-form .ad-btn { background: #fff; color: var(--pf-green) !important; }
+
+/* Stat tiles */
+.pt-shell .pt-stat { padding: 14px; }
+.pt-shell .pt-stat-label { color: var(--pf-muted); letter-spacing: .06em; }
+.pt-shell .pt-stat-value { color: var(--pf-ink); font-size: 19px; }
+
+/* Chart */
+.pt-shell .pt-bar {
+  background: linear-gradient(180deg, #3FA772, var(--pf-green));
+  border-radius: 8px 8px 4px 4px;
+}
+.pt-shell .pt-bar-label { color: var(--pf-muted); }
+
+/* Lists */
+.pt-shell .pt-list li { color: var(--pf-ink); }
+.pt-shell .pt-list-meta { color: var(--pf-muted); }
+
+/* Receipts */
+.pt-shell .pt-sale,
+.pt-shell .pt-sale.paid { border-color: var(--pf-line); }
+.pt-shell .pt-sale-table,
+.pt-shell .pt-sale-total { color: var(--pf-ink); }
+.pt-shell .pt-sale-status {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #F2F4F7;
+  color: var(--pf-muted);
+  letter-spacing: .04em;
+}
+.pt-shell .pt-sale-status.paid { background: var(--pf-green-soft); color: var(--pf-green); }
+.pt-shell .pt-sale-items { border-top-color: var(--pf-line); }
+
+/* Tables grid */
+.pt-shell .pt-table-card { padding: 14px; }
+.pt-shell .pt-table-name { color: var(--pf-ink); }
+.pt-shell .pt-table-total { color: var(--pf-green); }
+.pt-shell .pt-floor-now {
+  border-color: var(--pf-line);
+  background: var(--pf-card);
+  box-shadow: var(--pf-shadow);
+  border-radius: var(--pf-radius);
+}
+.pt-shell .pt-floor-now b { color: var(--pf-green); }
+
+/* Gjendja */
+.pt-shell .pt-gj-stat { border-color: var(--pf-line); background: #F8FAFB; border-radius: 14px; }
+.pt-shell .pt-gj-stat-value { color: var(--pf-ink); }
+.pt-shell .pt-gj-day-card { border-color: #CFE7DA; background: #F6FBF8; }
+.pt-shell .pt-gj-day-date,
+.pt-shell .pt-gj-day-chevron,
+.pt-shell .pt-gj-total,
+.pt-shell .pt-gj-day-sum { color: var(--pf-green); }
+.pt-shell .pt-gj-day-body { border-top-color: #CFE7DA; }
+.pt-shell .pt-gj-detail { border-bottom-color: var(--pf-line); }
+.pt-shell .pt-gj-close,
+.pt-shell .pt-gj-period { color: var(--pf-ink-2); }
+
+/* Tills */
+.pt-shell .pt-reg-no { background: var(--pf-green-soft); border-color: transparent; color: var(--pf-green); }
+.pt-shell .pt-reg-bar { background: #EDF0F3; }
+.pt-shell .pt-reg-bar-fill { background: var(--pf-green); }
+.pt-shell .pt-reg-best { background: var(--pf-green); color: #fff; }
+.pt-shell .pt-reg-foot { color: var(--pf-muted); }
+.pt-shell .pt-reg.best { border-color: var(--pf-green); }
+
+/* Reports */
+.pt-shell .pt-report-preview { background: var(--pf-green-soft); border-color: transparent; }
+.pt-shell .pt-report-total { color: var(--pf-green); }
+.pt-shell .pt-report-item { border-bottom-color: var(--pf-line); }
+
+/* Notifications card */
+.pt-shell .pt-push-prompt {
+  border-color: #CFE7DA;
+  background: linear-gradient(140deg, var(--pf-green-soft), var(--pf-card));
+}
+.pt-shell .pt-push-on { color: var(--pf-green); }
+
+/* Forms and buttons */
+.pt-shell .ad-field,
+.pt-login .ad-field {
+  background: #F7F9FA;
+  border-color: var(--pf-line);
+  color: var(--pf-ink);
+  border-radius: 14px;
+}
+.pt-shell .ad-field:focus,
+.pt-login .ad-field:focus { border-color: var(--pf-green); background: #fff; }
+.pt-shell .ad-field::placeholder,
+.pt-login .ad-field::placeholder { color: var(--pf-muted); }
+.pt-shell .ad-btn,
+.pt-login .ad-btn {
+  background: var(--pf-green);
+  color: #fff !important;
+  border-radius: 14px;
+  box-shadow: 0 12px 24px -14px rgba(31, 122, 76, .9);
+}
+.pt-shell .ad-btn:hover,
+.pt-login .ad-btn:hover { background: var(--pf-green-dark); }
+.pt-shell .ad-btn-ghost,
+.pt-login .ad-btn-ghost {
+  border-color: var(--pf-line);
+  background: var(--pf-card);
+  color: var(--pf-ink-2) !important;
+  border-radius: 14px;
+}
+.pt-shell .ad-btn-ghost:hover,
+.pt-login .ad-btn-ghost:hover { background: #F7F9FA; border-color: #D6DBE2; }
+
+/* Footer link */
+.pt-shell .pt-foot .ad-hint { color: var(--pf-muted); }
+
+/* Login card */
+.pt-login .ad-card { padding: 26px; }
+.pt-login .pt-mark { border-color: var(--pf-ink); }
+.pt-login .pt-mark span { background: var(--pf-ink); }
+
+/* Modals */
+.pt-shell .pt-modal-back { background: rgba(16, 24, 40, .45); }
+.pt-shell .pt-modal { background: var(--pf-card); }
+
+/* — skin, pass 2: tighten the hero, the header row and the receipt states — */
+
+/* Header actions sit on one line next to the business, not full width */
+@media (max-width: 420px) {
+  .pt-shell .pt-top { flex-wrap: nowrap; }
+  .pt-shell .pt-header-actions { width: auto; gap: 6px; }
+  .pt-shell .pt-header-actions .ad-btn-ghost,
+  .pt-shell .pt-header-actions .pt-btn-dil {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+}
+
+/* Hero: compact card, ring no longer fills the screen */
+.pt-shell .pt-today { padding: 18px 16px 16px; gap: 10px; }
+.pt-shell .pt-today-ring { width: min(190px, 52vw); }
+.pt-shell .pt-today-track,
+.pt-shell .pt-today-fill { stroke-width: 14; }
+.pt-shell .pt-today-inner { inset: 14%; }
+.pt-shell .pt-today-label { font-size: 11px; letter-spacing: .18em; margin-bottom: 4px; }
+.pt-shell .pt-today-value { font-size: clamp(24px, 7.5vw, 32px); }
+.pt-shell .pt-today-pct { margin-top: 4px; font-size: 12px; }
+.pt-shell .pt-today-goal .ad-btn-ghost { min-height: 40px; padding: 0 20px; font-size: 13px; }
+
+/* Receipts: keep the "newest" accent, in the new palette */
+.pt-shell .pt-sale.latest {
+  border-color: #BFE3CE;
+  background: #F4FBF7;
+  box-shadow: inset 4px 0 0 var(--pf-green);
+}
+.pt-shell .pt-sale.latest .pt-sale-total,
+.pt-shell .pt-sale.latest .pt-sale-table { color: var(--pf-green); }
+.pt-shell .pt-sale.fiscal { border-color: #BBD9F2; }
+.pt-shell .pt-sale-status.fiscal { background: #EAF2FB; color: #2A6FB0; }
+.pt-shell .pt-sale-status.latest { background: var(--pf-green-soft); color: var(--pf-green); }
+
+/* Page copy */
+.pt-shell .pt-page > .ad-hint b { color: var(--pf-ink-2); }
+
+/* — skin, pass 3: header fits the phone, round icon actions like the mock — */
+
+.pt-shell .pt-brand { min-width: 0; flex: 1 1 auto; }
+.pt-shell .pt-brand > div { min-width: 0; }
+.pt-shell .pt-brand .ad-hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .pt-shell .pt-header-actions { width: auto; gap: 8px; flex: 0 0 auto; }
+  /* Label stays in the DOM for screen readers; the glyph carries it visually. */
+  .pt-shell .pt-header-actions .ad-btn-ghost,
+  .pt-shell .pt-header-actions .pt-btn-dil {
+    position: relative;
+    flex: 0 0 auto;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;
+    overflow: hidden;
+  }
+  .pt-shell .pt-header-actions .ad-btn-ghost::before,
+  .pt-shell .pt-header-actions .pt-btn-dil::before {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    line-height: 1;
+  }
+  .pt-shell .pt-header-actions .ad-btn-ghost::before { content: '⟳'; color: var(--pf-ink-2); }
+  .pt-shell .pt-header-actions .pt-btn-dil::before { content: '⏻'; color: var(--pf-red); }
+}
+
+/* Tabs and content breathe a little more */
+.pt-shell .pt-tabs { padding-top: 10px; }
+.pt-shell .pt-main { padding-top: 16px; }
+.pt-shell .pt-page-head { margin-bottom: 14px; }
+
+/* On a laptop the hero would stretch the full width; keep it card-sized. */
+@media (min-width: 900px) {
+  .pt-shell .pt-today { max-width: 560px; margin-left: auto; margin-right: auto; }
+}
