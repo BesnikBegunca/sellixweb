@@ -143,7 +143,7 @@ export default function PushCard({ compact = false }) {
         </div>
       )}
       {error && <div className="ad-error" style={{ marginTop: 10 }}>{error}</div>}
-      {note && <div style={{ color: '#1F7A4C', fontSize: 13, marginTop: 10 }}>{note}</div>}
+      {note && <div style={{ color: 'var(--pf-green)', fontSize: 13, marginTop: 10 }}>{note}</div>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { usePortal } from '../../lib/PortalContext';
+import { readPortalTheme } from './usePortalTheme';
 
 export default function RequirePortal({ children }) {
   const { business, loading } = usePortal();
@@ -7,7 +8,7 @@ export default function RequirePortal({ children }) {
 
   if (loading) {
     return (
-      <div className="ad" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#667085' }}>
+      <div className="ad pt-login" data-theme={readPortalTheme()} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pf-ink-2)' }}>
         Duke ngarkuar…
       </div>
     );

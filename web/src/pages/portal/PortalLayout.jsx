@@ -6,6 +6,8 @@ import { parseLicenseExpiry } from '../../lib/sales';
 import VerifiedBadge from './VerifiedBadge';
 import PushCard from './PushCard';
 import PushWelcome from './PushWelcome';
+import ThemeToggle from './ThemeToggle';
+import usePortalTheme from './usePortalTheme';
 import '../admin/admin.css';
 import './portal.css';
 
@@ -114,7 +116,7 @@ function LicenseRenewalPrompt({ business }) {
   );
 }
 
-function ForcedPasswordChange() {
+function ForcedPasswordChange({ theme }) {
   const { business, setBusiness } = usePortal();
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -138,11 +140,11 @@ function ForcedPasswordChange() {
   };
 
   return (
-    <div className="ad pt-login">
+    <div className="ad pt-login" data-theme={theme}>
       <div className="ad-card" style={{ padding: 28, width: '100%', maxWidth: 400 }}>
-        <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: '#1F7A4C', marginBottom: 8 }}>KËRKOHET</div>
+        <div className="ad-mono" style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--pf-green)', marginBottom: 8 }}>KËRKOHET</div>
         <h1 className="ad-heading" style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px', letterSpacing: '-0.02em' }}>Vendos fjalëkalim të ri</h1>
-        <p style={{ fontSize: 14, color: '#667085', margin: '0 0 20px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 14, color: 'var(--pf-ink-2)', margin: '0 0 20px', lineHeight: 1.5 }}>
           Kjo llogari po përdor fjalëkalimin e përkohshëm. Zgjidh një të ri për të vazhduar te portali.
         </p>
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -159,16 +161,17 @@ function ForcedPasswordChange() {
 export default function PortalLayout() {
   const { business, logout } = usePortal();
   const navigate = useNavigate();
+  const [theme, toggleTheme] = usePortalTheme();
 
   const onLogout = async () => {
     await logout();
     navigate('/portal/login', { replace: true });
   };
 
-  if (business?.mustChangePassword) return <ForcedPasswordChange />;
+  if (business?.mustChangePassword) return <ForcedPasswordChange theme={theme} />;
 
   return (
-    <div className="ad pt-shell">
+    <div className="ad pt-shell" data-theme={theme}>
       <header className="pt-top">
         <div className="pt-brand">
           <span className="pt-mark">
@@ -183,6 +186,7 @@ export default function PortalLayout() {
           </div>
         </div>
         <div className="pt-header-actions">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <button type="button" className="ad-btn-ghost" onClick={() => window.location.reload()}>
             Rifresko
           </button>
